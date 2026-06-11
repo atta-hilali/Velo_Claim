@@ -1,0 +1,12 @@
+{
+  "keys": [
+    {
+      "kty": "RSA",
+      "kid": "velo-claim-prod-key-1",
+      "use": "sig",
+      "alg": "RS384",
+      "n": "nd9x-l8Hy8v2rB0dT_lyMI1CtukpwPMmB9q3r01T9Bh4LmVzxtmh5zxRFuEWIqxRTXsuimiKV255utzgHeyZmwwSQkDmfoHe7g5mN3T2HJYdSc89OlA9V08Pew7BfuvrgGFlAiWdd5Zdbc7ZvOi9PrbERYTeAsglHcPt9bwyDtVkaRwXiMZzJuqSfLOHciQ9Nd3yyLWBUMX_8lrdSCphAQ32svkC5m9RrGycifzXkMWYSJCL-tb4-jfERekjkIvAgmSvfkE3ExxMyFqibcLRpNFVlpShoWtLCP7d0P5iag_SncnOW63pEAYtMBUyUcBYAL1MK36cLTFP_9zchcN-T5WvIAVB5KetJLkZo4k1zhlC8ohoH9TTvMSHVZjuM2xPG0BM03o443uY6NxcgsrcbArE4nvFcxjYEcnE-hKm-kTqFQhtFmtSzF0DhnZD4N2pRx1q4sEEh7uVs4fAaw3FFS6EhdbLmIU_F_LAJdlPziyN6WrcIG_eDkYGqJHk6MkP",
+      "e": "AQAB"
+    }
+  ]
+}

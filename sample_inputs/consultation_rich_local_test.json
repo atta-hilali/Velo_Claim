@@ -1,0 +1,154 @@
+{
+  "case_id": "CASE-CONSULT-001",
+  "trigger_source": "VELO_DOCTOR_APPROVED_ENCOUNTER",
+  "use_medgemma": true,
+  "claim_format": "AUTO",
+  "jurisdiction": "DUBAI",
+  "encounter_package": {
+    "encounter": {
+      "resourceType": "Encounter",
+      "id": "ENC-CONSULT-001",
+      "status": "finished",
+      "class": {
+        "code": "AMB",
+        "display": "Ambulatory"
+      },
+      "type": [
+        {
+          "text": "Primary care consultation"
+        }
+      ],
+      "patient_id": "P-CONSULT-001",
+      "doctor_id": "D-CONSULT-001",
+      "facility_id": "FAC-CONSULT-001",
+      "period": {
+        "start": "2026-06-10T11:30:00+04:00"
+      },
+      "soap_note": "Patient presents with fever and productive cough. Chest exam shows crackles. Doctor documents pneumonia assessment and outpatient treatment plan.",
+      "diagnoses": [
+        {
+          "diagnosisCode": "J18.9",
+          "system": "ICD-10",
+          "description": "Pneumonia, unspecified organism",
+          "type": "principal"
+        }
+      ],
+      "procedures": [
+        {
+          "procedureCode": "99213",
+          "system": "CPT",
+          "description": "Office or other outpatient visit for established patient",
+          "units": 1
+        }
+      ],
+      "radiology_reports": [
+        {
+          "name": "chest_xray_report.pdf",
+          "type": "radiology_report",
+          "status": "available",
+          "url": "https://example.invalid/chest_xray_report.pdf"
+        }
+      ],
+      "images": [
+        {
+          "name": "chest_xray_image.jpg",
+          "type": "radiology_image",
+          "status": "available",
+          "url": "https://example.invalid/chest_xray_image.jpg"
+        }
+      ],
+      "pharmacy_invoices": [
+        {
+          "id": "PHINV-001",
+          "items": [
+            {
+              "id": "PHARM-001",
+              "description": "Antibiotic dispensed after consultation",
+              "drug_code": "DDC-12345",
+              "amount": 95.0,
+              "currency": "AED",
+              "quantity": 1
+            }
+          ]
+        }
+      ],
+      "charge_items": [
+        {
+          "id": "CHG-CONSULT-001",
+          "description": "Office consultation",
+          "code": "99213",
+          "system": "CPT",
+          "amount": 350.0,
+          "currency": "AED"
+        }
+      ]
+    },
+    "patient": {
+      "resourceType": "Patient",
+      "id": "P-CONSULT-001",
+      "identifier": [
+        {
+          "system": "velo/member-id",
+          "value": "M-CONSULT-001"
+        },
+        {
+          "system": "uae/emirates-id",
+          "value": "784-1985-1111111-1"
+        }
+      ],
+      "name": [
+        {
+          "text": "Consultation Patient"
+        }
+      ],
+      "birthDate": "1985-02-14",
+      "gender": "female"
+    },
+    "coverage": {
+      "resourceType": "Coverage",
+      "id": "COV-CONSULT-001",
+      "status": "active",
+      "subscriberId": "M-CONSULT-001",
+      "payor": [
+        {
+          "identifier": {
+            "value": "DHA-PAYER"
+          },
+          "display": "Dubai Payer"
+        }
+      ],
+      "class": [
+        {
+          "value": "ENHANCED",
+          "name": "Enhanced Plan"
+        }
+      ]
+    },
+    "provider": {
+      "resourceType": "Practitioner",
+      "id": "D-CONSULT-001",
+      "identifier": [
+        {
+          "system": "dha/clinician-license",
+          "value": "DHA-D-CONSULT-001"
+        }
+      ],
+      "name": [
+        {
+          "text": "Dr. Consultation"
+        }
+      ]
+    },
+    "facility": {
+      "resourceType": "Organization",
+      "id": "FAC-CONSULT-001",
+      "name": "Velo Clinic Dubai",
+      "identifier": [
+        {
+          "system": "dha/facility-code",
+          "value": "DHA-FAC-CONSULT-001"
+        }
+      ]
+    }
+  }
+}

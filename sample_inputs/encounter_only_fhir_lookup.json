@@ -1,0 +1,40 @@
+{
+  "case_id": "CASE-FHIR-001",
+  "trigger_source": "VELO_DOCTOR_APPROVED_ENCOUNTER",
+  "use_medgemma": true,
+  "claim_format": "AUTO",
+  "jurisdiction": "AUTO",
+  "encounter_package": {
+    "encounter": {
+      "resourceType": "Encounter",
+      "id": "ENC-FHIR-001",
+      "status": "finished",
+      "class": {
+        "code": "AMB",
+        "display": "Ambulatory"
+      },
+      "type": [
+        {
+          "text": "Primary care consultation"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/P-FHIR-001"
+      },
+      "serviceProvider": {
+        "reference": "Organization/FAC-FHIR-001"
+      },
+      "participant": [
+        {
+          "individual": {
+            "reference": "Practitioner/D-FHIR-001"
+          }
+        }
+      ],
+      "period": {
+        "start": "2026-06-10T10:00:00+04:00"
+      },
+      "soap_note": "Clinical note generated during the consultation. Patient reports cough and fever. Doctor documents assessment and plan."
+    }
+  }
+}

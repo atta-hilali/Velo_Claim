@@ -1,0 +1,185 @@
+{
+  "case_id": "CASE-002",
+  "trigger_source": "RCM_MANUAL_UPLOAD",
+  "use_medgemma": true,
+  "claim_format": "CANONICAL",
+  "jurisdiction": "AUTO",
+  "encounter_package": {
+    "acceptance": {
+      "status": "received",
+      "accepted_by": "RCMUpload",
+      "accepted_at": "2026-06-08T10:15:00+04:00",
+      "source": "RCM_MANUAL_UPLOAD"
+    },
+    "encounter": {
+      "resourceType": "Encounter",
+      "id": "ENC-002",
+      "status": "finished",
+      "class": {
+        "code": "AMB",
+        "display": "Ambulatory"
+      },
+      "type": [
+        {
+          "text": "Primary care consultation"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/P002"
+      },
+      "serviceProvider": {
+        "reference": "Organization/FAC-002"
+      },
+      "participant": [
+        {
+          "individual": {
+            "reference": "Practitioner/D002"
+          }
+        }
+      ],
+      "period": {
+        "start": "2026-06-08T10:00:00+04:00"
+      },
+      "soap_note": "Patient presents with fever, productive cough, and right lower lobe crackles. Chest X-ray impression supports pneumonia. Treated as outpatient with antibiotics and follow-up instructions.",
+      "charge_items": [
+        {
+          "id": "CHG-002",
+          "description": "Established patient outpatient visit",
+          "code": "99213",
+          "system": "CPT",
+          "amount": 350.0,
+          "currency": "AED"
+        }
+      ],
+      "attachments": [
+        {
+          "name": "chest_xray_report.pdf",
+          "type": "radiology_report",
+          "status": "available"
+        }
+      ]
+    },
+    "patient": {
+      "resourceType": "Patient",
+      "id": "P002",
+      "identifier": [
+        {
+          "system": "velo/member-id",
+          "value": "M-44002"
+        },
+        {
+          "system": "uae/emirates-id",
+          "value": "784-1979-7654321-2"
+        }
+      ],
+      "name": [
+        {
+          "text": "Omar Hassan"
+        }
+      ],
+      "birthDate": "1979-11-03",
+      "gender": "male"
+    },
+    "coverage": {
+      "resourceType": "Coverage",
+      "id": "COV-002",
+      "status": "active",
+      "subscriberId": "M-44002",
+      "payor": [
+        {
+          "identifier": {
+            "value": "NAS"
+          },
+          "display": "NAS"
+        }
+      ],
+      "class": [
+        {
+          "type": {
+            "text": "plan"
+          },
+          "value": "GOLD",
+          "name": "Gold Network"
+        }
+      ],
+      "period": {
+        "start": "2026-01-01",
+        "end": "2026-12-31"
+      }
+    },
+    "provider": {
+      "resourceType": "Practitioner",
+      "id": "D002",
+      "identifier": [
+        {
+          "system": "dha/clinician-license",
+          "value": "DHA-D002"
+        }
+      ],
+      "name": [
+        {
+          "text": "Dr. Lina Farah"
+        }
+      ],
+      "qualification": [
+        {
+          "code": {
+            "text": "Family Medicine"
+          }
+        }
+      ]
+    },
+    "facility": {
+      "resourceType": "Organization",
+      "id": "FAC-002",
+      "name": "Velo Clinic Dubai",
+      "identifier": [
+        {
+          "system": "dha/facility-code",
+          "value": "DHA-FAC-2100"
+        }
+      ]
+    },
+    "conditions": [
+      {
+        "resourceType": "Condition",
+        "id": "COND-002",
+        "code": {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10",
+              "code": "J18.9",
+              "display": "Pneumonia, unspecified organism"
+            }
+          ],
+          "text": "Pneumonia, unspecified organism"
+        }
+      }
+    ],
+    "fhir_procedures": [
+      {
+        "resourceType": "Procedure",
+        "id": "PROC-002",
+        "status": "completed",
+        "code": {
+          "coding": [
+            {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": "99213",
+              "display": "Office or other outpatient visit for established patient"
+            }
+          ],
+          "text": "Established patient outpatient visit"
+        }
+      }
+    ]
+  },
+  "payer_rules": [
+    {
+      "rule_id": "NAS-OP-001",
+      "payer_id": "NAS",
+      "layer": "claim_validation",
+      "message": "Outpatient pneumonia claims require diagnosis/procedure consistency review."
+    }
+  ]
+}

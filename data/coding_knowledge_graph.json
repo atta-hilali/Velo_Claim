@@ -1,0 +1,55 @@
+{
+  "version": "local-kg-v0.1",
+  "diagnosis_nodes": [
+    {
+      "system": "ICD-10",
+      "code": "M17.11",
+      "description": "Unilateral primary osteoarthritis, right knee",
+      "type": "principal",
+      "keywords": ["right knee osteoarthritis", "knee osteoarthritis", "osteoarthritis", "right knee"]
+    },
+    {
+      "system": "ICD-10",
+      "code": "K02.9",
+      "description": "Dental caries, unspecified",
+      "type": "principal",
+      "keywords": ["dental caries", "caries", "tooth decay", "cavity"]
+    }
+  ],
+  "procedure_nodes": [
+    {
+      "system": "CPT",
+      "code": "27447",
+      "description": "Arthroplasty, knee, condyle and plateau; medial and lateral compartments",
+      "units": 1,
+      "keywords": ["total knee replacement", "knee replacement", "knee arthroplasty"]
+    },
+    {
+      "system": "CDT",
+      "code": "D2391",
+      "description": "Resin-based composite, one surface, posterior",
+      "units": 1,
+      "keywords": ["composite filling", "posterior filling", "one surface restoration", "dental restoration"]
+    }
+  ],
+  "edges": [
+    {
+      "id": "local-edge-m17-27447",
+      "diagnosis_code": "M17.11",
+      "procedure_code": "27447",
+      "procedure_system": "CPT",
+      "relationship": "supports",
+      "confidence": 0.82,
+      "evidence": "Right knee osteoarthritis supports total knee replacement when conservative treatment has failed."
+    },
+    {
+      "id": "local-edge-k029-d2391",
+      "diagnosis_code": "K02.9",
+      "procedure_code": "D2391",
+      "procedure_system": "CDT",
+      "relationship": "supports",
+      "confidence": 0.8,
+      "evidence": "Dental caries supports a resin-based composite restoration when the documented plan is a filling."
+    }
+  ]
+}

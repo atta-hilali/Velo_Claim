@@ -1,0 +1,162 @@
+{
+  "case_id": "CASE-NPHIES-001",
+  "trigger_source": "VELO_DOCTOR_APPROVED_ENCOUNTER",
+  "use_medgemma": false,
+  "fhir_auth_type": "no_auth",
+  "claim_format": "NPHIES",
+  "jurisdiction": "KSA",
+  "encounter_package": {
+    "encounter": {
+      "resourceType": "Encounter",
+      "id": "ENC-NPHIES-001",
+      "status": "finished",
+      "class": {
+        "code": "AMB",
+        "display": "Ambulatory"
+      },
+      "type": [
+        {
+          "text": "Primary care consultation"
+        }
+      ],
+      "patient_id": "P-NPHIES-001",
+      "doctor_id": "D-NPHIES-001",
+      "facility_id": "FAC-NPHIES-001",
+      "period": {
+        "start": "2026-06-11T10:30:00+03:00"
+      },
+      "soap_note": "Patient presents with fever, productive cough, and lower chest crackles. Physician documents pneumonia assessment and outpatient treatment plan.",
+      "diagnoses": [
+        {
+          "diagnosisCode": "J18.9",
+          "system": "ICD-10",
+          "description": "Pneumonia, unspecified organism",
+          "type": "principal"
+        }
+      ],
+      "procedures": [
+        {
+          "procedureCode": "99213",
+          "system": "CPT",
+          "description": "Office or other outpatient visit for established patient",
+          "units": 1
+        }
+      ],
+      "attachments": [
+        {
+          "name": "chest_xray_report.pdf",
+          "type": "radiology_report",
+          "status": "available"
+        }
+      ],
+      "charge_items": [
+        {
+          "id": "ACT-NPHIES-001",
+          "description": "Established patient outpatient visit",
+          "code": "99213",
+          "system": "CPT",
+          "amount": 275.0,
+          "currency": "SAR"
+        }
+      ]
+    },
+    "patient": {
+      "resourceType": "Patient",
+      "id": "P-NPHIES-001",
+      "identifier": [
+        {
+          "system": "nin",
+          "value": "1023456789"
+        },
+        {
+          "system": "velo/member-id",
+          "value": "NPHIES-M-001"
+        }
+      ],
+      "name": [
+        {
+          "text": "Nphies Test Patient",
+          "given": [
+            "Nphies",
+            "Test"
+          ],
+          "family": "Patient"
+        }
+      ],
+      "birthDate": "1990-01-15",
+      "gender": "male"
+    },
+    "coverage": {
+      "resourceType": "Coverage",
+      "id": "COV-NPHIES-001",
+      "status": "active",
+      "subscriberId": "NPHIES-M-001",
+      "payor": [
+        {
+          "identifier": {
+            "value": "TAWUNIYA"
+          },
+          "display": "Tawuniya"
+        }
+      ],
+      "class": [
+        {
+          "value": "BASIC",
+          "name": "Basic Network"
+        }
+      ],
+      "period": {
+        "start": "2026-01-01",
+        "end": "2026-12-31"
+      }
+    },
+    "provider": {
+      "resourceType": "Practitioner",
+      "id": "D-NPHIES-001",
+      "identifier": [
+        {
+          "system": "nphies/practitioner-id",
+          "value": "NPHIES-D-001"
+        }
+      ],
+      "name": [
+        {
+          "text": "Dr. Nphies Test",
+          "given": [
+            "Nphies"
+          ],
+          "family": "Test",
+          "prefix": [
+            "Dr."
+          ]
+        }
+      ],
+      "qualification": [
+        {
+          "code": {
+            "text": "Family Medicine"
+          }
+        }
+      ]
+    },
+    "facility": {
+      "resourceType": "Organization",
+      "id": "FAC-NPHIES-001",
+      "name": "Velo Clinic Riyadh",
+      "identifier": [
+        {
+          "system": "nphies/provider-id",
+          "value": "NPHIES-FAC-001"
+        }
+      ]
+    }
+  },
+  "payer_rules": [
+    {
+      "rule_id": "NPHIES-TEST-001",
+      "payer_id": "TAWUNIYA",
+      "layer": "claim_validation",
+      "message": "NPHIES claims require validation before submission."
+    }
+  ]
+}

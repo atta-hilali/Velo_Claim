@@ -2,6 +2,7 @@
   "case_id": "CASE-CONSULT-001",
   "trigger_source": "VELO_DOCTOR_APPROVED_ENCOUNTER",
   "use_medgemma": true,
+  "fhir_auth_type": "no_auth",
   "claim_format": "AUTO",
   "jurisdiction": "DUBAI",
   "encounter_package": {

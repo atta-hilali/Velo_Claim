@@ -22,11 +22,13 @@ import json
 import os
 import re
 import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from base64 import b64encode
-from datetime import UTC, datetime
+import uuid
+from base64 import b64encode, urlsafe_b64encode
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from pprint import pprint
 from typing import Any, Literal, TypedDict
@@ -122,6 +124,9 @@ class ClaimPreparationState(TypedDict, total=False):
     fhir_client_auth_method: str
     fhir_scope: str
     fhir_audience: str
+    fhir_private_key_path: str
+    fhir_key_id: str
+    fhir_jwks_url: str
 
     # Runtime configuration: jurisdiction-specific claim export
     claim_format: str
@@ -629,6 +634,66 @@ def post_form(
         raise RuntimeError(f"POST {url} failed with HTTP {exc.code}: {body}") from exc
 
 
+def base64url(data: bytes) -> str:
+    return urlsafe_b64encode(data).rstrip(b"=").decode("ascii")
+
+
+def resolve_local_path(path: str) -> Path:
+    candidate = Path(path)
+    if not candidate.is_absolute():
+        candidate = Path(__file__).resolve().parent / candidate
+    return candidate
+
+
+def build_private_key_jwt_assertion(
+    *,
+    token_url: str,
+    client_id: str,
+    private_key_path: str,
+    key_id: str,
+    jwks_url: str | None = None,
+    audience: str | None = None,
+) -> str:
+    from cryptography.hazmat.primitives import hashes, serialization
+    from cryptography.hazmat.primitives.asymmetric import padding
+
+    now = int(time.time())
+    header = {
+        "alg": "RS384",
+        "typ": "JWT",
+        "kid": key_id,
+    }
+    if jwks_url:
+        header["jku"] = jwks_url
+    payload = {
+        "iss": client_id,
+        "sub": client_id,
+        "aud": audience or token_url,
+        "jti": str(uuid.uuid4()),
+        "nbf": now,
+        "iat": now,
+        "exp": now + 300,
+    }
+
+    signing_input = ".".join(
+        [
+            base64url(json.dumps(header, separators=(",", ":")).encode("utf-8")),
+            base64url(json.dumps(payload, separators=(",", ":")).encode("utf-8")),
+        ]
+    ).encode("ascii")
+
+    private_key = serialization.load_pem_private_key(
+        resolve_local_path(private_key_path).read_bytes(),
+        password=None,
+    )
+    signature = private_key.sign(
+        signing_input,
+        padding.PKCS1v15(),
+        hashes.SHA384(),
+    )
+    return f"{signing_input.decode('ascii')}.{base64url(signature)}"
+
+
 def fhir_backend_access_token(state: ClaimPreparationState) -> str | None:
     static_token = state.get("fhir_access_token") or os.getenv("FHIR_ACCESS_TOKEN")
     auth_type = (
@@ -641,7 +706,13 @@ def fhir_backend_access_token(state: ClaimPreparationState) -> str | None:
         return static_token
     if auth_type in {"", "none", "no_auth"}:
         return None
-    if auth_type not in {"client_credentials", "backend", "backend_services"}:
+    if auth_type not in {
+        "client_credentials",
+        "backend",
+        "backend_services",
+        "backend_services_jwt",
+        "private_key_jwt",
+    }:
         return None
 
     token_url = state.get("fhir_token_url") or os.getenv("FHIR_TOKEN_URL")
@@ -654,31 +725,58 @@ def fhir_backend_access_token(state: ClaimPreparationState) -> str | None:
     ).strip().lower()
     scope = state.get("fhir_scope") or os.getenv("FHIR_SCOPE") or DEFAULT_FHIR_SCOPE
     audience = state.get("fhir_audience") or os.getenv("FHIR_AUDIENCE")
+    private_key_path = state.get("fhir_private_key_path") or os.getenv("FHIR_PRIVATE_KEY_PATH")
+    key_id = state.get("fhir_key_id") or os.getenv("FHIR_KEY_ID")
+    jwks_url = state.get("fhir_jwks_url") or os.getenv("FHIR_JWKS_URL")
+
+    if auth_type in {"backend_services_jwt", "private_key_jwt"}:
+        client_auth_method = "private_key_jwt"
 
     if not token_url:
-        raise RuntimeError("FHIR_AUTH_TYPE=client_credentials requires FHIR_TOKEN_URL.")
+        raise RuntimeError("FHIR backend auth requires FHIR_TOKEN_URL.")
     if not client_id:
-        raise RuntimeError("FHIR_AUTH_TYPE=client_credentials requires FHIR_CLIENT_ID.")
-    if not client_secret:
-        raise RuntimeError("FHIR_AUTH_TYPE=client_credentials requires FHIR_CLIENT_SECRET.")
+        raise RuntimeError("FHIR backend auth requires FHIR_CLIENT_ID.")
 
     form = {
         "grant_type": "client_credentials",
         "scope": scope,
     }
-    if audience:
-        form["aud"] = audience
 
     headers: dict[str, str] = {}
     if client_auth_method == "client_secret_basic":
+        if not client_secret:
+            raise RuntimeError("FHIR_CLIENT_AUTH_METHOD=client_secret_basic requires FHIR_CLIENT_SECRET.")
         credentials = f"{client_id}:{client_secret}".encode("utf-8")
         headers["Authorization"] = f"Basic {b64encode(credentials).decode('ascii')}"
+        if audience:
+            form["aud"] = audience
     elif client_auth_method == "client_secret_post":
+        if not client_secret:
+            raise RuntimeError("FHIR_CLIENT_AUTH_METHOD=client_secret_post requires FHIR_CLIENT_SECRET.")
         form["client_id"] = client_id
         form["client_secret"] = client_secret
+        if audience:
+            form["aud"] = audience
+    elif client_auth_method == "private_key_jwt":
+        if not private_key_path:
+            raise RuntimeError("FHIR_CLIENT_AUTH_METHOD=private_key_jwt requires FHIR_PRIVATE_KEY_PATH.")
+        if not key_id:
+            raise RuntimeError("FHIR_CLIENT_AUTH_METHOD=private_key_jwt requires FHIR_KEY_ID.")
+        form["client_assertion_type"] = (
+            "urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
+        )
+        form["client_assertion"] = build_private_key_jwt_assertion(
+            token_url=token_url,
+            client_id=client_id,
+            private_key_path=private_key_path,
+            key_id=key_id,
+            jwks_url=jwks_url,
+            audience=audience or token_url,
+        )
     else:
         raise RuntimeError(
-            "Unsupported FHIR_CLIENT_AUTH_METHOD. Use client_secret_basic or client_secret_post."
+            "Unsupported FHIR_CLIENT_AUTH_METHOD. Use client_secret_basic, "
+            "client_secret_post, or private_key_jwt."
         )
 
     token_response = post_form(url=token_url, form=form, headers=headers)
@@ -2139,13 +2237,230 @@ def activity_type_for_line(line: dict[str, Any], format_name: str) -> str:
     return "GENERIC"
 
 
+NPHIES_BASE_URL = "http://nphies.sa/fhir/ksa/nphies-fs"
+NPHIES_PROFILE_BUNDLE = f"{NPHIES_BASE_URL}/StructureDefinition/bundle"
+NPHIES_PROFILE_MESSAGE_HEADER = f"{NPHIES_BASE_URL}/StructureDefinition/message-header"
+NPHIES_PROFILE_PROFESSIONAL_CLAIM = f"{NPHIES_BASE_URL}/StructureDefinition/professional-claim"
+NPHIES_PROFILE_PATIENT = f"{NPHIES_BASE_URL}/StructureDefinition/patient"
+NPHIES_PROFILE_COVERAGE = f"{NPHIES_BASE_URL}/StructureDefinition/coverage"
+NPHIES_PROFILE_PRACTITIONER = f"{NPHIES_BASE_URL}/StructureDefinition/practitioner"
+NPHIES_PROFILE_PROVIDER_ORGANIZATION = f"{NPHIES_BASE_URL}/StructureDefinition/provider-organization"
+NPHIES_PROFILE_INSURER_ORGANIZATION = f"{NPHIES_BASE_URL}/StructureDefinition/insurer-organization"
+NPHIES_PROFILE_ENCOUNTER_CLAIM_AMB = f"{NPHIES_BASE_URL}/StructureDefinition/encounter-claim-AMB"
+NPHIES_EXTENSION_ENCOUNTER = f"{NPHIES_BASE_URL}/StructureDefinition/extension-encounter"
+NPHIES_MESSAGE_EVENT_SYSTEM = "http://nphies.sa/terminology/CodeSystem/ksa-message-events"
+NPHIES_PROVIDER_LICENSE_SYSTEM = "http://nphies.sa/license/provider-license"
+NPHIES_PAYER_LICENSE_SYSTEM = "http://nphies.sa/license/payer-license"
+NPHIES_PRACTITIONER_LICENSE_SYSTEM = "http://nphies.sa/license/practitioner-license"
+NPHIES_DIAGNOSIS_TYPE_SYSTEM = "http://nphies.sa/terminology/CodeSystem/diagnosis-type"
+NPHIES_PROCESS_MESSAGE_ENDPOINT = "https://nphies.sa/fhir/$process-message"
+DEFAULT_NPHIES_SOURCE_ENDPOINT = "https://velodoc.ai/fhir"
+CLAIM_TYPE_SYSTEM = "http://terminology.hl7.org/CodeSystem/claim-type"
+PROCESS_PRIORITY_SYSTEM = "http://terminology.hl7.org/CodeSystem/processpriority"
+SUBSCRIBER_RELATIONSHIP_SYSTEM = "http://terminology.hl7.org/CodeSystem/subscriber-relationship"
+
+
+def nphies_meta(profile: str) -> dict[str, Any]:
+    return {"profile": [profile]}
+
+
+def nphies_identifier(system: str, value: Any) -> dict[str, Any]:
+    return {
+        "use": "official",
+        "system": system,
+        "value": str(value or "UNKNOWN"),
+    }
+
+
+def nphies_entry(resource: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "fullUrl": f"{resource['resourceType']}/{resource['id']}",
+        "resource": resource,
+    }
+
+
+def nphies_message_id(claim_id: str, suffix: str) -> str:
+    return str(uuid.uuid5(uuid.NAMESPACE_URL, f"velo-claim:nphies:{claim_id}:{suffix}"))
+
+
+def nphies_org_id(prefix: str, value: Any) -> str:
+    token = normalize_token(str(value or prefix), prefix)
+    return f"{prefix}-{token}"[:64]
+
+
+def nphies_patient_identifier(patient: dict[str, Any]) -> dict[str, Any]:
+    patient_id = patient.get("emirates_id") or patient.get("member_id") or patient.get("id")
+    identifier_type = "NI" if str(patient_id or "").startswith("1") else "PRC"
+    return {
+        "use": "official",
+        "type": {
+            "coding": [
+                {
+                    "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+                    "code": identifier_type,
+                }
+            ]
+        },
+        "system": "http://nphies.sa/identifier/patient",
+        "value": str(patient_id or "UNKNOWN"),
+    }
+
+
+def human_name_from_source(
+    display_name: str | None,
+    source_names: list[dict[str, Any]] | None,
+) -> dict[str, Any]:
+    source_name = source_names[0] if source_names else {}
+    text = source_name.get("text") or display_name or ""
+    given = source_name.get("given")
+    family = source_name.get("family")
+
+    if not given or not family:
+        parts = [part for part in str(text).replace(".", " ").split() if part.lower() != "dr"]
+        if not given and len(parts) > 1:
+            given = parts[:-1]
+        if not family and parts:
+            family = parts[-1]
+
+    name = {"text": text or str(family or "")}
+    if family:
+        name["family"] = str(family)
+    if given:
+        name["given"] = [str(item) for item in given] if isinstance(given, list) else [str(given)]
+    if source_name.get("prefix"):
+        prefix = source_name["prefix"]
+        name["prefix"] = [str(item) for item in prefix] if isinstance(prefix, list) else [str(prefix)]
+    return name
+
+
+def build_nphies_practitioner(canonical_claim: dict[str, Any]) -> dict[str, Any]:
+    provider = canonical_claim["provider"]
+    source_provider = canonical_claim.get("source_resources", {}).get("provider", {})
+    license_number = provider.get("license_number") or provider.get("id")
+    return {
+        "resourceType": "Practitioner",
+        "id": provider.get("id") or nphies_org_id("PRAC", license_number),
+        "meta": nphies_meta(NPHIES_PROFILE_PRACTITIONER),
+        "identifier": [nphies_identifier(NPHIES_PRACTITIONER_LICENSE_SYSTEM, license_number)],
+        "active": True,
+        "name": [human_name_from_source(provider.get("name"), source_provider.get("name", []))],
+    }
+
+
+def build_nphies_provider_organization(canonical_claim: dict[str, Any]) -> dict[str, Any]:
+    provider = canonical_claim["provider"]
+    license_number = provider.get("facility_license_number") or provider.get("facility_id")
+    return {
+        "resourceType": "Organization",
+        "id": nphies_org_id("PROV", license_number),
+        "meta": nphies_meta(NPHIES_PROFILE_PROVIDER_ORGANIZATION),
+        "identifier": [nphies_identifier(NPHIES_PROVIDER_LICENSE_SYSTEM, license_number)],
+        "active": True,
+        "type": [
+            {
+                "coding": [
+                    {
+                        "system": "http://nphies.sa/terminology/CodeSystem/organization-type",
+                        "code": "prov",
+                        "display": "Healthcare Provider",
+                    }
+                ]
+            }
+        ],
+        "name": provider.get("facility_name") or provider.get("name") or "Provider Organization",
+    }
+
+
+def build_nphies_insurer_organization(canonical_claim: dict[str, Any]) -> dict[str, Any]:
+    payer = canonical_claim["payer"]
+    payer_license = payer.get("id") or payer.get("name")
+    return {
+        "resourceType": "Organization",
+        "id": nphies_org_id("INS", payer_license),
+        "meta": nphies_meta(NPHIES_PROFILE_INSURER_ORGANIZATION),
+        "identifier": [nphies_identifier(NPHIES_PAYER_LICENSE_SYSTEM, payer_license)],
+        "active": True,
+        "type": [
+            {
+                "coding": [
+                    {
+                        "system": "http://nphies.sa/terminology/CodeSystem/organization-type",
+                        "code": "ins",
+                        "display": "Insurance Company",
+                    }
+                ]
+            }
+        ],
+        "name": payer.get("name") or "Insurer Organization",
+    }
+
+
+def build_nphies_encounter(
+    canonical_claim: dict[str, Any],
+    provider_organization: dict[str, Any],
+    practitioner_resource: dict[str, Any],
+) -> dict[str, Any]:
+    source_encounter = canonical_claim["source_resources"]["encounter"]
+    period = source_encounter.get("period", {})
+    start = period.get("start") or f"{canonical_claim['service_date']}T00:00:00+03:00"
+    end = period.get("end") or (
+        datetime.fromisoformat(str(start).replace("Z", "+00:00")) + timedelta(minutes=30)
+    ).isoformat()
+    class_code = str(source_encounter.get("class", {}).get("code") or "AMB").upper()
+    return {
+        "resourceType": "Encounter",
+        "id": canonical_claim["encounter_id"],
+        "meta": nphies_meta(NPHIES_PROFILE_ENCOUNTER_CLAIM_AMB),
+        "identifier": [
+            {
+                "system": f"{NPHIES_BASE_URL}/identifier/encounter",
+                "value": canonical_claim["encounter_id"],
+            }
+        ],
+        "status": str(source_encounter.get("status") or "finished").lower(),
+        "class": {
+            "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+            "code": class_code,
+            "display": source_encounter.get("class", {}).get("display") or class_code,
+        },
+        "subject": {"reference": f"Patient/{canonical_claim['patient'].get('id')}"},
+        "period": {"start": start, "end": end},
+        "participant": [
+            {"individual": {"reference": f"Practitioner/{practitioner_resource['id']}"}}
+        ],
+        "serviceProvider": {"reference": f"Organization/{provider_organization['id']}"},
+    }
+
+
 def build_nphies_bundle(canonical_claim: dict[str, Any]) -> dict[str, Any]:
     claim_id = canonical_claim["claim_id"]
     created_at = canonical_claim["created_at"]
     claim_resource = json.loads(json.dumps(canonical_claim["fhir_claim"]))
-    claim_resource["meta"] = {
-        "profile": ["urn:velo-claim:nphies:fhir-r4:claim-draft"]
-    }
+    patient = canonical_claim["patient"]
+    payer = canonical_claim["payer"]
+    provider = canonical_claim["provider"]
+    provider_organization = build_nphies_provider_organization(canonical_claim)
+    insurer_organization = build_nphies_insurer_organization(canonical_claim)
+    practitioner_resource = build_nphies_practitioner(canonical_claim)
+    encounter_resource = build_nphies_encounter(
+        canonical_claim,
+        provider_organization,
+        practitioner_resource,
+    )
+
+    bundle_id = str(uuid.uuid4())
+    message_header_id = nphies_message_id(claim_id, "message-header")
+
+    claim_resource["meta"] = nphies_meta(NPHIES_PROFILE_PROFESSIONAL_CLAIM)
+    claim_resource["extension"] = [
+        *claim_resource.get("extension", []),
+        {
+            "url": NPHIES_EXTENSION_ENCOUNTER,
+            "valueReference": {"reference": f"Encounter/{encounter_resource['id']}"},
+        },
+    ]
+    claim_resource["provider"] = {"reference": f"Organization/{provider_organization['id']}"}
+    claim_resource["insurer"] = {"reference": f"Organization/{insurer_organization['id']}"}
     claim_resource["total"] = {
         "value": canonical_claim["amount"]["net"],
         "currency": canonical_claim["amount"]["currency"],
@@ -2153,63 +2468,94 @@ def build_nphies_bundle(canonical_claim: dict[str, Any]) -> dict[str, Any]:
     if canonical_claim.get("prior_auth", {}).get("ref"):
         claim_resource["preAuthRef"] = [canonical_claim["prior_auth"]["ref"]]
 
-    patient = canonical_claim["patient"]
-    payer = canonical_claim["payer"]
-    provider = canonical_claim["provider"]
+    patient_resource = {
+        "resourceType": "Patient",
+        "id": patient.get("id"),
+        "meta": nphies_meta(NPHIES_PROFILE_PATIENT),
+        "active": True,
+        "identifier": [nphies_patient_identifier(patient)],
+        "name": [
+            human_name_from_source(
+                patient.get("name"),
+                canonical_claim.get("source_resources", {}).get("patient", {}).get("name", []),
+            )
+        ],
+        "birthDate": patient.get("date_of_birth"),
+        "gender": patient.get("gender"),
+    }
+
+    coverage_resource = {
+        "resourceType": "Coverage",
+        "id": payer.get("coverage_id"),
+        "meta": nphies_meta(NPHIES_PROFILE_COVERAGE),
+        "status": str(payer.get("coverage_status") or "active").lower(),
+        "subscriberId": patient.get("member_id"),
+        "subscriber": {"reference": f"Patient/{patient.get('id')}"},
+        "beneficiary": {"reference": f"Patient/{patient.get('id')}"},
+        "relationship": {
+            "coding": [
+                {
+                    "system": SUBSCRIBER_RELATIONSHIP_SYSTEM,
+                    "code": "self",
+                    "display": "Self",
+                }
+            ]
+        },
+        "payor": [{"reference": f"Organization/{insurer_organization['id']}"}],
+    }
+    if payer.get("coverage_period"):
+        coverage_resource["period"] = payer["coverage_period"]
+
+    message_header = {
+        "resourceType": "MessageHeader",
+        "id": message_header_id,
+        "meta": nphies_meta(NPHIES_PROFILE_MESSAGE_HEADER),
+        "eventCoding": {
+            "system": NPHIES_MESSAGE_EVENT_SYSTEM,
+            "code": "claim-request",
+            "display": "Claim Request",
+        },
+        "destination": [
+            {
+                "endpoint": NPHIES_PROCESS_MESSAGE_ENDPOINT,
+                "receiver": {
+                    "type": "Organization",
+                    "identifier": nphies_identifier(
+                        NPHIES_PAYER_LICENSE_SYSTEM,
+                        payer.get("id"),
+                    ),
+                },
+            }
+        ],
+        "sender": {
+            "type": "Organization",
+            "identifier": nphies_identifier(
+                NPHIES_PROVIDER_LICENSE_SYSTEM,
+                provider.get("facility_license_number"),
+            ),
+        },
+        "source": {
+            "endpoint": os.getenv("NPHIES_SOURCE_ENDPOINT") or DEFAULT_NPHIES_SOURCE_ENDPOINT,
+            "name": provider.get("facility_name"),
+        },
+        "focus": [{"reference": f"Claim/{claim_id}"}],
+    }
 
     return {
         "resourceType": "Bundle",
+        "meta": nphies_meta(NPHIES_PROFILE_BUNDLE),
         "type": "message",
-        "id": f"BND-{claim_id}",
+        "id": bundle_id,
         "timestamp": created_at,
         "entry": [
-            {
-                "fullUrl": f"urn:uuid:messageheader-{claim_id}",
-                "resource": {
-                    "resourceType": "MessageHeader",
-                    "id": f"MSG-{claim_id}",
-                    "eventCoding": {
-                        "system": "urn:velo-claim:nphies:event",
-                        "code": "claim-submit",
-                        "display": "Claim submission",
-                    },
-                    "source": {"name": provider.get("facility_name")},
-                    "destination": [{"name": payer.get("name")}],
-                    "focus": [{"reference": f"Claim/{claim_id}"}],
-                },
-            },
-            {
-                "fullUrl": f"urn:uuid:patient-{patient.get('id')}",
-                "resource": {
-                    "resourceType": "Patient",
-                    "id": patient.get("id"),
-                    "identifier": [
-                        {
-                            "system": "urn:velo-claim:patient-identifier",
-                            "value": patient.get("member_id")
-                            or patient.get("emirates_id")
-                            or patient.get("id"),
-                        }
-                    ],
-                    "name": [{"text": patient.get("name")}],
-                    "birthDate": patient.get("date_of_birth"),
-                    "gender": patient.get("gender"),
-                },
-            },
-            {
-                "fullUrl": f"urn:uuid:coverage-{payer.get('coverage_id')}",
-                "resource": {
-                    "resourceType": "Coverage",
-                    "id": payer.get("coverage_id"),
-                    "status": str(payer.get("coverage_status") or "active").lower(),
-                    "subscriberId": patient.get("member_id"),
-                    "payor": [{"display": payer.get("name")}],
-                },
-            },
-            {
-                "fullUrl": f"urn:uuid:claim-{claim_id}",
-                "resource": claim_resource,
-            },
+            nphies_entry(message_header),
+            nphies_entry(provider_organization),
+            nphies_entry(insurer_organization),
+            nphies_entry(practitioner_resource),
+            nphies_entry(patient_resource),
+            nphies_entry(coverage_resource),
+            nphies_entry(encounter_resource),
+            nphies_entry(claim_resource),
         ],
     }
 
@@ -2438,7 +2784,9 @@ def build_submission_payload(
         "payload_type": payload_type,
         "payload": payload,
         "warnings": claim_format_warnings(canonical_claim, format_name),
-        "schema_status": "draft_adapter_not_payer_certified",
+        "schema_status": "nphies_sandbox_ready"
+        if format_name == "NPHIES"
+        else "draft_adapter_not_payer_certified",
     }
 
 
@@ -2467,7 +2815,21 @@ def build_fhir_claim(
                 ],
                 "text": item["description"],
             },
-            "type": [{"text": item.get("type", "principal")}],
+            "type": [
+                {
+                    "coding": [
+                        {
+                            "system": NPHIES_DIAGNOSIS_TYPE_SYSTEM,
+                            "code": str(item.get("type") or "principal").lower(),
+                            "display": (
+                                "Principal Diagnosis"
+                                if str(item.get("type") or "principal").lower() == "principal"
+                                else str(item.get("type") or "secondary").title()
+                            ),
+                        }
+                    ]
+                }
+            ],
         }
         for index, item in enumerate(diagnosis_codes)
     ]
@@ -2518,13 +2880,29 @@ def build_fhir_claim(
         "resourceType": "Claim",
         "id": claim_id,
         "status": "active",
-        "type": {"text": "professional"},
+        "type": {
+            "coding": [
+                {
+                    "system": CLAIM_TYPE_SYSTEM,
+                    "code": "professional",
+                    "display": "Professional",
+                }
+            ]
+        },
         "use": "claim",
         "patient": {"reference": f"Patient/{patient.get('id')}"},
         "created": created_at.split("T")[0],
         "insurer": {"display": payer_display(coverage)},
         "provider": {"reference": f"Practitioner/{provider.get('id')}"},
-        "priority": {"text": "normal"},
+        "priority": {
+            "coding": [
+                {
+                    "system": PROCESS_PRIORITY_SYSTEM,
+                    "code": "normal",
+                    "display": "Normal",
+                }
+            ]
+        },
         "diagnosis": diagnosis,
         "procedure": procedures,
         "insurance": [
@@ -2744,6 +3122,10 @@ def supervisor_agent(state: ClaimPreparationState) -> ClaimPreparationState:
         or DEFAULT_FHIR_CLIENT_AUTH_METHOD,
         "fhir_scope": state.get("fhir_scope") or os.getenv("FHIR_SCOPE") or DEFAULT_FHIR_SCOPE,
         "fhir_audience": state.get("fhir_audience") or os.getenv("FHIR_AUDIENCE", ""),
+        "fhir_private_key_path": state.get("fhir_private_key_path")
+        or os.getenv("FHIR_PRIVATE_KEY_PATH", ""),
+        "fhir_key_id": state.get("fhir_key_id") or os.getenv("FHIR_KEY_ID", ""),
+        "fhir_jwks_url": state.get("fhir_jwks_url") or os.getenv("FHIR_JWKS_URL", ""),
         "claim_format": state.get("claim_format")
         or os.getenv("DEFAULT_CLAIM_FORMAT")
         or DEFAULT_CLAIM_FORMAT,
@@ -2883,6 +3265,10 @@ def start_claim_preparation(state: ClaimPreparationState) -> ClaimPreparationSta
             or DEFAULT_FHIR_CLIENT_AUTH_METHOD,
             "fhir_scope": state.get("fhir_scope") or os.getenv("FHIR_SCOPE") or DEFAULT_FHIR_SCOPE,
             "fhir_audience": state.get("fhir_audience") or os.getenv("FHIR_AUDIENCE", ""),
+            "fhir_private_key_path": state.get("fhir_private_key_path")
+            or os.getenv("FHIR_PRIVATE_KEY_PATH", ""),
+            "fhir_key_id": state.get("fhir_key_id") or os.getenv("FHIR_KEY_ID", ""),
+            "fhir_jwks_url": state.get("fhir_jwks_url") or os.getenv("FHIR_JWKS_URL", ""),
             "claim_format": state.get("claim_format")
             or os.getenv("DEFAULT_CLAIM_FORMAT")
             or DEFAULT_CLAIM_FORMAT,

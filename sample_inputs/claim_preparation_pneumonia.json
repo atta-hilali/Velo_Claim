@@ -2,6 +2,7 @@
   "case_id": "CASE-002",
   "trigger_source": "RCM_MANUAL_UPLOAD",
   "use_medgemma": true,
+  "fhir_auth_type": "no_auth",
   "claim_format": "CANONICAL",
   "jurisdiction": "AUTO",
   "encounter_package": {

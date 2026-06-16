@@ -1,0 +1,840 @@
+{
+  "_meta": {
+    "version": "1.1.1",
+    "last_updated": "2026-06-12",
+    "merged_from": [
+      "local MVP default rules",
+      "C:/Users/User/Downloads/default_rules.json"
+    ],
+    "sources": [
+      "DOH Claims & Adjudication Rules V2025.1 (doh.gov.ae)",
+      "Shafafiya Prior Request/Authorization data dictionary (doh.gov.ae)",
+      "CCHI/NPHIES Payer Qualification Programme",
+      "DAMAN healthcare FAQ (damanhealth.ae)",
+      "DHA eClaimLink provider documentation"
+    ],
+    "note": "Structural and claim-logic rules derived from publicly available regulatory documents. CPT-level prior auth code lists per payer (Tawuniya, BUPA Arabia, MedGulf) are only available after provider onboarding. Replace placeholder CPT lists with actual payer-issued lists once contracts are signed.",
+    "scoring_note": "Each rule may define max_deduction_per_layer; the validation score caps total applied penalties per validation layer."
+  },
+  "rules": [
+    {
+      "rule_id": "DEFAULT-TIMELY-001",
+      "payer_id": "default",
+      "version": "2026.06.12",
+      "status": "ACTIVE",
+      "rule_type": "TIMELY_FILING",
+      "effective_from": "2026-01-01",
+      "condition": {},
+      "action": {
+        "limit_days": 90
+      },
+      "severity": "FAIL",
+      "message": "Claim must be submitted within the payer timely filing window.",
+      "max_deduction_per_layer": 10.0
+    },
+    {
+      "rule_id": "TAW-PRIOR-99214-001",
+      "payer_id": "tawuniya",
+      "version": "2026.06.12",
+      "status": "ACTIVE",
+      "rule_type": "PRIOR_AUTH",
+      "effective_from": "2026-01-01",
+      "condition": {
+        "cpt": "99214"
+      },
+      "action": {},
+      "severity": "FAIL",
+      "message": "Tawuniya requires prior authorization for CPT 99214 in this MVP rule set.",
+      "max_deduction_per_layer": 25.0
+    },
+    {
+      "rule_id": "TAW-CPT-ICD-99214-001",
+      "payer_id": "tawuniya",
+      "version": "2026.06.12",
+      "status": "ACTIVE",
+      "rule_type": "CPT_REQUIRES_ICD",
+      "effective_from": "2026-01-01",
+      "condition": {
+        "cpt": "99214"
+      },
+      "action": {
+        "required_icd_prefixes": [
+          "I10",
+          "I11"
+        ]
+      },
+      "severity": "FAIL",
+      "message": "CPT 99214 requires a hypertension-related diagnosis for Tawuniya.",
+      "max_deduction_per_layer": 25.0
+    },
+    {
+      "rule_id": "TAW-DOC-001",
+      "payer_id": "tawuniya",
+      "version": "2026.06.12",
+      "status": "ACTIVE",
+      "rule_type": "DOCUMENTATION",
+      "effective_from": "2026-01-01",
+      "condition": {},
+      "action": {
+        "required_documents": [
+          "soap_note"
+        ]
+      },
+      "severity": "FAIL",
+      "message": "Tawuniya requires a SOAP note attachment for this MVP rule set.",
+      "max_deduction_per_layer": 25.0
+    },
+    {
+      "_comment_group": "ELIGIBILITY RULES \u2014 apply to all GCC payers",
+      "rule_id": "GCC-ELIG-001",
+      "payer_id": "*",
+      "version": "1.0",
+      "status": "ACTIVE",
+      "rule_type": "ELIGIBILITY",
+      "jurisdiction": "GCC",
+      "specialty": null,
+      "condition": {
+        "field": "coverage_status",
+        "operator": "must_equal",
+        "value": "active"
+      },
+      "action": {
+        "action_type": "BLOCK",
+        "requires_llm": false,
+        "fix_template": "Verify patient insurance card validity and check with payer portal before service delivery. Do not submit against inactive coverage."
+      },
+      "severity": "FAIL",
+      "message": "Patient coverage is not active. Submitting against inactive coverage will result in an instant denial with no recovery path.",
+      "max_deduction_per_layer": 30.0
+    },
+    {
+      "rule_id": "GCC-ELIG-002",
+      "payer_id": "*",
+      "version": "1.0",
+      "status": "ACTIVE",
+      "rule_type": "ELIGIBILITY",
+      "jurisdiction": "GCC",
+      "specialty": null,
+      "condition": {
+        "field": "coverage_period",
+        "operator": "must_include_service_date",
+        "value": null
+      },
+      "action": {
+        "action_type": "BLOCK",
+        "requires_llm": false,
+        "fix_template": "Confirm coverage period with the payer. Check if the patient has a different active policy for the service date."
+      },
+      "severity": "FAIL",
+      "message": "Service date falls outside the coverage effective period. Coverage may have lapsed, not yet started, or renewed under a different policy ID.",
+      "max_deduction_per_layer": 30.0
+    },
+    {
+      "_comment_group": "TIMELY FILING RULES \u2014 per payer, sourced from payer contracts",
+      "rule_id": "TWN-TF-001",
+      "payer_id": "tawuniya_sa",
+      "version": "1.0",
+      "status": "ACTIVE",
+      "rule_type": "TIMELY_FILING",
+      "jurisdiction": "KSA",
+      "specialty": null,
+      "effective_from": "2024-01-01",
+      "effective_to": null,
+      "condition": {
+        "field": "days_since_service",
+        "operator": "greater_than"
+      },
+      "action": {
+        "action_type": "BLOCK",
+        "limit_days": 30,
+        "requires_llm": false,
+        "fix_template": "Tawuniya requires claim submission within 30 days of service date. File immediately or check if your specific contract extends this to 60 days."
+      },
+      "severity": "FAIL",
+      "message": "Claim exceeds Tawuniya's 30-day timely filing limit. Once this window closes, the denial is final \u2014 no recovery or appeal path exists.",
+      "max_deduction_per_layer": 10.0
+    },
+    {
+      "rule_id": "DAM-TF-001",
+      "payer_id": "daman_ae",
+      "version": "1.0",
+      "status": "ACTIVE",
+      "rule_type": "TIMELY_FILING",
+      "jurisdiction": "AE_AUH",
+      "specialty": null,
+      "effective_from": "2024-01-01",
+      "effective_to": null,
+      "condition": {
+        "field": "days_since_service",
+        "operator": "greater_than"
+      },
+      "action": {
+        "action_type": "BLOCK",
+        "limit_days": 60,
+        "requires_llm": false,
+        "fix_template": "DAMAN requires claims within 60 days of service date. For resubmissions after denial, the clock resets from the date of the original denial."
+      },
+      "severity": "FAIL",
+      "message": "Claim exceeds DAMAN's 60-day timely filing limit.",
+      "max_deduction_per_layer": 10.0
+    },
+    {
+      "rule_id": "DHA-TF-001",
+      "payer_id": "*",
+      "version": "1.0",
+      "status": "ACTIVE",
+      "rule_type": "TIMELY_FILING",
+      "jurisdiction": "AE_DXB",
+      "specialty": null,
+      "effective_from": "2024-01-01",
+      "effective_to": null,
+      "condition": {
+        "field": "days_since_service",
+        "operator": "greater_than"
+      },
+      "action": {
+        "action_type": "BLOCK",
+        "limit_days": 90,
+        "requires_llm": false,
+        "fix_template": "DHA eClaimLink requires claims within 90 days of service. For resubmissions, file within 30 days of the denial date."
+      },
+      "severity": "FAIL",
+      "message": "Claim exceeds the 90-day DHA eClaimLink timely filing limit.",
+      "max_deduction_per_layer": 10.0
+    },
+    {
+      "_comment_group": "PRIOR AUTHORIZATION \u2014 NPHIES/KSA. Note: full CPT lists require payer contract. These represent well-known high-cost/elective service categories.",
+      "rule_id": "TWN-AUTH-001",
+      "payer_id": "tawuniya_sa",
+      "version": "1.0",
+      "status": "ACTIVE",
+      "rule_type": "PRIOR_AUTHORIZATION",
+      "jurisdiction": "KSA",
+      "specialty": null,
+      "effective_from": "2024-01-01",
+      "effective_to": null,
+      "condition": {
+        "field": "procedure_codes",
+        "operator": "requires_auth_if",
+        "value": [
+          "27447",
+          "27446",
+          "27440"
+        ],
+        "description": "Total and partial knee arthroplasty"
+      },
+      "action": {
+        "action_type": "BLOCK",
+        "requires_llm": false,
+        "fix_template": "Submit prior authorization request via NPHIES priorauth-request Bundle before scheduling surgery. Reference Tawuniya surgical policy. PA typically requires: surgeon report, imaging (X-ray/MRI), failed conservative management evidence (min 6 months), and BMI documentation."
+      },
+      "severity": "FAIL",
+      "message": "CPT {cpt} (knee arthroplasty) requires prior authorization under Tawuniya. Retroactive authorization is not permitted under KSA CCHI regulations.",
+      "max_deduction_per_layer": 25.0
+    },
+    {
+      "rule_id": "TWN-AUTH-002",
+      "payer_id": "tawuniya_sa",
+      "version": "1.0",
+      "status": "ACTIVE",
+      "rule_type": "PRIOR_AUTHORIZATION",
+      "jurisdiction": "KSA",
+      "specialty": null,
+      "effective_from": "2024-01-01",
+      "effective_to": null,
+      "condition": {
+        "field": "procedure_codes",
+        "operator": "requires_auth_if",
+        "value": [
+          "27130",
+          "27132",
+          "27134"
+        ],
+        "description": "Hip arthroplasty procedures"
+      },
+      "action": {
+        "action_type": "BLOCK",
+        "requires_llm": false,
+        "fix_template": "Submit PA via NPHIES. Required supporting documents: orthopaedic surgeon clinical report, AP pelvis X-ray, failed physiotherapy course evidence."
+      },
+      "severity": "FAIL",
+      "message": "CPT {cpt} (hip arthroplasty) requires prior authorization under Tawuniya.",
+      "max_deduction_per_layer": 25.0
+    },
+    {
+      "rule_id": "TWN-AUTH-003",
+      "payer_id": "tawuniya_sa",
+      "version": "1.0",
+      "status": "ACTIVE",
+      "rule_type": "PRIOR_AUTHORIZATION",
+      "jurisdiction": "KSA",
+      "specialty": null,
+      "effective_from": "2024-01-01",
+      "effective_to": null,
+      "condition": {
+        "field": "procedure_codes",
+        "operator": "requires_auth_if",
+        "value": [
+          "70553",
+          "70552",
+          "70551",
+          "73723",
+          "73721",
+          "73722"
+        ],
+        "description": "MRI brain and MRI joint studies"
+      },
+      "action": {
+        "action_type": "BLOCK",
+        "requires_llm": false,
+        "fix_template": "Obtain PA before MRI. Attach clinical indication letter from requesting physician, failed conservative management or prior imaging results. Emergency MRI under clinical urgency criteria may qualify for expedited PA."
+      },
+      "severity": "FAIL",
+      "message": "MRI studies (CPT {cpt}) require prior authorization under Tawuniya. This is one of the highest-frequency denial causes in KSA.",
+      "max_deduction_per_layer": 25.0
+    },
+    {
+      "rule_id": "TWN-AUTH-004",
+      "payer_id": "tawuniya_sa",
+      "version": "1.0",
+      "status": "ACTIVE",
+      "rule_type": "PRIOR_AUTHORIZATION",
+      "jurisdiction": "KSA",
+      "specialty": null,
+      "effective_from": "2024-01-01",
+      "effective_to": null,
+      "condition": {
+        "field": "procedure_codes",
+        "operator": "requires_auth_if",
+        "value": [
+          "43239",
+          "43240",
+          "43249",
+          "47562",
+          "47563",
+          "47564"
+        ],
+        "description": "GI endoscopy and laparoscopic cholecystectomy"
+      },
+      "action": {
+        "action_type": "BLOCK",
+        "requires_llm": false,
+        "fix_template": "Submit PA via NPHIES institutional-priorauth profile. Attach gastroenterology/surgical consult note and clinical indication."
+      },
+      "severity": "FAIL",
+      "message": "CPT {cpt} (GI procedure) requires prior authorization under Tawuniya.",
+      "max_deduction_per_layer": 25.0
+    },
+    {
+      "_comment_group": "PRIOR AUTHORIZATION \u2014 DAMAN / Shafafiya Abu Dhabi. Source: damanhealth.ae FAQ and DOH Shafafiya dictionary.",
+      "rule_id": "DAM-AUTH-001",
+      "payer_id": "daman_ae",
+      "version": "1.0",
+      "status": "ACTIVE",
+      "rule_type": "PRIOR_AUTHORIZATION",
+      "jurisdiction": "AE_AUH",
+      "specialty": null,
+      "effective_from": "2024-01-01",
+      "effective_to": null,
+      "condition": {
+        "field": "encounter_type",
+        "operator": "requires_auth_if",
+        "value": [
+          "inpatient",
+          "IMP",
+          "3",
+          "4"
+        ],
+        "description": "All planned inpatient admissions"
+      },
+      "action": {
+        "action_type": "BLOCK",
+        "requires_llm": false,
+        "fix_template": "Submit PriorRequest via Shafafiya OpenJet before admission. Emergency admissions are exempt but must be notified to DAMAN within 24 hours of admission."
+      },
+      "severity": "FAIL",
+      "message": "Planned inpatient admission (EncounterType IMP) requires prior authorization from DAMAN. Emergency admissions are exempt \u2014 notification within 24h is required instead.",
+      "max_deduction_per_layer": 25.0
+    },
+    {
+      "rule_id": "DAM-AUTH-002",
+      "payer_id": "daman_ae",
+      "version": "1.0",
+      "status": "ACTIVE",
+      "rule_type": "PRIOR_AUTHORIZATION",
+      "jurisdiction": "AE_AUH",
+      "specialty": "physiotherapy",
+      "effective_from": "2024-01-01",
+      "effective_to": null,
+      "condition": {
+        "field": "procedure_codes",
+        "operator": "requires_auth_if_over_threshold",
+        "value": [
+          "97110",
+          "97530",
+          "97140",
+          "97012"
+        ],
+        "threshold_units": 6,
+        "description": "Physiotherapy sessions beyond the initial 6 sessions"
+      },
+      "action": {
+        "action_type": "BLOCK",
+        "requires_llm": false,
+        "fix_template": "Submit PA for physiotherapy continuation after 6 sessions. Attach physiotherapist progress report showing functional improvement and remaining treatment goals. DAMAN requires objective outcome measures (VAS score, ROM measurements)."
+      },
+      "severity": "FAIL",
+      "message": "Physiotherapy beyond 6 sessions requires prior authorization from DAMAN. Per damanhealth.ae: physiotherapy is covered but requires pre-authorization.",
+      "max_deduction_per_layer": 25.0
+    },
+    {
+      "rule_id": "DAM-AUTH-003",
+      "payer_id": "daman_ae",
+      "version": "1.0",
+      "status": "ACTIVE",
+      "rule_type": "PRIOR_AUTHORIZATION",
+      "jurisdiction": "AE_AUH",
+      "specialty": null,
+      "effective_from": "2024-01-01",
+      "effective_to": null,
+      "condition": {
+        "field": "encounter_type",
+        "operator": "must_not_equal",
+        "value": "7",
+        "description": "EncounterType=7 (network verification) cannot be used for PA"
+      },
+      "action": {
+        "action_type": "BLOCK",
+        "requires_llm": false,
+        "fix_template": "EncounterType=7 is reserved for network/access verification only. Use the correct EncounterType for the actual service being provided. Per Shafafiya data dictionary: authorization for EncounterType=7 is not allowed."
+      },
+      "severity": "FAIL",
+      "message": "Invalid EncounterType=7 used in PA request. Per DOH Shafafiya rules: authorization for EncounterType=7 is not allowed. Network access verification must use a separate transaction.",
+      "max_deduction_per_layer": 25.0
+    },
+    {
+      "_comment_group": "SHAFAFIYA/DOH ADJUDICATION RULES \u2014 sourced from DOH Claims & Adjudication Rules V2025.1",
+      "rule_id": "DOH-ADJ-001",
+      "payer_id": "*",
+      "version": "V2025.1",
+      "status": "ACTIVE",
+      "rule_type": "PAYER_RULES",
+      "jurisdiction": "AE_AUH",
+      "specialty": null,
+      "effective_from": "2025-01-01",
+      "effective_to": null,
+      "condition": {
+        "field": "activity_type",
+        "operator": "equals",
+        "value": "10",
+        "description": "Generic drug activity type"
+      },
+      "action": {
+        "action_type": "BLOCK",
+        "requires_llm": false,
+        "fix_template": "For generic drugs (ActivityType=10): DenialCode field must be empty and PaymentAmount must be empty in the PA response. If payer responds with a trade drug substitution, PaymentAmount must have a value and DenialCode must be empty. Per DOH Shafafiya data dictionary."
+      },
+      "severity": "FAIL",
+      "message": "Generic drug (ActivityType=10) claim has incorrect field population. Per Shafafiya rules: DenialCode and PaymentAmount must be empty for generic drug activities.",
+      "max_deduction_per_layer": 25.0
+    },
+    {
+      "rule_id": "DOH-ADJ-002",
+      "payer_id": "*",
+      "version": "V2025.1",
+      "status": "ACTIVE",
+      "rule_type": "PAYER_RULES",
+      "jurisdiction": "AE_AUH",
+      "specialty": null,
+      "effective_from": "2025-01-01",
+      "effective_to": null,
+      "condition": {
+        "field": "encounter_type_inpatient_drug",
+        "operator": "check_upp_threshold",
+        "value": {
+          "encounter_types": [
+            "inpatient",
+            "long_term_care",
+            "IMP"
+          ],
+          "description": "Unified Procurement Programme (UPP) drug rules for inpatient"
+        }
+      },
+      "action": {
+        "action_type": "WARN",
+        "requires_llm": false,
+        "fix_template": "Drugs used in Inpatient and Long Term Care encounters are excluded from UPP reimbursement. For daycase encounters only the markup amount above AED 500 threshold is reimbursed separately. Verify drug coding against DOH Drug List on Shafafiya portal before submission."
+      },
+      "severity": "WARN",
+      "message": "Inpatient drug billing may be subject to UPP (Unified Procurement Programme) rules effective 2025. Per DOH Claims & Adjudication Rules V2025.1 Circular USO/144/2024.",
+      "max_deduction_per_layer": 25.0
+    },
+    {
+      "rule_id": "DOH-ADJ-003",
+      "payer_id": "*",
+      "version": "V2025.1",
+      "status": "ACTIVE",
+      "rule_type": "PAYER_RULES",
+      "jurisdiction": "AE_AUH",
+      "specialty": null,
+      "effective_from": "2025-01-01",
+      "effective_to": null,
+      "condition": {
+        "field": "modifier",
+        "operator": "check_modifier_25",
+        "value": "25"
+      },
+      "action": {
+        "action_type": "FIX",
+        "requires_llm": false,
+        "fix_template": "Modifier 25 usage is subject to DOH adjudication edit rules (Section 5.4.1 of V2025.1). Ensure the E&M service is separately identifiable from any procedure performed on the same day. Attach supporting documentation."
+      },
+      "severity": "WARN",
+      "message": "Modifier 25 detected. DOH adjudication rules apply specific edits to modifier 25 use. Verify documentation supports a separately identifiable E&M service on the same date as a procedure.",
+      "max_deduction_per_layer": 25.0
+    },
+    {
+      "_comment_group": "CODING RULES \u2014 GCC-applicable CPT/ICD logic",
+      "rule_id": "GCC-CODE-001",
+      "payer_id": "*",
+      "version": "1.0",
+      "status": "ACTIVE",
+      "rule_type": "CPT_REQUIRES_ICD",
+      "jurisdiction": "GCC",
+      "specialty": "orthopaedics",
+      "effective_from": "2024-01-01",
+      "effective_to": null,
+      "condition": {
+        "cpt": "27447",
+        "description": "Total knee arthroplasty requires OA or post-traumatic arthritis diagnosis"
+      },
+      "action": {
+        "action_type": "BLOCK",
+        "required_icd_prefixes": [
+          "M17",
+          "M16",
+          "S72",
+          "M05",
+          "M06"
+        ],
+        "requires_llm": false,
+        "fix_template": "CPT 27447 (total knee arthroplasty) requires a diagnosis of osteoarthritis (M17.x), rheumatoid arthritis (M05/M06), or post-traumatic arthritis. Add the appropriate ICD-10 code or reconsider the procedure code."
+      },
+      "severity": "FAIL",
+      "message": "CPT 27447 requires a matching arthritis or joint disease diagnosis code (M16/M17 series or post-traumatic). Missing or mismatched diagnosis will cause payer denial on medical necessity grounds.",
+      "max_deduction_per_layer": 25.0
+    },
+    {
+      "rule_id": "GCC-CODE-002",
+      "payer_id": "*",
+      "version": "1.0",
+      "status": "ACTIVE",
+      "rule_type": "CPT_REQUIRES_ICD",
+      "jurisdiction": "GCC",
+      "specialty": "cardiology",
+      "effective_from": "2024-01-01",
+      "effective_to": null,
+      "condition": {
+        "cpt": "93306",
+        "description": "Echocardiography with Doppler requires cardiac diagnosis"
+      },
+      "action": {
+        "action_type": "BLOCK",
+        "required_icd_prefixes": [
+          "I05",
+          "I06",
+          "I07",
+          "I08",
+          "I20",
+          "I21",
+          "I25",
+          "I34",
+          "I35",
+          "I36",
+          "I42",
+          "I44",
+          "I48",
+          "I50"
+        ],
+        "requires_llm": false,
+        "fix_template": "Echocardiography (CPT 93306) requires a cardiac diagnosis in the I-chapter of ICD-10. Ensure the primary or secondary diagnosis supports the clinical indication for echo."
+      },
+      "severity": "FAIL",
+      "message": "Echocardiography (CPT 93306) lacks a supporting cardiac diagnosis code. Payer may deny as not medically necessary without documented cardiac indication.",
+      "max_deduction_per_layer": 25.0
+    },
+    {
+      "rule_id": "GCC-CODE-003",
+      "payer_id": "*",
+      "version": "1.0",
+      "status": "ACTIVE",
+      "rule_type": "CPT_REQUIRES_ICD",
+      "jurisdiction": "GCC",
+      "specialty": null,
+      "effective_from": "2024-01-01",
+      "effective_to": null,
+      "condition": {
+        "cpt_range": [
+          "70551",
+          "70552",
+          "70553"
+        ],
+        "description": "Brain MRI requires neurological or oncological indication"
+      },
+      "action": {
+        "action_type": "BLOCK",
+        "required_icd_prefixes": [
+          "G35",
+          "G40",
+          "G43",
+          "G47",
+          "C71",
+          "C72",
+          "D33",
+          "I60",
+          "I61",
+          "I63",
+          "I67",
+          "G20",
+          "G30",
+          "R51",
+          "R55"
+        ],
+        "requires_llm": true,
+        "llm_prompt_key": "brain_mri_indication_check",
+        "fix_template": "Brain MRI requires documented neurological, oncological, or vascular indication. Ensure the diagnosis code matches the clinical reason for imaging documented in the referral or SOAP note."
+      },
+      "severity": "FAIL",
+      "message": "Brain MRI (CPT 70551-70553) lacks a documented neurological or oncological indication code. Headache alone (R51) may be accepted by some payers but is frequently denied \u2014 add a more specific diagnosis if clinically supported.",
+      "max_deduction_per_layer": 25.0
+    },
+    {
+      "rule_id": "GCC-CODE-004",
+      "payer_id": "*",
+      "version": "1.0",
+      "status": "ACTIVE",
+      "rule_type": "PAYER_RULES",
+      "jurisdiction": "GCC",
+      "specialty": null,
+      "effective_from": "2024-01-01",
+      "effective_to": null,
+      "condition": {
+        "field": "bilateral_procedure",
+        "description": "Bilateral procedures require RT/LT modifier or bilateral modifier 50"
+      },
+      "action": {
+        "action_type": "WARN",
+        "requires_llm": false,
+        "fix_template": "For bilateral procedures, add modifier 50 (bilateral) or use separate line items with RT/LT modifiers depending on payer policy. DAMAN and Tawuniya have different rules on bilateral modifier use \u2014 check payer-specific policy."
+      },
+      "severity": "WARN",
+      "message": "Bilateral procedure detected without appropriate modifier (50, RT, or LT). Missing modifier on bilateral procedures is a common source of underpayment or denial in GCC markets.",
+      "max_deduction_per_layer": 25.0
+    },
+    {
+      "_comment_group": "MAX UNITS RULES \u2014 MUE equivalent for GCC",
+      "rule_id": "DOH-MUE-001",
+      "payer_id": "*",
+      "version": "V2025.1",
+      "status": "ACTIVE",
+      "rule_type": "MAX_UNITS",
+      "jurisdiction": "AE_AUH",
+      "specialty": null,
+      "effective_from": "2025-01-01",
+      "effective_to": null,
+      "condition": {
+        "cpt": "99213",
+        "description": "Outpatient E&M office visit \u2014 max 1 per day per provider"
+      },
+      "action": {
+        "action_type": "BLOCK",
+        "max_units": 1,
+        "requires_llm": false,
+        "fix_template": "E&M visit codes (99213) cannot be billed more than once per day per provider per patient. If additional services were rendered, use the appropriate add-on code or a different visit code."
+      },
+      "severity": "FAIL",
+      "message": "CPT 99213 billed more than once on the same date of service. Medically Unlikely Edit (MUE) \u2014 per DOH Claims & Adjudication Rules V2025.1 Section 5.2.",
+      "max_deduction_per_layer": 25.0
+    },
+    {
+      "rule_id": "GCC-MUE-001",
+      "payer_id": "*",
+      "version": "1.0",
+      "status": "ACTIVE",
+      "rule_type": "MAX_UNITS",
+      "jurisdiction": "GCC",
+      "specialty": null,
+      "effective_from": "2024-01-01",
+      "effective_to": null,
+      "condition": {
+        "cpt": "99214",
+        "description": "Moderate-complexity office visit \u2014 max 1 per day per provider"
+      },
+      "action": {
+        "action_type": "BLOCK",
+        "max_units": 1,
+        "requires_llm": false,
+        "fix_template": "CPT 99214 cannot be billed more than once per provider per patient per day. Review encounter documentation and consolidate into a single visit if appropriate."
+      },
+      "severity": "FAIL",
+      "message": "CPT 99214 billed more than once on the same date of service. MUE violation.",
+      "max_deduction_per_layer": 25.0
+    },
+    {
+      "_comment_group": "DOCUMENTATION RULES \u2014 applicable across GCC",
+      "rule_id": "GCC-DOC-001",
+      "payer_id": "*",
+      "version": "1.0",
+      "status": "ACTIVE",
+      "rule_type": "DOCUMENTATION",
+      "jurisdiction": "GCC",
+      "specialty": "surgery",
+      "effective_from": "2024-01-01",
+      "effective_to": null,
+      "condition": {
+        "procedure_category": "surgical",
+        "cpt_range_prefix": [
+          "27",
+          "43",
+          "47",
+          "65",
+          "66",
+          "67"
+        ],
+        "description": "Surgical procedures require operative report"
+      },
+      "action": {
+        "action_type": "BLOCK",
+        "required_documents": [
+          "operative_report",
+          "preoperative_assessment",
+          "surgical_consent"
+        ],
+        "requires_llm": false,
+        "fix_template": "Surgical claims require: (1) operative report documenting procedure performed, (2) pre-operative assessment, (3) signed surgical consent. Attach all three before submission. Absence of operative report is the leading cause of surgical claim denial across all GCC payers."
+      },
+      "severity": "FAIL",
+      "message": "Surgical procedure (CPT series 27xxx/43xxx/47xxx) submitted without required operative report documentation.",
+      "max_deduction_per_layer": 25.0
+    },
+    {
+      "rule_id": "GCC-DOC-002",
+      "payer_id": "*",
+      "version": "1.0",
+      "status": "ACTIVE",
+      "rule_type": "DOCUMENTATION",
+      "jurisdiction": "GCC",
+      "specialty": null,
+      "effective_from": "2024-01-01",
+      "effective_to": null,
+      "condition": {
+        "procedure_codes": [
+          "73723",
+          "73721",
+          "73722",
+          "70553",
+          "70552",
+          "70551",
+          "74183",
+          "74181"
+        ],
+        "description": "MRI studies require clinical indication documentation"
+      },
+      "action": {
+        "action_type": "BLOCK",
+        "required_documents": [
+          "radiology_referral",
+          "clinical_indication_letter"
+        ],
+        "requires_llm": false,
+        "fix_template": "MRI studies require a radiology referral or clinical indication letter from the requesting physician. Attach the referral document and ensure the clinical indication is consistent with the ICD-10 diagnosis on the claim."
+      },
+      "severity": "FAIL",
+      "message": "MRI study (CPT 70551-70553, 73721-73723) submitted without clinical indication documentation.",
+      "max_deduction_per_layer": 25.0
+    },
+    {
+      "rule_id": "GCC-DOC-003",
+      "payer_id": "*",
+      "version": "1.0",
+      "status": "ACTIVE",
+      "rule_type": "DOCUMENTATION",
+      "jurisdiction": "GCC",
+      "specialty": "oncology",
+      "effective_from": "2024-01-01",
+      "effective_to": null,
+      "condition": {
+        "icd_prefix": [
+          "C",
+          "D0",
+          "D1",
+          "D2",
+          "D3",
+          "D4"
+        ],
+        "description": "Oncology claims require histopathology or biopsy report"
+      },
+      "action": {
+        "action_type": "BLOCK",
+        "required_documents": [
+          "histopathology_report",
+          "oncology_treatment_plan"
+        ],
+        "requires_llm": false,
+        "fix_template": "Cancer diagnosis (ICD-10 C-chapter) requires supporting histopathology or biopsy report. Oncology treatment claims additionally require a documented multidisciplinary treatment plan. Both are required before submission."
+      },
+      "severity": "FAIL",
+      "message": "Oncology claim (C-chapter ICD-10) submitted without histopathology confirmation. All GCC payers require pathological confirmation for cancer diagnosis claims.",
+      "max_deduction_per_layer": 25.0
+    },
+    {
+      "_comment_group": "SPECIALTY RESTRICTION RULES",
+      "rule_id": "GCC-SPEC-001",
+      "payer_id": "*",
+      "version": "1.0",
+      "status": "ACTIVE",
+      "rule_type": "CPT_NOT_ALLOWED_FOR_SPECIALTY",
+      "jurisdiction": "GCC",
+      "specialty": "general_practice",
+      "effective_from": "2024-01-01",
+      "effective_to": null,
+      "condition": {
+        "cpt": "27447",
+        "specialty": "general_practice",
+        "description": "Total knee replacement cannot be billed by GP"
+      },
+      "action": {
+        "action_type": "BLOCK",
+        "requires_llm": false,
+        "fix_template": "CPT 27447 (total knee replacement) must be billed by an orthopaedic surgeon. Update the billing provider to the performing surgeon's NPI and specialty. GP billing of surgical procedures is a major fraud flag in GCC markets."
+      },
+      "severity": "FAIL",
+      "message": "Surgical procedure CPT 27447 cannot be billed under General Practice specialty. Must be billed under Orthopaedic Surgery.",
+      "max_deduction_per_layer": 25.0
+    },
+    {
+      "rule_id": "GCC-SPEC-002",
+      "payer_id": "*",
+      "version": "1.0",
+      "status": "ACTIVE",
+      "rule_type": "CPT_NOT_ALLOWED_FOR_SPECIALTY",
+      "jurisdiction": "GCC",
+      "specialty": "general_practice",
+      "effective_from": "2024-01-01",
+      "effective_to": null,
+      "condition": {
+        "cpt": "93306",
+        "specialty": "general_practice",
+        "description": "Echocardiography must be billed by cardiologist"
+      },
+      "action": {
+        "action_type": "BLOCK",
+        "requires_llm": false,
+        "fix_template": "CPT 93306 (echocardiography) requires a cardiologist or cardiac imaging specialist as the billing provider. Update to the correct performing physician."
+      },
+      "severity": "FAIL",
+      "message": "Echocardiography (CPT 93306) cannot be billed under General Practice. Must be billed under Cardiology.",
+      "max_deduction_per_layer": 25.0
+    }
+  ]
+}

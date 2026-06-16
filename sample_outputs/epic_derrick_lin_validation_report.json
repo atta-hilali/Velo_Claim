@@ -1,0 +1,43 @@
+{
+  "claim_id": "CLM-EPIC-DERRICK-LIN-e6kBx6PwnxIv.5kCifScsWg3",
+  "payer_id": "Epic Sandbox Payer",
+  "patient_id": "eq081-VQEgP8drUUqCWzHfw3",
+  "date_of_service": "2019-05-28",
+  "score": 100.0,
+  "routing": "READY_TO_SUBMIT",
+  "summary": {
+    "total_issues": 0,
+    "critical_issues": 0,
+    "warnings": 0,
+    "information": 0
+  },
+  "checks": {
+    "eligibility": {
+      "passes": true,
+      "issue_count": 0
+    },
+    "prior_authorization": {
+      "passes": true,
+      "issue_count": 0
+    },
+    "coding": {
+      "passes": true,
+      "issue_count": 0
+    },
+    "documentation": {
+      "passes": true,
+      "issue_count": 0
+    },
+    "payer_rules": {
+      "passes": true,
+      "issue_count": 0
+    },
+    "timely_filing": {
+      "passes": true,
+      "issue_count": 0
+    }
+  },
+  "issues": [],
+  "recommended_next_step": "Send to submission queue.",
+  "generated_at": "2026-06-12T10:39:20+00:00"
+}

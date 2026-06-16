@@ -38,6 +38,12 @@ from xml.etree.ElementTree import Element, SubElement, tostring
 from langgraph.graph import END, START, StateGraph
 from pydantic import BaseModel, Field, ValidationError
 
+from fhir_adapters import (
+    fhir_backend_access_token as shared_fhir_backend_access_token,
+    get_fhir_adapter,
+)
+from payer_registry import infer_standard_for_payer
+
 
 def load_env_file(path: str | Path = ".env") -> None:
     """Load simple KEY=VALUE pairs from a .env file without extra dependencies."""
@@ -116,6 +122,7 @@ class ClaimPreparationState(TypedDict, total=False):
     medgemma_used: bool
 
     fhir_base_url: str
+    fhir_adapter: str
     fhir_access_token: str
     fhir_auth_type: str
     fhir_token_url: str
@@ -695,95 +702,7 @@ def build_private_key_jwt_assertion(
 
 
 def fhir_backend_access_token(state: ClaimPreparationState) -> str | None:
-    static_token = state.get("fhir_access_token") or os.getenv("FHIR_ACCESS_TOKEN")
-    auth_type = (
-        state.get("fhir_auth_type")
-        or os.getenv("FHIR_AUTH_TYPE")
-        or DEFAULT_FHIR_AUTH_TYPE
-    ).strip().lower()
-
-    if static_token:
-        return static_token
-    if auth_type in {"", "none", "no_auth"}:
-        return None
-    if auth_type not in {
-        "client_credentials",
-        "backend",
-        "backend_services",
-        "backend_services_jwt",
-        "private_key_jwt",
-    }:
-        return None
-
-    token_url = state.get("fhir_token_url") or os.getenv("FHIR_TOKEN_URL")
-    client_id = state.get("fhir_client_id") or os.getenv("FHIR_CLIENT_ID")
-    client_secret = state.get("fhir_client_secret") or os.getenv("FHIR_CLIENT_SECRET")
-    client_auth_method = (
-        state.get("fhir_client_auth_method")
-        or os.getenv("FHIR_CLIENT_AUTH_METHOD")
-        or DEFAULT_FHIR_CLIENT_AUTH_METHOD
-    ).strip().lower()
-    scope = state.get("fhir_scope") or os.getenv("FHIR_SCOPE") or DEFAULT_FHIR_SCOPE
-    audience = state.get("fhir_audience") or os.getenv("FHIR_AUDIENCE")
-    private_key_path = state.get("fhir_private_key_path") or os.getenv("FHIR_PRIVATE_KEY_PATH")
-    key_id = state.get("fhir_key_id") or os.getenv("FHIR_KEY_ID")
-    jwks_url = state.get("fhir_jwks_url") or os.getenv("FHIR_JWKS_URL")
-
-    if auth_type in {"backend_services_jwt", "private_key_jwt"}:
-        client_auth_method = "private_key_jwt"
-
-    if not token_url:
-        raise RuntimeError("FHIR backend auth requires FHIR_TOKEN_URL.")
-    if not client_id:
-        raise RuntimeError("FHIR backend auth requires FHIR_CLIENT_ID.")
-
-    form = {
-        "grant_type": "client_credentials",
-        "scope": scope,
-    }
-
-    headers: dict[str, str] = {}
-    if client_auth_method == "client_secret_basic":
-        if not client_secret:
-            raise RuntimeError("FHIR_CLIENT_AUTH_METHOD=client_secret_basic requires FHIR_CLIENT_SECRET.")
-        credentials = f"{client_id}:{client_secret}".encode("utf-8")
-        headers["Authorization"] = f"Basic {b64encode(credentials).decode('ascii')}"
-        if audience:
-            form["aud"] = audience
-    elif client_auth_method == "client_secret_post":
-        if not client_secret:
-            raise RuntimeError("FHIR_CLIENT_AUTH_METHOD=client_secret_post requires FHIR_CLIENT_SECRET.")
-        form["client_id"] = client_id
-        form["client_secret"] = client_secret
-        if audience:
-            form["aud"] = audience
-    elif client_auth_method == "private_key_jwt":
-        if not private_key_path:
-            raise RuntimeError("FHIR_CLIENT_AUTH_METHOD=private_key_jwt requires FHIR_PRIVATE_KEY_PATH.")
-        if not key_id:
-            raise RuntimeError("FHIR_CLIENT_AUTH_METHOD=private_key_jwt requires FHIR_KEY_ID.")
-        form["client_assertion_type"] = (
-            "urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
-        )
-        form["client_assertion"] = build_private_key_jwt_assertion(
-            token_url=token_url,
-            client_id=client_id,
-            private_key_path=private_key_path,
-            key_id=key_id,
-            jwks_url=jwks_url,
-            audience=audience or token_url,
-        )
-    else:
-        raise RuntimeError(
-            "Unsupported FHIR_CLIENT_AUTH_METHOD. Use client_secret_basic, "
-            "client_secret_post, or private_key_jwt."
-        )
-
-    token_response = post_form(url=token_url, form=form, headers=headers)
-    access_token = token_response.get("access_token")
-    if not access_token:
-        raise RuntimeError("FHIR token response did not include access_token.")
-    return str(access_token)
+    return shared_fhir_backend_access_token(state)
 
 
 def response_text_from_openai_chat(data: dict[str, Any]) -> str:
@@ -968,7 +887,7 @@ class FHIRClient:
         bundle = self._request_json(resource_type, params=params)
         for entry in bundle.get("entry", []):
             resource = entry.get("resource")
-            if resource:
+            if resource and resource.get("resourceType") == resource_type:
                 return resource
         return None
 
@@ -978,15 +897,12 @@ class FHIRClient:
             entry["resource"]
             for entry in bundle.get("entry", [])
             if isinstance(entry.get("resource"), dict)
+            and entry["resource"].get("resourceType") == resource_type
         ]
 
 
-def get_fhir_client(state: ClaimPreparationState) -> FHIRClient | None:
-    base_url = state.get("fhir_base_url") or os.getenv("FHIR_BASE_URL")
-    if not base_url:
-        return None
-    token = fhir_backend_access_token(state)
-    return FHIRClient(base_url=base_url, access_token=token)
+def get_fhir_client(state: ClaimPreparationState) -> Any | None:
+    return get_fhir_adapter(state)
 
 
 def resolve_provider_and_facility(
@@ -1020,6 +936,7 @@ def load_source_data(state: ClaimPreparationState) -> ClaimPreparationState:
 
     try:
         package = state.get("encounter_package") or {}
+        warnings = state.get("warnings", [])
         fhir_client = get_fhir_client(state)
         encounter = encounter_from_state(state)
 
@@ -1075,8 +992,15 @@ def load_source_data(state: ClaimPreparationState) -> ClaimPreparationState:
             coverage = fhir_client.read("Coverage", coverage_id)
 
         if not coverage and fhir_client:
-            patient_ref = f"Patient/{get_required(patient_id or (patient or {}).get('id'), 'patient_id')}"
-            coverage = fhir_client.search_first("Coverage", {"beneficiary": patient_ref})
+            coverage_patient_id = get_required(
+                patient_id or (patient or {}).get("id"),
+                "patient_id",
+            )
+            if hasattr(fhir_client, "coverage_for_patient"):
+                coverage = fhir_client.coverage_for_patient(coverage_patient_id)
+            else:
+                patient_ref = f"Patient/{coverage_patient_id}"
+                coverage = fhir_client.search_first("Coverage", {"beneficiary": patient_ref})
 
         if encounter:
             provider, facility = resolve_provider_and_facility(
@@ -1091,34 +1015,76 @@ def load_source_data(state: ClaimPreparationState) -> ClaimPreparationState:
             encounter_ref = f"Encounter/{encounter.get('id')}" if encounter else None
 
             if conditions is None:
-                condition_params = {"subject": patient_ref}
-                if encounter_ref:
-                    condition_params["encounter"] = encounter_ref
-                conditions = fhir_client.search("Condition", condition_params)
+                if hasattr(fhir_client, "search_patient_context"):
+                    conditions = fhir_client.search_patient_context(
+                        "Condition",
+                        patient_id=patient.get("id"),
+                        encounter_id=encounter.get("id") if encounter else None,
+                    )
+                else:
+                    condition_params = {"subject": patient_ref}
+                    if encounter_ref:
+                        condition_params["encounter"] = encounter_ref
+                    conditions = fhir_client.search("Condition", condition_params)
 
             if fhir_procedures is None:
-                procedure_params = {"subject": patient_ref}
-                if encounter_ref:
-                    procedure_params["encounter"] = encounter_ref
-                fhir_procedures = fhir_client.search("Procedure", procedure_params)
+                if hasattr(fhir_client, "search_patient_context"):
+                    fhir_procedures = fhir_client.search_patient_context(
+                        "Procedure",
+                        patient_id=patient.get("id"),
+                        encounter_id=encounter.get("id") if encounter else None,
+                    )
+                else:
+                    procedure_params = {"subject": patient_ref}
+                    if encounter_ref:
+                        procedure_params["encounter"] = encounter_ref
+                    fhir_procedures = fhir_client.search("Procedure", procedure_params)
 
             if attachments is None:
-                document_params = {"subject": patient_ref}
-                if encounter_ref:
-                    document_params["encounter"] = encounter_ref
+                if hasattr(fhir_client, "search_patient_context"):
+                    documents = fhir_client.search_patient_context(
+                        "DocumentReference",
+                        patient_id=patient.get("id"),
+                        encounter_id=encounter.get("id") if encounter else None,
+                    )
+                else:
+                    document_params = {"subject": patient_ref}
+                    if encounter_ref:
+                        document_params["encounter"] = encounter_ref
+                    documents = fhir_client.search("DocumentReference", document_params)
                 attachments = [
                     normalize_fhir_document_reference(document)
-                    for document in fhir_client.search("DocumentReference", document_params)
+                    for document in documents
                 ]
 
             if charge_items is None:
-                charge_params = {"subject": patient_ref}
-                if encounter_ref:
-                    charge_params["context"] = encounter_ref
-                charge_items = [
-                    normalize_fhir_charge_item(charge_item)
-                    for charge_item in fhir_client.search("ChargeItem", charge_params)
-                ]
+                try:
+                    if hasattr(fhir_client, "search_patient_context"):
+                        charge_results = fhir_client.search_patient_context(
+                            "ChargeItem",
+                            patient_id=patient.get("id"),
+                            encounter_id=encounter.get("id") if encounter else None,
+                        )
+                    else:
+                        charge_params = {"subject": patient_ref}
+                        if encounter_ref:
+                            charge_params["context"] = encounter_ref
+                        charge_results = fhir_client.search("ChargeItem", charge_params)
+                    charge_items = [
+                        normalize_fhir_charge_item(charge_item)
+                        for charge_item in charge_results
+                    ]
+                except Exception as exc:
+                    warnings = [
+                        *warnings,
+                        {
+                            "type": "FHIR_CHARGE_ITEM_SEARCH_SKIPPED",
+                            "message": "FHIR ChargeItem search failed; continuing without FHIR charge items.",
+                            "metadata": {"error": str(exc)},
+                            "timestamp": utc_now(),
+                        },
+                    ]
+                    charge_items = []
 
         missing = [
             name
@@ -1158,6 +1124,7 @@ def load_source_data(state: ClaimPreparationState) -> ClaimPreparationState:
             "fhir_procedures": as_list(fhir_procedures),
             "attachments": as_list(attachments),
             "charge_items": as_list(charge_items),
+            "warnings": warnings,
             "status": "SOURCE_DATA_LOADED",
         }
     except Exception as exc:
@@ -2103,6 +2070,14 @@ def infer_claim_format(
             coverage_plan_name(coverage),
         ]
     ).lower()
+    payer_registry_format = infer_standard_for_payer(
+        payer_identifier(coverage),
+        payer_display(coverage),
+        coverage_plan_name(coverage),
+        jurisdiction=jurisdiction,
+    )
+    if payer_registry_format:
+        return payer_registry_format
 
     if (
         resource_has_identifier_system(facility, "dha")
@@ -3109,6 +3084,7 @@ def supervisor_agent(state: ClaimPreparationState) -> ClaimPreparationState:
         or os.getenv("MEDGEMMA_GENERATE_PATH")
         or DEFAULT_MEDGEMMA_GENERATE_PATH,
         "medgemma_used": False,
+        "fhir_adapter": state.get("fhir_adapter") or os.getenv("FHIR_ADAPTER", "generic"),
         "fhir_base_url": state.get("fhir_base_url") or os.getenv("FHIR_BASE_URL", ""),
         "fhir_access_token": state.get("fhir_access_token") or os.getenv("FHIR_ACCESS_TOKEN", ""),
         "fhir_auth_type": state.get("fhir_auth_type")
@@ -3252,6 +3228,7 @@ def start_claim_preparation(state: ClaimPreparationState) -> ClaimPreparationSta
             or os.getenv("MEDGEMMA_GENERATE_PATH")
             or DEFAULT_MEDGEMMA_GENERATE_PATH,
             "medgemma_used": False,
+            "fhir_adapter": state.get("fhir_adapter") or os.getenv("FHIR_ADAPTER", "generic"),
             "fhir_base_url": state.get("fhir_base_url") or os.getenv("FHIR_BASE_URL", ""),
             "fhir_access_token": state.get("fhir_access_token") or os.getenv("FHIR_ACCESS_TOKEN", ""),
             "fhir_auth_type": state.get("fhir_auth_type")

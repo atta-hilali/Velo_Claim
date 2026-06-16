@@ -1,0 +1,91 @@
+{
+  "summary": {
+    "total_payers": 14,
+    "phase1_payers": 11,
+    "phase2_payers": 3,
+    "phase1_by_country": {
+      "AE": 7,
+      "SA": 4
+    },
+    "phase1_priority_1": [
+      "tawuniya_sa",
+      "bupa_arabia_sa",
+      "daman_ae",
+      "oman_insurance_ae",
+      "axa_insurance_uae"
+    ],
+    "standards": [
+      "ECLAIMLINK",
+      "NPHIES",
+      "SHAFAFIYA"
+    ]
+  },
+  "phase1_ids": [
+    "almadallah_tpa_ae",
+    "axa_gulf_sa",
+    "axa_insurance_uae",
+    "bupa_arabia_sa",
+    "cigna_uae",
+    "daman_ae",
+    "medgulf_sa",
+    "nextcare_tpa_ae",
+    "oman_insurance_ae",
+    "sukoon_ae",
+    "tawuniya_sa"
+  ],
+  "phase2_ids": [
+    "al_rajhi_takaful_sa",
+    "malath_insurance_sa",
+    "ngi_ae"
+  ],
+  "routing_cases": [
+    {
+      "payer": "BUPA Arabia",
+      "jurisdiction": "AUTO",
+      "currency": "USD",
+      "expected_format": "NPHIES"
+    },
+    {
+      "payer": "MedGulf",
+      "jurisdiction": "AUTO",
+      "currency": "USD",
+      "expected_format": "NPHIES"
+    },
+    {
+      "payer": "DAMAN",
+      "jurisdiction": "AUTO",
+      "currency": "AED",
+      "expected_format": "SHAFAFIYA"
+    },
+    {
+      "payer": "Oman Insurance",
+      "jurisdiction": "DUBAI",
+      "currency": "AED",
+      "expected_format": "ECLAIMLINK"
+    },
+    {
+      "payer": "Almadallah",
+      "jurisdiction": "AUTO",
+      "currency": "AED",
+      "expected_format": "SHAFAFIYA"
+    },
+    {
+      "payer": "Nextcare",
+      "jurisdiction": "ABU_DHABI",
+      "currency": "AED",
+      "expected_format": "SHAFAFIYA"
+    },
+    {
+      "payer": "Nextcare",
+      "jurisdiction": "DUBAI",
+      "currency": "AED",
+      "expected_format": "ECLAIMLINK"
+    },
+    {
+      "payer": "AXA Insurance UAE",
+      "jurisdiction": "AUTO",
+      "currency": "AED",
+      "expected_format": "ECLAIMLINK"
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "summary": {
+    "artifact": "velo_claim_prior_auth_extraction_register",
+    "source_workbook": "velo_claim_prior_auth_extraction_register.xlsx",
+    "compact_prior_auth_rule_count": 9,
+    "ready_rule_count": 8,
+    "shafafiya_service_count": 5,
+    "missing_data_count": 9,
+    "implementation_step_count": 12,
+    "production_gap": "Public PDFs tell when PA may be required; actual patient-approved authorization must be retrieved from Shafafiya / payer transaction data."
+  },
+  "compact_rule_ids": [
+    "DAMAN-PA-BMT-DRUGS-001",
+    "DAMAN-PA-BRAIN-DEATH-001",
+    "DAMAN-PA-CARDIAC-CATH-001",
+    "DAMAN-PA-CT-ABD-PEL-001",
+    "DAMAN-PA-LYMPH-LIPEDEMA-001",
+    "DAMAN-PA-OBUS-001",
+    "DAMAN-PA-ORTHO-SHOES-001",
+    "DAMAN-PA-PODIATRY-HCPCS-001",
+    "DAMAN-PA-WHEELCHAIR-001"
+  ],
+  "shafafiya_service_methods": [
+    "CheckForNewPriorAuthorizationTransactions(login, pwd, out errorMessage)",
+    "DownloadTransactionFile(login, pwd, fileID, out fileName, out byte[] file, out errorMessage)",
+    "GetNewPriorAuthorizationTransactions(login, pwd, foundTransactions, out errorMessage)",
+    "SearchTransactions(..., transactionID, transactionStatus, ...)",
+    "SetTransactionDownloaded(login, pwd, fileID, out errorMessage)"
+  ]
+}

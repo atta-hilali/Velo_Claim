@@ -1,0 +1,1212 @@
+{
+  "artifact": "velo_claim_prior_auth_extraction_register",
+  "source_workbook": "velo_claim_prior_auth_extraction_register.xlsx",
+  "description": "Prior authorization extraction register for Velo Claim. Public payer documents give prior-authorization requirement rules; Shafafiya/payer transaction data is needed for actual patient authorization status.",
+  "generated_from_sheets": [
+    {
+      "sheet_name": "README",
+      "range": "A1:B10",
+      "rows": 10,
+      "columns": 2
+    },
+    {
+      "sheet_name": "Available_PA_Rules",
+      "range": "A1:M10",
+      "rows": 10,
+      "columns": 13
+    },
+    {
+      "sheet_name": "Daman_Billing_Index",
+      "range": "A1:H26",
+      "rows": 26,
+      "columns": 8
+    },
+    {
+      "sheet_name": "Missing_Data",
+      "range": "A1:E10",
+      "rows": 10,
+      "columns": 5
+    },
+    {
+      "sheet_name": "Implementation_Steps",
+      "range": "A1:E13",
+      "rows": 13,
+      "columns": 5
+    },
+    {
+      "sheet_name": "Shafafiya_PA_Services",
+      "range": "A1:E6",
+      "rows": 6,
+      "columns": 5
+    },
+    {
+      "sheet_name": "CT_Prerequisites",
+      "range": "A1:C11",
+      "rows": 11,
+      "columns": 3
+    },
+    {
+      "sheet_name": "Rule_DB_Schema",
+      "range": "A1:C20",
+      "rows": 20,
+      "columns": 3
+    },
+    {
+      "sheet_name": "Dashboard",
+      "range": "A1:D7",
+      "rows": 7,
+      "columns": 4
+    }
+  ],
+  "data": {
+    "readme": {
+      "headers": [
+        "Field",
+        "Value"
+      ],
+      "records": [
+        {
+          "field": "File purpose",
+          "value": "Velo Claim prior authorization extraction register for Daman public billing/adjudication sources + Shafafiya retrieval services."
+        },
+        {
+          "field": "Generated on",
+          "value": "2026-06-14"
+        },
+        {
+          "field": "Scope",
+          "value": "Rules extracted from the Daman billing index and the CT Abdomen/Pelvis guideline URL supplied by the user. This is not a production payer-contract rulebook."
+        },
+        {
+          "field": "Confirmed PA rules/forms extracted",
+          "value": 8
+        },
+        {
+          "field": "Documents indexed from Daman billing page",
+          "value": 24
+        },
+        {
+          "field": "Main production gap",
+          "value": "Public PDFs tell when PA may be required; actual patient-approved authorization must be retrieved from Shafafiya / payer transaction data."
+        },
+        {
+          "field": "Primary source index",
+          "value": "https://www.damaninsurance.ae/billing/"
+        },
+        {
+          "field": "CT guideline source",
+          "value": "https://www.damaninsurance.ae/wp-content/uploads/2026/01/CT-scan-Abdomen-and-Pelvis-External-Guideline-V4.0.pdf"
+        },
+        {
+          "field": "Uploaded technical source",
+          "value": "DoH_Shafafiya_ Web Services Technical definition document V2.pdf"
+        }
+      ]
+    },
+    "available_pa_rules": {
+      "headers": [
+        "Rule ID",
+        "Payer",
+        "Service / Procedure Family",
+        "Codes Mentioned",
+        "PA Requirement Status",
+        "Applicability / Plan Rule",
+        "Exceptions",
+        "Required Evidence / Documentation",
+        "Non-Coverage / Denial Logic",
+        "Implementation Status",
+        "Source Document",
+        "Source URL",
+        "Notes / Next Action"
+      ],
+      "records": [
+        {
+          "rule_id": "DAMAN-PA-CT-ABD-PEL-001",
+          "payer": "Daman",
+          "service_procedure_family": "CT scan Abdomen and/or Pelvis",
+          "codes_mentioned": "Exact CPT list not provided in PDF; guideline says ICD and CPT must be highest specificity.",
+          "pa_requirement_status": "REQUIRED",
+          "applicability_plan_rule": "Authorization for CT scan is required for all plans.",
+          "exceptions": "Premier; Thiqa in SEHA providers only.",
+          "required_evidence_documentation": "Medical necessity; prerequisite tests for certain indications; repeat imaging needs strong justification.",
+          "non_coverage_denial_logic": "Visitor plan except medical emergency; screening without signs/symptoms not covered; bundled without/with contrast must use single combined CPT.",
+          "implementation_status": "Ready as MVP rule; missing CPT mapping.",
+          "source_document": "CT scan Abdomen and Pelvis External Guideline V4.0",
+          "source_url": "https://www.damaninsurance.ae/wp-content/uploads/2026/01/CT-scan-Abdomen-and-Pelvis-External-Guideline-V4.0.pdf",
+          "notes_next_action": "Add CPT family mapping from licensed CPT/DOH tariff; add plan/provider exception logic."
+        },
+        {
+          "rule_id": "DAMAN-PA-WHEELCHAIR-001",
+          "payer": "Daman",
+          "service_procedure_family": "Wheelchair services and wheelchair accessories",
+          "codes_mentioned": "HCPCS / DME codes not listed in extracted lines.",
+          "pa_requirement_status": "REQUIRED",
+          "applicability_plan_rule": "Wheelchair services require authorization for all plans; must have DME benefit and policy limit.",
+          "exceptions": "None stated in extracted PA sentence.",
+          "required_evidence_documentation": "Prescribing specialist/consultant must compile and submit documentation for authorization; ordering and performing specialty rules.",
+          "non_coverage_denial_logic": "No DME benefit / visitor plan / duplicate convenience equipment / no illness or injury may reject.",
+          "implementation_status": "Ready as PA rule; missing HCPCS mapping.",
+          "source_document": "Wheelchair Services Adjudication Guideline",
+          "source_url": "https://www.damaninsurance.ae/wp-content/uploads/2025/09/Wheelchair-Services_Adjudication-Guideline-External-Instruction-Template_30122024.pdf",
+          "notes_next_action": "Add wheelchair HCPCS code list and DME benefit check."
+        },
+        {
+          "rule_id": "DAMAN-PA-ORTHO-SHOES-001",
+          "payer": "Daman",
+          "service_procedure_family": "Orthopedic Shoes / Orthotic HCPCS",
+          "codes_mentioned": "HCPCS category; specific code for unspecified orthopedic shoe modification noted but exact code list incomplete.",
+          "pa_requirement_status": "REQUIRED / STRONG CLUE",
+          "applicability_plan_rule": "Authorization-level documentation is required; AUTH-001 denial code confirms prior approval risk.",
+          "exceptions": "Plans without DME benefit are not covered.",
+          "required_evidence_documentation": "For unspecified HCPCS: reason for unspecified code, detailed description, and photograph for authorization only; ordering and performing clinicians in invoice.",
+          "non_coverage_denial_logic": "AUTH-001: prior approval required and not obtained; reject if documentation does not justify HCPCS.",
+          "implementation_status": "Ready with caution; map HCPCS codes.",
+          "source_document": "Orthopedic Shoes External Guideline",
+          "source_url": "https://www.damaninsurance.ae/wp-content/uploads/2025/09/Orthopedic-Shoes-External-Guideline-1.pdf",
+          "notes_next_action": "Treat as PA-required for orthopedic shoe HCPCS until contract matrix confirms."
+        },
+        {
+          "rule_id": "DAMAN-PA-PODIATRY-HCPCS-001",
+          "payer": "Daman",
+          "service_procedure_family": "Podiatry services vs podiatry-related HCPCS",
+          "codes_mentioned": "CPT podiatry services; HCPCS orthosis/orthopedic shoes.",
+          "pa_requirement_status": "MIXED",
+          "applicability_plan_rule": "Authorization is not required for Podiatry services CPTs; HCPCS such as Orthosis and Orthopedic Shoes are subject to pre-approval.",
+          "exceptions": "Podiatry CPTs are no-PA in this guideline.",
+          "required_evidence_documentation": "Anatomic location and systemic conditions must be documented; advanced practice requires evidence of training/competency.",
+          "non_coverage_denial_logic": "Routine foot care without documented systemic disease not medically necessary.",
+          "implementation_status": "Ready as negative/positive split rule.",
+          "source_document": "Podiatry Services Adjudication Guideline",
+          "source_url": "https://www.damaninsurance.ae/wp-content/uploads/2025/10/Podiatry-Adjudication-Guideline-External-Instruction-22092025-1.pdf",
+          "notes_next_action": "Implement as two rules: no-PA for podiatry CPTs; PA for related orthosis/orthopedic shoe HCPCS."
+        },
+        {
+          "rule_id": "DAMAN-PA-OBUS-001",
+          "payer": "Daman",
+          "service_procedure_family": "Obstetric Ultrasound",
+          "codes_mentioned": "OB ultrasound CPT list appears in guideline; exact mapping should be verified.",
+          "pa_requirement_status": "CONDITIONAL",
+          "applicability_plan_rule": "Eligibility must be obtained before each OB ultrasound. Additional ultrasound after OBUS-001 rejection can be requested through pre-authorization.",
+          "exceptions": "Proven emergency excluded from count and eligibility check requirement.",
+          "required_evidence_documentation": "Previous ultrasound report and detailed documentation supporting medical necessity for additional ultrasound.",
+          "non_coverage_denial_logic": "Not covered without corresponding eligibility or prior authorization except proven emergency; visitor/no maternity benefit not covered.",
+          "implementation_status": "Ready as conditional rule.",
+          "source_document": "Obstetric Ultrasound Version 1.0",
+          "source_url": "https://www.damaninsurance.ae/wp-content/uploads/2025/09/Obstetric-Ultrasound-Version-1.0.pdf",
+          "notes_next_action": "Model as eligibility-first; only require PA when frequency/trimester rule rejects and medical necessity supports additional ultrasound."
+        },
+        {
+          "rule_id": "DAMAN-PA-BRAIN-DEATH-001",
+          "payer": "Daman",
+          "service_procedure_family": "Brain Death Diagnosis Confirmation",
+          "codes_mentioned": "CPT/procedure code to be supplied on form; exact CPT list not extracted.",
+          "pa_requirement_status": "REQUIRED / FORM-BASED",
+          "applicability_plan_rule": "Guideline denial code AUTH-001 indicates prior approval required; Daman pre-approval form is mandatory step for Brain Death Diagnosis Confirmation.",
+          "exceptions": "Not explicit.",
+          "required_evidence_documentation": "Brain death pre-approval form fields: GCS, brainstem reflexes, apnea test, ancillary tests, physician signatures, pregnancy/organ donor/court order details.",
+          "non_coverage_denial_logic": "AUTH-001: prior approval is required and was not obtained.",
+          "implementation_status": "Ready as PA form rule; missing code mapping.",
+          "source_document": "Brain Death Diagnosis Guideline + Brain Death Pre-approval Form",
+          "source_url": "https://www.damaninsurance.ae/wp-content/uploads/2025/09/Brain-Death-Diagnosis-External-Updated-280425-1.pdf ; https://www.damaninsurance.ae/wp-content/uploads/2025/09/Brain-Death-Pre-approval-Form.pdf",
+          "notes_next_action": "Add service code/CPT and determine whether PA is required for confirmation activities or continuation of coverage."
+        },
+        {
+          "rule_id": "DAMAN-PA-LYMPH-LIPEDEMA-001",
+          "payer": "Daman",
+          "service_procedure_family": "Bundled Lymphedema and Lipedema services for Thiqa",
+          "codes_mentioned": "SRVC codes 59-01 to 59-12; CPT examples include 15876, 15877, 15878, 38999 as listed on form.",
+          "pa_requirement_status": "REQUIRED / FORM-BASED",
+          "applicability_plan_rule": "Pre-Authorization Form for Bundled Lymphedema and Lipedema services for Thiqa; mandatory step to proceed.",
+          "exceptions": "Thiqa-specific form.",
+          "required_evidence_documentation": "Clinical assessment, staging, symptoms, comorbidities, differential diagnosis ruled out, quantitative measures, diagnostic tests, complete decongestive therapy history, surgical intervention details.",
+          "non_coverage_denial_logic": "Incomplete information may delay processing.",
+          "implementation_status": "Ready as PA form rule; validate service codes.",
+          "source_document": "Pre-Authorization Form for Bundled Lymphedema and Lipedema Services for Thiqa",
+          "source_url": "https://www.damaninsurance.ae/wp-content/uploads/2026/01/Pre-Authorization-Form-for-Bundled-Lymphedema-and-Lipedema-serivces-for-Thiqa-24112025_new.pdf",
+          "notes_next_action": "Add exact bundled service definitions for 59-01..59-12 and link to Thiqa plan rules."
+        },
+        {
+          "rule_id": "DAMAN-PA-BMT-DRUGS-001",
+          "payer": "Daman",
+          "service_procedure_family": "BMT Bundle Excluded Drugs",
+          "codes_mentioned": "Medication/drug names; no CPT extracted.",
+          "pa_requirement_status": "REQUIRED / FORM-BASED",
+          "applicability_plan_rule": "Pre-approval form for BMT bundle excluded drugs; mandatory step to proceed.",
+          "exceptions": "Only for excluded drugs from BMT bundle.",
+          "required_evidence_documentation": "Medication name, FDA-labelled diagnosis, dose/duration, admission/discharge dates, prescription copies and lab/medical report results.",
+          "non_coverage_denial_logic": "Missing relevant approval information delays processing.",
+          "implementation_status": "Ready as PA form rule; missing drug list.",
+          "source_document": "BMT Bundle Excluded Drugs Pre-Requisite Form",
+          "source_url": "https://www.damaninsurance.ae/wp-content/uploads/2026/01/BMT-Bundle-excluded-drugs-Pre-Requisite-Form.pdf",
+          "notes_next_action": "Add formulary/excluded-drug list and drug coding source."
+        },
+        {
+          "rule_id": "DAMAN-PA-CARDIAC-CATH-001",
+          "payer": "Daman",
+          "service_procedure_family": "Cardiac Catheterization & Coronary Angiography",
+          "codes_mentioned": "Cardiac catheterization CPT families; exact code list not extracted.",
+          "pa_requirement_status": "UNCONFIRMED / AUTH DENIAL CLUE",
+          "applicability_plan_rule": "Guideline includes AUTH-001 denial code, but extracted policy section does not clearly state the PA trigger.",
+          "exceptions": "Not stated.",
+          "required_evidence_documentation": "Medical necessity, ICD/CPT highest specificity, procedure report.",
+          "non_coverage_denial_logic": "AUTH-001: prior approval is required and was not obtained.",
+          "implementation_status": "Needs manual payer confirmation before production.",
+          "source_document": "Cardiac Catheterization & Coronary Angiography External",
+          "source_url": "https://www.damaninsurance.ae/wp-content/uploads/2025/09/Cardiac-Catheterization-Coronary-Angiography-External.pdf",
+          "notes_next_action": "Do not auto-deny in MVP; flag for manual review until PA matrix/contract confirms exact trigger."
+        }
+      ]
+    },
+    "daman_billing_index": {
+      "headers": [
+        "#",
+        "Daman Billing Page Title",
+        "Billing Page Date",
+        "Source URL",
+        "Extraction Status",
+        "PA / Auth Signal",
+        "Action for Velo Claim",
+        null
+      ],
+      "records": [
+        {
+          "daman_billing_page_title": "General Ophthalmological services",
+          "billing_page_date": "04.06.2026",
+          "source_url": "https://www.damaninsurance.ae/wp-content/uploads/2026/06/External-Instruction-Template_General-Ophthalmological-Services-20052026.pdf",
+          "extraction_status": "Indexed; no PA phrase found in scanned terms",
+          "pa_auth_signal": "No authorization/pre-approval/AUTH-001 match found",
+          "action_for_velo_claim": "Keep as billing/coding guideline, not PA rule unless payer matrix says otherwise.",
+          "unnamed_2": null
+        },
+        {
+          "daman_billing_page_title": "Diabetes Home Monitoring - External Instruction",
+          "billing_page_date": "20.05.2026",
+          "source_url": "https://www.damaninsurance.ae/wp-content/uploads/2026/05/Diabetes-Home-Monitoring-External-Instruction-2.pdf",
+          "extraction_status": "Indexed; no PA phrase found in scanned terms",
+          "pa_auth_signal": "No authorization/pre-approval/AUTH-001 match found",
+          "action_for_velo_claim": "Keep as coverage/documentation guideline.",
+          "unnamed_2": null
+        },
+        {
+          "daman_billing_page_title": "Nerve conduction studies",
+          "billing_page_date": "21.04.2026",
+          "source_url": "https://www.damaninsurance.ae/wp-content/uploads/2026/05/Nerve-conduction-studies-updated-template-External.pdf",
+          "extraction_status": "Indexed; no PA phrase found in scanned terms",
+          "pa_auth_signal": "No authorization/pre-approval/AUTH-001 match found",
+          "action_for_velo_claim": "Keep as coverage/documentation guideline.",
+          "unnamed_2": null
+        },
+        {
+          "daman_billing_page_title": "Vaccination Administration",
+          "billing_page_date": "17.02.2026",
+          "source_url": "https://www.damaninsurance.ae/wp-content/uploads/2026/02/Vaccination-Administartion_Adjudication-Guideline-External-Instruction.pdf",
+          "extraction_status": "Indexed; no PA phrase found in scanned terms",
+          "pa_auth_signal": "No authorization/pre-approval/AUTH-001 match found",
+          "action_for_velo_claim": "Keep as billing guideline.",
+          "unnamed_2": null
+        },
+        {
+          "daman_billing_page_title": "Pre-Requisite Form Lymphedema and Lipidema",
+          "billing_page_date": "16.12.2025",
+          "source_url": "https://www.damaninsurance.ae/wp-content/uploads/2026/01/Pre-Authorization-Form-for-Bundled-Lymphedema-and-Lipedema-serivces-for-Thiqa-24112025_new.pdf",
+          "extraction_status": "PA form extracted",
+          "pa_auth_signal": "Pre-Authorization Form; mandatory step",
+          "action_for_velo_claim": "Add to prior_auth_rules as form-based Thiqa bundled service rule.",
+          "unnamed_2": null
+        },
+        {
+          "daman_billing_page_title": "Coverage and Medical Indications of Video EEG",
+          "billing_page_date": "27.11.2025",
+          "source_url": "https://www.damaninsurance.ae/wp-content/uploads/2025/11/Video-EEG-External.pdf",
+          "extraction_status": "Indexed; no PA phrase found in scanned terms",
+          "pa_auth_signal": "No authorization/pre-approval/AUTH-001 match found",
+          "action_for_velo_claim": "Keep as medical necessity guideline.",
+          "unnamed_2": null
+        },
+        {
+          "daman_billing_page_title": "Cardiac Markers",
+          "billing_page_date": "12.11.2025",
+          "source_url": "https://www.damaninsurance.ae/wp-content/uploads/2026/01/Cardiac-Makers-in-The-Early-Diagnosis-and-Management-of-Patients-With-Acute-Coronary-Syndrome-External.pdf",
+          "extraction_status": "Indexed; no PA phrase found in scanned terms",
+          "pa_auth_signal": "No authorization/pre-approval/AUTH-001 match found",
+          "action_for_velo_claim": "Keep as medical necessity/coding rule.",
+          "unnamed_2": null
+        },
+        {
+          "daman_billing_page_title": "BMT Bundle excluded drugs Pre-Requisite Form",
+          "billing_page_date": "09.10.2025",
+          "source_url": "https://www.damaninsurance.ae/wp-content/uploads/2026/01/BMT-Bundle-excluded-drugs-Pre-Requisite-Form.pdf",
+          "extraction_status": "PA form extracted",
+          "pa_auth_signal": "Pre-approval form; mandatory step; approval-relevant info required",
+          "action_for_velo_claim": "Add to prior_auth_rules as drug/form-based rule.",
+          "unnamed_2": null
+        },
+        {
+          "daman_billing_page_title": "Podiatry Services",
+          "billing_page_date": "02.10.2025",
+          "source_url": "https://www.damaninsurance.ae/wp-content/uploads/2025/10/Podiatry-Adjudication-Guideline-External-Instruction-22092025-1.pdf",
+          "extraction_status": "PA split rule extracted",
+          "pa_auth_signal": "Podiatry CPTs: no authorization; HCPCS orthosis/orthopedic shoes: pre-approval",
+          "action_for_velo_claim": "Implement mixed rule by code family.",
+          "unnamed_2": null
+        },
+        {
+          "daman_billing_page_title": "Arthrocentesis",
+          "billing_page_date": "01.08.2025",
+          "source_url": "https://www.damaninsurance.ae/wp-content/uploads/2025/09/Arthrocentesis-_Adjudication-Guideline-External-Instruction-Template_V1R00.pdf",
+          "extraction_status": "Indexed; no PA phrase found in scanned terms",
+          "pa_auth_signal": "No authorization/pre-approval/AUTH-001 match found",
+          "action_for_velo_claim": "Keep as medical necessity guideline.",
+          "unnamed_2": null
+        },
+        {
+          "daman_billing_page_title": "Wheelchair Services",
+          "billing_page_date": "10.07.2025",
+          "source_url": "https://www.damaninsurance.ae/wp-content/uploads/2025/09/Wheelchair-Services_Adjudication-Guideline-External-Instruction-Template_30122024.pdf",
+          "extraction_status": "PA rule extracted",
+          "pa_auth_signal": "Authorization required for all plans",
+          "action_for_velo_claim": "Add to prior_auth_rules.",
+          "unnamed_2": null
+        },
+        {
+          "daman_billing_page_title": "Wound Care Management",
+          "billing_page_date": "12.06.2025",
+          "source_url": "https://www.damaninsurance.ae/wp-content/uploads/2025/09/Wound-Care-Management-External-Instruction.pdf",
+          "extraction_status": "Indexed; no PA phrase found in scanned terms",
+          "pa_auth_signal": "No authorization/pre-approval/AUTH-001 match found",
+          "action_for_velo_claim": "Keep as coverage/documentation guideline.",
+          "unnamed_2": null
+        },
+        {
+          "daman_billing_page_title": "Removal of Foreign Body Eye",
+          "billing_page_date": "15.05.2025",
+          "source_url": "https://www.damaninsurance.ae/wp-content/uploads/2025/09/Removal-of-Eye-Foreign-body-External-Instruction-1.pdf",
+          "extraction_status": "Indexed; no PA phrase found in scanned terms",
+          "pa_auth_signal": "No authorization/pre-approval/AUTH-001 match found",
+          "action_for_velo_claim": "Keep as coding guideline.",
+          "unnamed_2": null
+        },
+        {
+          "daman_billing_page_title": "Brain Death",
+          "billing_page_date": "15.05.2025",
+          "source_url": "https://www.damaninsurance.ae/wp-content/uploads/2025/09/Brain-Death-Diagnosis-External-Updated-280425-1.pdf",
+          "extraction_status": "PA clue extracted",
+          "pa_auth_signal": "AUTH-001 prior approval required + form link",
+          "action_for_velo_claim": "Add as rule after confirming code trigger.",
+          "unnamed_2": null
+        },
+        {
+          "daman_billing_page_title": "Brain Death Pre-approval form",
+          "billing_page_date": "15.05.2025",
+          "source_url": "https://www.damaninsurance.ae/wp-content/uploads/2025/09/Brain-Death-Pre-approval-Form.pdf",
+          "extraction_status": "PA form extracted",
+          "pa_auth_signal": "Medical Standards & Research Pre-approval Form; mandatory step",
+          "action_for_velo_claim": "Use as documentation requirement for Brain Death rule.",
+          "unnamed_2": null
+        },
+        {
+          "daman_billing_page_title": "Nebulization",
+          "billing_page_date": "24.04.2025",
+          "source_url": "https://www.damaninsurance.ae/wp-content/uploads/2025/09/Nebulization-External-Instruction-Template_V1R0.pdf",
+          "extraction_status": "Indexed; no PA phrase found in scanned terms",
+          "pa_auth_signal": "No authorization/pre-approval/AUTH-001 match found",
+          "action_for_velo_claim": "Keep as coverage/documentation guideline.",
+          "unnamed_2": null
+        },
+        {
+          "daman_billing_page_title": "Cardiac Catheterization & Coronary Angiography",
+          "billing_page_date": "02.04.2025",
+          "source_url": "https://www.damaninsurance.ae/wp-content/uploads/2025/09/Cardiac-Catheterization-Coronary-Angiography-External.pdf",
+          "extraction_status": "PA clue only",
+          "pa_auth_signal": "AUTH-001 denial code present; exact trigger unclear",
+          "action_for_velo_claim": "Manual review before production auto-fail.",
+          "unnamed_2": null
+        },
+        {
+          "daman_billing_page_title": "Sleep Studies & Polysomnography",
+          "billing_page_date": "02.04.2025",
+          "source_url": "https://www.damaninsurance.ae/wp-content/uploads/2025/09/Sleep-Study-Adjudication-Guideline-External.pdf",
+          "extraction_status": "Indexed; no PA phrase found in scanned terms",
+          "pa_auth_signal": "No authorization/pre-approval/AUTH-001 match found",
+          "action_for_velo_claim": "Keep as medical necessity guideline.",
+          "unnamed_2": null
+        },
+        {
+          "daman_billing_page_title": "Orthopedic Shoes",
+          "billing_page_date": "03.02.2025",
+          "source_url": "https://www.damaninsurance.ae/wp-content/uploads/2025/09/Orthopedic-Shoes-External-Guideline-1.pdf",
+          "extraction_status": "PA rule extracted",
+          "pa_auth_signal": "Authorization-level documentation and AUTH-001 denial code",
+          "action_for_velo_claim": "Add to prior_auth_rules; map HCPCS.",
+          "unnamed_2": null
+        },
+        {
+          "daman_billing_page_title": "Ambulatory ECG Monitoring",
+          "billing_page_date": "12.01.2025",
+          "source_url": "https://www.damaninsurance.ae/wp-content/uploads/2025/09/Ambulatory-ECG-Monitoring-External-Instruction-Template_V1R0.pdf",
+          "extraction_status": "Indexed; no PA phrase found in scanned terms",
+          "pa_auth_signal": "No authorization/pre-approval/AUTH-001 match found",
+          "action_for_velo_claim": "Keep as medical necessity guideline.",
+          "unnamed_2": null
+        },
+        {
+          "daman_billing_page_title": "CPT Procedure Codes vs E&M codes",
+          "billing_page_date": "06.01.2025",
+          "source_url": "https://www.damaninsurance.ae/wp-content/uploads/2025/09/CPT-Procedure-codes-vs-E-M-Codes-External-Instruction-Template_V1R0.pdf",
+          "extraction_status": "Indexed; no PA phrase found in scanned terms",
+          "pa_auth_signal": "No authorization/pre-approval/AUTH-001 match found",
+          "action_for_velo_claim": "Keep as coding rule.",
+          "unnamed_2": null
+        },
+        {
+          "daman_billing_page_title": "Ambulance Services",
+          "billing_page_date": "31.12.2024",
+          "source_url": "https://www.damaninsurance.ae/wp-content/uploads/2025/09/Ambulance-services_Adjudication-Guideline-External-Instruction-Template_V1R0.pdf",
+          "extraction_status": "Indexed; no PA phrase found in scanned terms",
+          "pa_auth_signal": "No authorization/pre-approval/AUTH-001 match found",
+          "action_for_velo_claim": "Emergency coverage; PA not explicit",
+          "unnamed_2": "Keep as coverage guideline; emergency logic."
+        },
+        {
+          "daman_billing_page_title": "Obstetric ultrasounds",
+          "billing_page_date": "04.04.2019",
+          "source_url": "https://www.damaninsurance.ae/wp-content/uploads/2025/09/Obstetric-Ultrasound-Version-1.0.pdf",
+          "extraction_status": "Conditional PA rule extracted",
+          "pa_auth_signal": "Eligibility first; pre-authorization for additional ultrasound after OBUS-001; claims need eligibility or PA except emergency",
+          "action_for_velo_claim": "Add as conditional rule.",
+          "unnamed_2": null
+        },
+        {
+          "daman_billing_page_title": "Injection, Infusion & Hydration",
+          "billing_page_date": "16.05.2016",
+          "source_url": "https://www.damaninsurance.ae/wp-content/uploads/2025/09/InjectionInfusionandHydrationcodes-V2.pdf",
+          "extraction_status": "Indexed; no PA phrase found in scanned terms",
+          "pa_auth_signal": "No authorization/pre-approval/AUTH-001 match found",
+          "action_for_velo_claim": "Keep as coding rule.",
+          "unnamed_2": null
+        },
+        {
+          "daman_billing_page_title": "CT scan Abdomen and Pelvis",
+          "billing_page_date": "27.10.2025 revision / direct URL",
+          "source_url": "https://www.damaninsurance.ae/wp-content/uploads/2026/01/CT-scan-Abdomen-and-Pelvis-External-Guideline-V4.0.pdf",
+          "extraction_status": "PA rule extracted",
+          "pa_auth_signal": "Authorization required for CT scan all plans except Premier and Thiqa in SEHA providers",
+          "action_for_velo_claim": "Add to prior_auth_rules; map CPT family.",
+          "unnamed_2": null
+        }
+      ]
+    },
+    "missing_data": {
+      "headers": [
+        "Missing Item",
+        "Why It Is Missing / Risk",
+        "What To Do",
+        "Owner",
+        "Priority"
+      ],
+      "records": [
+        {
+          "missing_item": "Exact CPT/HCPCS/SRVC code mapping",
+          "why_it_is_missing_risk": "Several Daman PDFs mention CPT/HCPCS/SRVC families but do not provide complete production code lists. CPT is also licensed by AMA.",
+          "what_to_do": "Build a controlled code mapping table from licensed CPT/HCPCS, DOH tariff/source, payer contract, and Daman-specific service groups.",
+          "owner": "Coding/Rules team",
+          "priority": "High"
+        },
+        {
+          "missing_item": "Actual approved prior authorization records",
+          "why_it_is_missing_risk": "Public PDFs only state requirement rules. They do not show whether this patient/member already has an approved valid authorization.",
+          "what_to_do": "Connect Shafafiya prior authorization transaction services and payer APIs; ingest PA XML/files into auth_store.",
+          "owner": "Backend/Integration",
+          "priority": "Critical"
+        },
+        {
+          "missing_item": "Shafafiya credentials and endpoint configuration",
+          "why_it_is_missing_risk": "Uploaded technical document shows login/pwd service signatures, but credentials and actual environment endpoints are not provided here.",
+          "what_to_do": "Request non-production access: login, password, service URL, facility/caller license, payer/partner license, IP/network allowlist, certificate requirements.",
+          "owner": "Integration/Compliance",
+          "priority": "Critical"
+        },
+        {
+          "missing_item": "Prior Authorization XML schema/sample files",
+          "why_it_is_missing_risk": "The service returns XML descriptions/files; field names for auth_ref, status, member_id, validity dates, service codes need concrete samples.",
+          "what_to_do": "Ask payer/DoH for PA transaction sample packages and XML/XSD; map fields into Velo Claim auth_store.",
+          "owner": "Backend/Data",
+          "priority": "High"
+        },
+        {
+          "missing_item": "Member plan and SOB/benefit data",
+          "why_it_is_missing_risk": "Rules depend on plan type and benefits: Premier, Thiqa, SEHA provider, DME benefit, maternity benefit, visitor plan, policy limits.",
+          "what_to_do": "Use Coverage/FHIR, eligibility response, payer eligibility API, and internal policy/SOB data.",
+          "owner": "Eligibility Agent",
+          "priority": "High"
+        },
+        {
+          "missing_item": "Provider/facility and clinician context",
+          "why_it_is_missing_risk": "Rules depend on SEHA provider status, ordering/performing clinician specialty, and facility license.",
+          "what_to_do": "Normalize provider master data: facility license, network/SEHA flag, clinician specialty, ordering/performing IDs.",
+          "owner": "Provider Data",
+          "priority": "High"
+        },
+        {
+          "missing_item": "Medical evidence attachments",
+          "why_it_is_missing_risk": "Rules require ultrasound/X-ray reports, previous imaging, lab reports, photos, CDT history, previous ultrasound reports, etc.",
+          "what_to_do": "Index DocumentReference/attachments and extract evidence with OCR/RAG; create evidence checklist per rule.",
+          "owner": "Documentation Agent",
+          "priority": "High"
+        },
+        {
+          "missing_item": "Manual validation of ambiguous PA clues",
+          "why_it_is_missing_risk": "AUTH-001 denial code alone is not enough to prove every service always requires PA.",
+          "what_to_do": "Create review queue for rules with status UNCONFIRMED / AUTH DENIAL CLUE.",
+          "owner": "Clinical Rules Reviewer",
+          "priority": "Medium"
+        },
+        {
+          "missing_item": "Version monitoring",
+          "why_it_is_missing_risk": "Daman billing documents update frequently; current page includes 2026 PDFs.",
+          "what_to_do": "Schedule monthly crawler and diff job for Daman billing page and direct PDFs; update rule version history.",
+          "owner": "Data Engineering",
+          "priority": "Medium"
+        }
+      ]
+    },
+    "implementation_steps": {
+      "headers": [
+        "Step",
+        "Task",
+        "Implementation Detail",
+        "Output Artifact",
+        "Done?"
+      ],
+      "records": [
+        {
+          "step": 1,
+          "task": "Create source registry",
+          "implementation_detail": "Store source_id, payer, title, source_url, document_date, last_checked_at. Seed it with Daman billing page and direct CT PDF.",
+          "output_artifact": "source_registry table",
+          "done": "No"
+        },
+        {
+          "step": 2,
+          "task": "Download and parse PDFs",
+          "implementation_detail": "For each source, download PDF, extract text, page numbers, and screenshots for tables/forms if needed.",
+          "output_artifact": "raw_document + parsed_chunks",
+          "done": "No"
+        },
+        {
+          "step": 3,
+          "task": "Detect prior-auth candidates",
+          "implementation_detail": "Search for terms: authorization, pre-authorization, pre-approval, prior approval, AUTH-001, eligibility/pre-authorization.",
+          "output_artifact": "candidate_pa_snippets",
+          "done": "No"
+        },
+        {
+          "step": 4,
+          "task": "Normalize rules",
+          "implementation_detail": "Convert snippets to payer_prior_auth_rules with payer, service_family, code system, plan rule, exception, required evidence, non-coverage, source URL.",
+          "output_artifact": "payer_prior_auth_rules",
+          "done": "No"
+        },
+        {
+          "step": 5,
+          "task": "Manual review",
+          "implementation_detail": "Review all rules with ambiguous language, especially AUTH-001-only matches such as Cardiac Cath.",
+          "output_artifact": "rule_review_status",
+          "done": "No"
+        },
+        {
+          "step": 6,
+          "task": "Add CPT/HCPCS/SRVC mapping",
+          "implementation_detail": "Link procedures to CPT/HCPCS/SRVC code ranges. Do not invent CPT codes from PDFs.",
+          "output_artifact": "procedure_rule_map",
+          "done": "No"
+        },
+        {
+          "step": 7,
+          "task": "Load medical evidence requirements",
+          "implementation_detail": "Convert prerequisites into checklists: ultrasound required, X-ray required, previous report, lab report, photo, CDT history, etc.",
+          "output_artifact": "documentation_requirements",
+          "done": "No"
+        },
+        {
+          "step": 8,
+          "task": "Connect Shafafiya PA ingestion",
+          "implementation_detail": "Call CheckForNewPriorAuthorizationTransactions, GetNewPriorAuthorizationTransactions, SearchTransactions transactionID 16/32, DownloadTransactionFile.",
+          "output_artifact": "auth_transaction_ingestion job",
+          "done": "No"
+        },
+        {
+          "step": 9,
+          "task": "Build auth_store matcher",
+          "implementation_detail": "Match claim member_id, payer, service_date, provider/facility, procedure codes/family to auth_ref and status APPROVED with valid dates.",
+          "output_artifact": "prior_auth_store + matching function",
+          "done": "No"
+        },
+        {
+          "step": 10,
+          "task": "Update check_prior_authorization()",
+          "implementation_detail": "Logic: find rule → apply exceptions → if PA required search auth_store → PASS/FAIL/UNKNOWN with evidence.",
+          "output_artifact": "Validation Agent tool",
+          "done": "No"
+        },
+        {
+          "step": 11,
+          "task": "Test scenarios",
+          "implementation_detail": "Synthetic tests: CT Basic no auth FAIL, CT Premier PASS no PA, CT Thiqa SEHA PASS exception, Wheelchair no auth FAIL, OBUS emergency PASS exception.",
+          "output_artifact": "unit tests + validation report examples",
+          "done": "No"
+        },
+        {
+          "step": 12,
+          "task": "Monitor updates",
+          "implementation_detail": "Monthly fetch Daman billing page, compare titles/dates/PDF hashes, create review task when changed.",
+          "output_artifact": "rules_update_pipeline",
+          "done": "No"
+        }
+      ]
+    },
+    "shafafiya_pa_services": {
+      "headers": [
+        "Service / Method",
+        "Purpose in Velo Claim",
+        "Key Inputs",
+        "Key Output",
+        "How to Use in Pipeline"
+      ],
+      "records": [
+        {
+          "service_method": "CheckForNewPriorAuthorizationTransactions(login, pwd, out errorMessage)",
+          "purpose_in_velo_claim": "Check whether new Prior Request or Prior Authorization transactions are available.",
+          "key_inputs": "login, pwd",
+          "key_output": "Return code and errorMessage",
+          "how_to_use_in_pipeline": "Run first in ingestion job; if new transactions exist, call GetNewPriorAuthorizationTransactions."
+        },
+        {
+          "service_method": "GetNewPriorAuthorizationTransactions(login, pwd, foundTransactions, out errorMessage)",
+          "purpose_in_velo_claim": "Get list/XML description of new Prior Request or Prior Authorization transactions not yet downloaded.",
+          "key_inputs": "login, pwd",
+          "key_output": "foundTransactions XML, errorMessage",
+          "how_to_use_in_pipeline": "Parse XML to identify file IDs and transaction metadata."
+        },
+        {
+          "service_method": "SearchTransactions(..., transactionID, transactionStatus, ...)",
+          "purpose_in_velo_claim": "Advanced search for sent/received transactions, including prior request and prior authorization.",
+          "key_inputs": "transactionID=16 for Prior Request; transactionID=32 for Prior Authorization; status=1 new or 2 downloaded",
+          "key_output": "foundTransactions XML",
+          "how_to_use_in_pipeline": "Use for historical lookup when matching a claim to an existing authorization."
+        },
+        {
+          "service_method": "DownloadTransactionFile(login, pwd, fileID, out fileName, out byte[] file, out errorMessage)",
+          "purpose_in_velo_claim": "Download the actual transaction file content.",
+          "key_inputs": "fileID from GetNewTransactions/SearchTransactions output",
+          "key_output": "fileName, file bytes",
+          "how_to_use_in_pipeline": "Store raw file, parse auth_ref/status/validity/procedure/member fields."
+        },
+        {
+          "service_method": "SetTransactionDownloaded(login, pwd, fileID, out errorMessage)",
+          "purpose_in_velo_claim": "Mark file as downloaded to avoid repeated ingestion.",
+          "key_inputs": "fileID",
+          "key_output": "Return code and errorMessage",
+          "how_to_use_in_pipeline": "Call only after successful parse/store."
+        }
+      ]
+    },
+    "ct_prerequisites": {
+      "headers": [
+        "Condition / Indication",
+        "Required Prerequisite Evidence",
+        "Velo Claim Evidence Check"
+      ],
+      "records": [
+        {
+          "condition_indication": "Hydronephrosis",
+          "required_prerequisite_evidence": "Ultrasound demonstrates hydronephrosis with inconclusive identification of cause.",
+          "velo_claim_evidence_check": "Find ultrasound report; confirm inconclusive cause."
+        },
+        {
+          "condition_indication": "Right upper quadrant pain",
+          "required_prerequisite_evidence": "Inconclusive ultrasound.",
+          "velo_claim_evidence_check": "Find ultrasound report with inconclusive result."
+        },
+        {
+          "condition_indication": "Systemic or portal venous thrombosis",
+          "required_prerequisite_evidence": "Technically limited or inconclusive Doppler ultrasound.",
+          "velo_claim_evidence_check": "Find Doppler ultrasound report; confirm limitation/inconclusive."
+        },
+        {
+          "condition_indication": "Pelvic stress fractures/trauma",
+          "required_prerequisite_evidence": "Persistent clinical symptoms following negative X-rays.",
+          "velo_claim_evidence_check": "Find X-ray report negative + symptoms documentation."
+        },
+        {
+          "condition_indication": "Osteoid osteoma",
+          "required_prerequisite_evidence": "Negative or inconclusive X-rays.",
+          "velo_claim_evidence_check": "Find X-ray report negative/inconclusive."
+        },
+        {
+          "condition_indication": "Sacroiliitis",
+          "required_prerequisite_evidence": "Following X-rays or MRI conditions; if MRI contraindicated, evidence-based criteria and documentation required.",
+          "velo_claim_evidence_check": "Find X-ray/MRI report or MRI contraindication and clinical documentation."
+        },
+        {
+          "condition_indication": "Suspicion of pelvic bones osteomyelitis or septic arthritis",
+          "required_prerequisite_evidence": "Plain radiograph baseline; if X-ray inconclusive and high suspicion remains.",
+          "velo_claim_evidence_check": "Find baseline radiograph and high suspicion note."
+        },
+        {
+          "condition_indication": "Hepatomegaly",
+          "required_prerequisite_evidence": "Worsening or suspected liver enlargement unexplained through ultrasound.",
+          "velo_claim_evidence_check": "Find ultrasound report and unexplained/worsening liver enlargement."
+        },
+        {
+          "condition_indication": "Elevated liver transaminases ALT/AST",
+          "required_prerequisite_evidence": "Unknown cause following ultrasound with focal lesion.",
+          "velo_claim_evidence_check": "Find lab ALT/AST + ultrasound focal lesion."
+        },
+        {
+          "condition_indication": "Jaundice",
+          "required_prerequisite_evidence": "Acute biliary obstruction level/cause not identified by ultrasound and/or suspected complication.",
+          "velo_claim_evidence_check": "Find ultrasound + clinical complication evidence."
+        }
+      ]
+    },
+    "rule_db_schema": {
+      "headers": [
+        "Column",
+        "Type",
+        "Description"
+      ],
+      "records": [
+        {
+          "column": "id",
+          "type": "uuid",
+          "description": "Unique rule id."
+        },
+        {
+          "column": "payer_name",
+          "type": "text",
+          "description": "Daman."
+        },
+        {
+          "column": "jurisdiction",
+          "type": "text",
+          "description": "UAE / Abu Dhabi when applicable."
+        },
+        {
+          "column": "guideline_title",
+          "type": "text",
+          "description": "Source guideline/form title."
+        },
+        {
+          "column": "source_url",
+          "type": "text",
+          "description": "Plain source URL."
+        },
+        {
+          "column": "reference_no",
+          "type": "text",
+          "description": "Guideline reference number if available."
+        },
+        {
+          "column": "version",
+          "type": "text",
+          "description": "Guideline version if available."
+        },
+        {
+          "column": "revision_date",
+          "type": "date",
+          "description": "Revision date if available."
+        },
+        {
+          "column": "service_category",
+          "type": "text",
+          "description": "Radiology, DME, Obstetric, Cardiology, etc."
+        },
+        {
+          "column": "procedure_family",
+          "type": "text",
+          "description": "CT Abdomen/Pelvis, Wheelchair, Orthopedic Shoes, etc."
+        },
+        {
+          "column": "code_system",
+          "type": "text",
+          "description": "CPT, HCPCS, SRVC, ICD, Medication."
+        },
+        {
+          "column": "code_pattern",
+          "type": "text",
+          "description": "Code list/range or linked mapping id."
+        },
+        {
+          "column": "prior_auth_required",
+          "type": "boolean/enum",
+          "description": "true, false, conditional, unknown."
+        },
+        {
+          "column": "applicability",
+          "type": "json",
+          "description": "Plan/provider/context conditions."
+        },
+        {
+          "column": "exceptions",
+          "type": "json",
+          "description": "Premier, Thiqa in SEHA providers, emergency, etc."
+        },
+        {
+          "column": "documentation_required",
+          "type": "json",
+          "description": "Required medical evidence attachments."
+        },
+        {
+          "column": "denial_codes",
+          "type": "json",
+          "description": "AUTH-001, MNEC, NCOV, etc."
+        },
+        {
+          "column": "confidence",
+          "type": "enum",
+          "description": "confirmed, conditional, unconfirmed, no-pa."
+        },
+        {
+          "column": "review_status",
+          "type": "enum",
+          "description": "pending, reviewed, approved, rejected."
+        }
+      ]
+    },
+    "dashboard": {
+      "headers": [
+        "Metric",
+        "Count",
+        "Meaning",
+        "Source Sheet"
+      ],
+      "records": [
+        {
+          "metric": "Confirmed / conditional PA rules/forms",
+          "count": 8,
+          "meaning": "Rules available for MVP implementation.",
+          "source_sheet": "Available_PA_Rules"
+        },
+        {
+          "metric": "Daman billing documents indexed",
+          "count": 24,
+          "meaning": "Documents on Daman billing page as of extraction.",
+          "source_sheet": "Daman_Billing_Index"
+        },
+        {
+          "metric": "Direct CT guideline included",
+          "count": 1,
+          "meaning": "User-provided direct PDF not necessarily visible in billing list.",
+          "source_sheet": "Available_PA_Rules"
+        },
+        {
+          "metric": "Critical missing items",
+          "count": 2,
+          "meaning": "Actual auth records + Shafafiya credentials/config.",
+          "source_sheet": "Missing_Data"
+        },
+        {
+          "metric": "Implementation steps",
+          "count": 12,
+          "meaning": "Build path from extraction to production agent.",
+          "source_sheet": "Implementation_Steps"
+        },
+        {
+          "metric": "CT prerequisite checks",
+          "count": 10,
+          "meaning": "Clinical evidence checks for CT Abdomen/Pelvis.",
+          "source_sheet": "CT_Prerequisites"
+        }
+      ]
+    }
+  },
+  "prior_auth_rules_compact": [
+    {
+      "rule_id": "DAMAN-PA-CT-ABD-PEL-001",
+      "payer": "Daman",
+      "service_procedure_family": "CT scan Abdomen and/or Pelvis",
+      "codes_mentioned": "Exact CPT list not provided in PDF; guideline says ICD and CPT must be highest specificity.",
+      "pa_requirement_status": "REQUIRED",
+      "applicability_plan_rule": "Authorization for CT scan is required for all plans.",
+      "exceptions": "Premier; Thiqa in SEHA providers only.",
+      "required_evidence_documentation": "Medical necessity; prerequisite tests for certain indications; repeat imaging needs strong justification.",
+      "non_coverage_denial_logic": "Visitor plan except medical emergency; screening without signs/symptoms not covered; bundled without/with contrast must use single combined CPT.",
+      "implementation_status": "Ready as MVP rule; missing CPT mapping.",
+      "source_document": "CT scan Abdomen and Pelvis External Guideline V4.0",
+      "source_url": "https://www.damaninsurance.ae/wp-content/uploads/2026/01/CT-scan-Abdomen-and-Pelvis-External-Guideline-V4.0.pdf",
+      "notes_next_action": "Add CPT family mapping from licensed CPT/DOH tariff; add plan/provider exception logic."
+    },
+    {
+      "rule_id": "DAMAN-PA-WHEELCHAIR-001",
+      "payer": "Daman",
+      "service_procedure_family": "Wheelchair services and wheelchair accessories",
+      "codes_mentioned": "HCPCS / DME codes not listed in extracted lines.",
+      "pa_requirement_status": "REQUIRED",
+      "applicability_plan_rule": "Wheelchair services require authorization for all plans; must have DME benefit and policy limit.",
+      "exceptions": "None stated in extracted PA sentence.",
+      "required_evidence_documentation": "Prescribing specialist/consultant must compile and submit documentation for authorization; ordering and performing specialty rules.",
+      "non_coverage_denial_logic": "No DME benefit / visitor plan / duplicate convenience equipment / no illness or injury may reject.",
+      "implementation_status": "Ready as PA rule; missing HCPCS mapping.",
+      "source_document": "Wheelchair Services Adjudication Guideline",
+      "source_url": "https://www.damaninsurance.ae/wp-content/uploads/2025/09/Wheelchair-Services_Adjudication-Guideline-External-Instruction-Template_30122024.pdf",
+      "notes_next_action": "Add wheelchair HCPCS code list and DME benefit check."
+    },
+    {
+      "rule_id": "DAMAN-PA-ORTHO-SHOES-001",
+      "payer": "Daman",
+      "service_procedure_family": "Orthopedic Shoes / Orthotic HCPCS",
+      "codes_mentioned": "HCPCS category; specific code for unspecified orthopedic shoe modification noted but exact code list incomplete.",
+      "pa_requirement_status": "REQUIRED / STRONG CLUE",
+      "applicability_plan_rule": "Authorization-level documentation is required; AUTH-001 denial code confirms prior approval risk.",
+      "exceptions": "Plans without DME benefit are not covered.",
+      "required_evidence_documentation": "For unspecified HCPCS: reason for unspecified code, detailed description, and photograph for authorization only; ordering and performing clinicians in invoice.",
+      "non_coverage_denial_logic": "AUTH-001: prior approval required and not obtained; reject if documentation does not justify HCPCS.",
+      "implementation_status": "Ready with caution; map HCPCS codes.",
+      "source_document": "Orthopedic Shoes External Guideline",
+      "source_url": "https://www.damaninsurance.ae/wp-content/uploads/2025/09/Orthopedic-Shoes-External-Guideline-1.pdf",
+      "notes_next_action": "Treat as PA-required for orthopedic shoe HCPCS until contract matrix confirms."
+    },
+    {
+      "rule_id": "DAMAN-PA-PODIATRY-HCPCS-001",
+      "payer": "Daman",
+      "service_procedure_family": "Podiatry services vs podiatry-related HCPCS",
+      "codes_mentioned": "CPT podiatry services; HCPCS orthosis/orthopedic shoes.",
+      "pa_requirement_status": "MIXED",
+      "applicability_plan_rule": "Authorization is not required for Podiatry services CPTs; HCPCS such as Orthosis and Orthopedic Shoes are subject to pre-approval.",
+      "exceptions": "Podiatry CPTs are no-PA in this guideline.",
+      "required_evidence_documentation": "Anatomic location and systemic conditions must be documented; advanced practice requires evidence of training/competency.",
+      "non_coverage_denial_logic": "Routine foot care without documented systemic disease not medically necessary.",
+      "implementation_status": "Ready as negative/positive split rule.",
+      "source_document": "Podiatry Services Adjudication Guideline",
+      "source_url": "https://www.damaninsurance.ae/wp-content/uploads/2025/10/Podiatry-Adjudication-Guideline-External-Instruction-22092025-1.pdf",
+      "notes_next_action": "Implement as two rules: no-PA for podiatry CPTs; PA for related orthosis/orthopedic shoe HCPCS."
+    },
+    {
+      "rule_id": "DAMAN-PA-OBUS-001",
+      "payer": "Daman",
+      "service_procedure_family": "Obstetric Ultrasound",
+      "codes_mentioned": "OB ultrasound CPT list appears in guideline; exact mapping should be verified.",
+      "pa_requirement_status": "CONDITIONAL",
+      "applicability_plan_rule": "Eligibility must be obtained before each OB ultrasound. Additional ultrasound after OBUS-001 rejection can be requested through pre-authorization.",
+      "exceptions": "Proven emergency excluded from count and eligibility check requirement.",
+      "required_evidence_documentation": "Previous ultrasound report and detailed documentation supporting medical necessity for additional ultrasound.",
+      "non_coverage_denial_logic": "Not covered without corresponding eligibility or prior authorization except proven emergency; visitor/no maternity benefit not covered.",
+      "implementation_status": "Ready as conditional rule.",
+      "source_document": "Obstetric Ultrasound Version 1.0",
+      "source_url": "https://www.damaninsurance.ae/wp-content/uploads/2025/09/Obstetric-Ultrasound-Version-1.0.pdf",
+      "notes_next_action": "Model as eligibility-first; only require PA when frequency/trimester rule rejects and medical necessity supports additional ultrasound."
+    },
+    {
+      "rule_id": "DAMAN-PA-BRAIN-DEATH-001",
+      "payer": "Daman",
+      "service_procedure_family": "Brain Death Diagnosis Confirmation",
+      "codes_mentioned": "CPT/procedure code to be supplied on form; exact CPT list not extracted.",
+      "pa_requirement_status": "REQUIRED / FORM-BASED",
+      "applicability_plan_rule": "Guideline denial code AUTH-001 indicates prior approval required; Daman pre-approval form is mandatory step for Brain Death Diagnosis Confirmation.",
+      "exceptions": "Not explicit.",
+      "required_evidence_documentation": "Brain death pre-approval form fields: GCS, brainstem reflexes, apnea test, ancillary tests, physician signatures, pregnancy/organ donor/court order details.",
+      "non_coverage_denial_logic": "AUTH-001: prior approval is required and was not obtained.",
+      "implementation_status": "Ready as PA form rule; missing code mapping.",
+      "source_document": "Brain Death Diagnosis Guideline + Brain Death Pre-approval Form",
+      "source_url": "https://www.damaninsurance.ae/wp-content/uploads/2025/09/Brain-Death-Diagnosis-External-Updated-280425-1.pdf ; https://www.damaninsurance.ae/wp-content/uploads/2025/09/Brain-Death-Pre-approval-Form.pdf",
+      "notes_next_action": "Add service code/CPT and determine whether PA is required for confirmation activities or continuation of coverage."
+    },
+    {
+      "rule_id": "DAMAN-PA-LYMPH-LIPEDEMA-001",
+      "payer": "Daman",
+      "service_procedure_family": "Bundled Lymphedema and Lipedema services for Thiqa",
+      "codes_mentioned": "SRVC codes 59-01 to 59-12; CPT examples include 15876, 15877, 15878, 38999 as listed on form.",
+      "pa_requirement_status": "REQUIRED / FORM-BASED",
+      "applicability_plan_rule": "Pre-Authorization Form for Bundled Lymphedema and Lipedema services for Thiqa; mandatory step to proceed.",
+      "exceptions": "Thiqa-specific form.",
+      "required_evidence_documentation": "Clinical assessment, staging, symptoms, comorbidities, differential diagnosis ruled out, quantitative measures, diagnostic tests, complete decongestive therapy history, surgical intervention details.",
+      "non_coverage_denial_logic": "Incomplete information may delay processing.",
+      "implementation_status": "Ready as PA form rule; validate service codes.",
+      "source_document": "Pre-Authorization Form for Bundled Lymphedema and Lipedema Services for Thiqa",
+      "source_url": "https://www.damaninsurance.ae/wp-content/uploads/2026/01/Pre-Authorization-Form-for-Bundled-Lymphedema-and-Lipedema-serivces-for-Thiqa-24112025_new.pdf",
+      "notes_next_action": "Add exact bundled service definitions for 59-01..59-12 and link to Thiqa plan rules."
+    },
+    {
+      "rule_id": "DAMAN-PA-BMT-DRUGS-001",
+      "payer": "Daman",
+      "service_procedure_family": "BMT Bundle Excluded Drugs",
+      "codes_mentioned": "Medication/drug names; no CPT extracted.",
+      "pa_requirement_status": "REQUIRED / FORM-BASED",
+      "applicability_plan_rule": "Pre-approval form for BMT bundle excluded drugs; mandatory step to proceed.",
+      "exceptions": "Only for excluded drugs from BMT bundle.",
+      "required_evidence_documentation": "Medication name, FDA-labelled diagnosis, dose/duration, admission/discharge dates, prescription copies and lab/medical report results.",
+      "non_coverage_denial_logic": "Missing relevant approval information delays processing.",
+      "implementation_status": "Ready as PA form rule; missing drug list.",
+      "source_document": "BMT Bundle Excluded Drugs Pre-Requisite Form",
+      "source_url": "https://www.damaninsurance.ae/wp-content/uploads/2026/01/BMT-Bundle-excluded-drugs-Pre-Requisite-Form.pdf",
+      "notes_next_action": "Add formulary/excluded-drug list and drug coding source."
+    },
+    {
+      "rule_id": "DAMAN-PA-CARDIAC-CATH-001",
+      "payer": "Daman",
+      "service_procedure_family": "Cardiac Catheterization & Coronary Angiography",
+      "codes_mentioned": "Cardiac catheterization CPT families; exact code list not extracted.",
+      "pa_requirement_status": "UNCONFIRMED / AUTH DENIAL CLUE",
+      "applicability_plan_rule": "Guideline includes AUTH-001 denial code, but extracted policy section does not clearly state the PA trigger.",
+      "exceptions": "Not stated.",
+      "required_evidence_documentation": "Medical necessity, ICD/CPT highest specificity, procedure report.",
+      "non_coverage_denial_logic": "AUTH-001: prior approval is required and was not obtained.",
+      "implementation_status": "Needs manual payer confirmation before production.",
+      "source_document": "Cardiac Catheterization & Coronary Angiography External",
+      "source_url": "https://www.damaninsurance.ae/wp-content/uploads/2025/09/Cardiac-Catheterization-Coronary-Angiography-External.pdf",
+      "notes_next_action": "Do not auto-deny in MVP; flag for manual review until PA matrix/contract confirms exact trigger."
+    }
+  ],
+  "missing_data": [
+    {
+      "missing_item": "Exact CPT/HCPCS/SRVC code mapping",
+      "why_it_is_missing_risk": "Several Daman PDFs mention CPT/HCPCS/SRVC families but do not provide complete production code lists. CPT is also licensed by AMA.",
+      "what_to_do": "Build a controlled code mapping table from licensed CPT/HCPCS, DOH tariff/source, payer contract, and Daman-specific service groups.",
+      "owner": "Coding/Rules team",
+      "priority": "High"
+    },
+    {
+      "missing_item": "Actual approved prior authorization records",
+      "why_it_is_missing_risk": "Public PDFs only state requirement rules. They do not show whether this patient/member already has an approved valid authorization.",
+      "what_to_do": "Connect Shafafiya prior authorization transaction services and payer APIs; ingest PA XML/files into auth_store.",
+      "owner": "Backend/Integration",
+      "priority": "Critical"
+    },
+    {
+      "missing_item": "Shafafiya credentials and endpoint configuration",
+      "why_it_is_missing_risk": "Uploaded technical document shows login/pwd service signatures, but credentials and actual environment endpoints are not provided here.",
+      "what_to_do": "Request non-production access: login, password, service URL, facility/caller license, payer/partner license, IP/network allowlist, certificate requirements.",
+      "owner": "Integration/Compliance",
+      "priority": "Critical"
+    },
+    {
+      "missing_item": "Prior Authorization XML schema/sample files",
+      "why_it_is_missing_risk": "The service returns XML descriptions/files; field names for auth_ref, status, member_id, validity dates, service codes need concrete samples.",
+      "what_to_do": "Ask payer/DoH for PA transaction sample packages and XML/XSD; map fields into Velo Claim auth_store.",
+      "owner": "Backend/Data",
+      "priority": "High"
+    },
+    {
+      "missing_item": "Member plan and SOB/benefit data",
+      "why_it_is_missing_risk": "Rules depend on plan type and benefits: Premier, Thiqa, SEHA provider, DME benefit, maternity benefit, visitor plan, policy limits.",
+      "what_to_do": "Use Coverage/FHIR, eligibility response, payer eligibility API, and internal policy/SOB data.",
+      "owner": "Eligibility Agent",
+      "priority": "High"
+    },
+    {
+      "missing_item": "Provider/facility and clinician context",
+      "why_it_is_missing_risk": "Rules depend on SEHA provider status, ordering/performing clinician specialty, and facility license.",
+      "what_to_do": "Normalize provider master data: facility license, network/SEHA flag, clinician specialty, ordering/performing IDs.",
+      "owner": "Provider Data",
+      "priority": "High"
+    },
+    {
+      "missing_item": "Medical evidence attachments",
+      "why_it_is_missing_risk": "Rules require ultrasound/X-ray reports, previous imaging, lab reports, photos, CDT history, previous ultrasound reports, etc.",
+      "what_to_do": "Index DocumentReference/attachments and extract evidence with OCR/RAG; create evidence checklist per rule.",
+      "owner": "Documentation Agent",
+      "priority": "High"
+    },
+    {
+      "missing_item": "Manual validation of ambiguous PA clues",
+      "why_it_is_missing_risk": "AUTH-001 denial code alone is not enough to prove every service always requires PA.",
+      "what_to_do": "Create review queue for rules with status UNCONFIRMED / AUTH DENIAL CLUE.",
+      "owner": "Clinical Rules Reviewer",
+      "priority": "Medium"
+    },
+    {
+      "missing_item": "Version monitoring",
+      "why_it_is_missing_risk": "Daman billing documents update frequently; current page includes 2026 PDFs.",
+      "what_to_do": "Schedule monthly crawler and diff job for Daman billing page and direct PDFs; update rule version history.",
+      "owner": "Data Engineering",
+      "priority": "Medium"
+    }
+  ],
+  "implementation_steps": [
+    {
+      "step": 1,
+      "task": "Create source registry",
+      "implementation_detail": "Store source_id, payer, title, source_url, document_date, last_checked_at. Seed it with Daman billing page and direct CT PDF.",
+      "output_artifact": "source_registry table",
+      "done": "No"
+    },
+    {
+      "step": 2,
+      "task": "Download and parse PDFs",
+      "implementation_detail": "For each source, download PDF, extract text, page numbers, and screenshots for tables/forms if needed.",
+      "output_artifact": "raw_document + parsed_chunks",
+      "done": "No"
+    },
+    {
+      "step": 3,
+      "task": "Detect prior-auth candidates",
+      "implementation_detail": "Search for terms: authorization, pre-authorization, pre-approval, prior approval, AUTH-001, eligibility/pre-authorization.",
+      "output_artifact": "candidate_pa_snippets",
+      "done": "No"
+    },
+    {
+      "step": 4,
+      "task": "Normalize rules",
+      "implementation_detail": "Convert snippets to payer_prior_auth_rules with payer, service_family, code system, plan rule, exception, required evidence, non-coverage, source URL.",
+      "output_artifact": "payer_prior_auth_rules",
+      "done": "No"
+    },
+    {
+      "step": 5,
+      "task": "Manual review",
+      "implementation_detail": "Review all rules with ambiguous language, especially AUTH-001-only matches such as Cardiac Cath.",
+      "output_artifact": "rule_review_status",
+      "done": "No"
+    },
+    {
+      "step": 6,
+      "task": "Add CPT/HCPCS/SRVC mapping",
+      "implementation_detail": "Link procedures to CPT/HCPCS/SRVC code ranges. Do not invent CPT codes from PDFs.",
+      "output_artifact": "procedure_rule_map",
+      "done": "No"
+    },
+    {
+      "step": 7,
+      "task": "Load medical evidence requirements",
+      "implementation_detail": "Convert prerequisites into checklists: ultrasound required, X-ray required, previous report, lab report, photo, CDT history, etc.",
+      "output_artifact": "documentation_requirements",
+      "done": "No"
+    },
+    {
+      "step": 8,
+      "task": "Connect Shafafiya PA ingestion",
+      "implementation_detail": "Call CheckForNewPriorAuthorizationTransactions, GetNewPriorAuthorizationTransactions, SearchTransactions transactionID 16/32, DownloadTransactionFile.",
+      "output_artifact": "auth_transaction_ingestion job",
+      "done": "No"
+    },
+    {
+      "step": 9,
+      "task": "Build auth_store matcher",
+      "implementation_detail": "Match claim member_id, payer, service_date, provider/facility, procedure codes/family to auth_ref and status APPROVED with valid dates.",
+      "output_artifact": "prior_auth_store + matching function",
+      "done": "No"
+    },
+    {
+      "step": 10,
+      "task": "Update check_prior_authorization()",
+      "implementation_detail": "Logic: find rule → apply exceptions → if PA required search auth_store → PASS/FAIL/UNKNOWN with evidence.",
+      "output_artifact": "Validation Agent tool",
+      "done": "No"
+    },
+    {
+      "step": 11,
+      "task": "Test scenarios",
+      "implementation_detail": "Synthetic tests: CT Basic no auth FAIL, CT Premier PASS no PA, CT Thiqa SEHA PASS exception, Wheelchair no auth FAIL, OBUS emergency PASS exception.",
+      "output_artifact": "unit tests + validation report examples",
+      "done": "No"
+    },
+    {
+      "step": 12,
+      "task": "Monitor updates",
+      "implementation_detail": "Monthly fetch Daman billing page, compare titles/dates/PDF hashes, create review task when changed.",
+      "output_artifact": "rules_update_pipeline",
+      "done": "No"
+    }
+  ]
+}

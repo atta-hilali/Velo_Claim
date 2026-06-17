@@ -177,80 +177,80 @@
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:07+00:00"
       },
       {
         "node": "fetch_fhir_context",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:07+00:00"
       },
       {
         "node": "load_rules",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:07+00:00"
       },
       {
         "node": "check_eligibility",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:07+00:00"
       },
       {
         "node": "check_prior_authorization",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:07+00:00"
       },
       {
         "node": "check_coding_consistency",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:07+00:00"
       },
       {
         "node": "check_documentation",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:07+00:00"
       },
       {
         "node": "apply_payer_rules",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:07+00:00"
       },
       {
         "node": "check_timely_filing",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:07+00:00"
       },
       {
         "node": "calculate_score",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:07+00:00"
       },
       {
         "node": "generate_report",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:07+00:00"
       }
     ],
-    "generated_at": "2026-06-16T18:31:44+00:00"
+    "generated_at": "2026-06-17T18:40:07+00:00"
   },
   "review": {
     "claim_id": "CLM-REVIEW-001",
@@ -441,80 +441,80 @@
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:07+00:00"
       },
       {
         "node": "fetch_fhir_context",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:07+00:00"
       },
       {
         "node": "load_rules",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:07+00:00"
       },
       {
         "node": "check_eligibility",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:07+00:00"
       },
       {
         "node": "check_prior_authorization",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:07+00:00"
       },
       {
         "node": "check_coding_consistency",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:07+00:00"
       },
       {
         "node": "check_documentation",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:07+00:00"
       },
       {
         "node": "apply_payer_rules",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:07+00:00"
       },
       {
         "node": "check_timely_filing",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:07+00:00"
       },
       {
         "node": "calculate_score",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:07+00:00"
       },
       {
         "node": "generate_report",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:07+00:00"
       }
     ],
-    "generated_at": "2026-06-16T18:31:44+00:00"
+    "generated_at": "2026-06-17T18:40:07+00:00"
   },
   "hold": {
     "claim_id": "CLM-HOLD-001",
@@ -745,80 +745,80 @@
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:07+00:00"
       },
       {
         "node": "fetch_fhir_context",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:07+00:00"
       },
       {
         "node": "load_rules",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:07+00:00"
       },
       {
         "node": "check_eligibility",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:07+00:00"
       },
       {
         "node": "check_prior_authorization",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:07+00:00"
       },
       {
         "node": "check_coding_consistency",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:07+00:00"
       },
       {
         "node": "check_documentation",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:07+00:00"
       },
       {
         "node": "apply_payer_rules",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:07+00:00"
       },
       {
         "node": "check_timely_filing",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:07+00:00"
       },
       {
         "node": "calculate_score",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:07+00:00"
       },
       {
         "node": "generate_report",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:07+00:00"
       }
     ],
-    "generated_at": "2026-06-16T18:31:44+00:00"
+    "generated_at": "2026-06-17T18:40:07+00:00"
   },
   "expired_prior_auth": {
     "claim_id": "CLM-EXPIRED-PA-001",
@@ -1009,80 +1009,80 @@
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:07+00:00"
       },
       {
         "node": "fetch_fhir_context",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:07+00:00"
       },
       {
         "node": "load_rules",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:07+00:00"
       },
       {
         "node": "check_eligibility",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:07+00:00"
       },
       {
         "node": "check_prior_authorization",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:07+00:00"
       },
       {
         "node": "check_coding_consistency",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:07+00:00"
       },
       {
         "node": "check_documentation",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:07+00:00"
       },
       {
         "node": "apply_payer_rules",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:07+00:00"
       },
       {
         "node": "check_timely_filing",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:07+00:00"
       },
       {
         "node": "calculate_score",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:07+00:00"
       },
       {
         "node": "generate_report",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:07+00:00"
       }
     ],
-    "generated_at": "2026-06-16T18:31:44+00:00"
+    "generated_at": "2026-06-17T18:40:07+00:00"
   },
   "plan_specific_prior_auth": {
     "claim_id": "CLM-PLAN-PA-001",
@@ -1273,80 +1273,80 @@
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       },
       {
         "node": "fetch_fhir_context",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       },
       {
         "node": "load_rules",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       },
       {
         "node": "check_eligibility",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       },
       {
         "node": "check_prior_authorization",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       },
       {
         "node": "check_coding_consistency",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       },
       {
         "node": "check_documentation",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       },
       {
         "node": "apply_payer_rules",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       },
       {
         "node": "check_timely_filing",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       },
       {
         "node": "calculate_score",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       },
       {
         "node": "generate_report",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       }
     ],
-    "generated_at": "2026-06-16T18:31:44+00:00"
+    "generated_at": "2026-06-17T18:40:08+00:00"
   },
   "kg_mismatch": {
     "claim_id": "CLM-KG-MISMATCH-001",
@@ -1537,80 +1537,80 @@
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       },
       {
         "node": "fetch_fhir_context",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       },
       {
         "node": "load_rules",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       },
       {
         "node": "check_eligibility",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       },
       {
         "node": "check_prior_authorization",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       },
       {
         "node": "check_coding_consistency",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       },
       {
         "node": "check_documentation",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       },
       {
         "node": "apply_payer_rules",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       },
       {
         "node": "check_timely_filing",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       },
       {
         "node": "calculate_score",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       },
       {
         "node": "generate_report",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       }
     ],
-    "generated_at": "2026-06-16T18:31:44+00:00"
+    "generated_at": "2026-06-17T18:40:08+00:00"
   },
   "llm_review": {
     "claim_id": "CLM-LLM-RULE-001",
@@ -1811,80 +1811,80 @@
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       },
       {
         "node": "fetch_fhir_context",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       },
       {
         "node": "load_rules",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       },
       {
         "node": "check_eligibility",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       },
       {
         "node": "check_prior_authorization",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       },
       {
         "node": "check_coding_consistency",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       },
       {
         "node": "check_documentation",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       },
       {
         "node": "apply_payer_rules",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       },
       {
         "node": "check_timely_filing",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       },
       {
         "node": "calculate_score",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       },
       {
         "node": "generate_report",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       }
     ],
-    "generated_at": "2026-06-16T18:31:44+00:00"
+    "generated_at": "2026-06-17T18:40:08+00:00"
   },
   "fhir_auth_failure": {
     "claim_id": "CLM-CLEAN-001",
@@ -2052,7 +2052,7 @@
           "status_code": 401,
           "error": "simulated expired backend token"
         },
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       }
     ],
     "validation_tools": [
@@ -2098,79 +2098,79 @@
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       },
       {
         "node": "fetch_fhir_context",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       },
       {
         "node": "load_rules",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       },
       {
         "node": "check_eligibility",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       },
       {
         "node": "check_prior_authorization",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       },
       {
         "node": "check_coding_consistency",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       },
       {
         "node": "check_documentation",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       },
       {
         "node": "apply_payer_rules",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       },
       {
         "node": "check_timely_filing",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       },
       {
         "node": "calculate_score",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       },
       {
         "node": "generate_report",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       }
     ],
-    "generated_at": "2026-06-16T18:31:44+00:00"
+    "generated_at": "2026-06-17T18:40:08+00:00"
   }
 }

@@ -95,7 +95,6 @@ def assert_common_claim_xml(result: dict[str, Any], expected_format: str, expect
     require(root.findtext("./Claim/ID") == result["claim_id"], f"{expected_format} XML Claim ID must match result")
     require(root.findtext("./Claim/MemberID"), f"{expected_format} claim must include MemberID")
     require(root.findtext("./Claim/EmiratesIDNumber"), f"{expected_format} claim must include Emirates ID")
-    require(root.findtext("./Claim/Encounter/Activity/Code") == "99213", f"{expected_format} activity code missing")
     return root
 
 
@@ -107,14 +106,28 @@ def main() -> None:
 
     shafafiya_xml = assert_common_claim_xml(shafafiya, "SHAFAFIYA", "ABU_DHABI")
     require(
-        shafafiya_xml.findtext("./Header/DispositionFlag") == "PRODUCTION_DRAFT",
-        "Shafafiya XML should include draft disposition flag",
+        shafafiya_xml.findtext("./Header/DispositionFlag") == "PTE_VALIDATE_ONLY",
+        "Shafafiya XML should include public-test validation disposition flag",
     )
-    require(shafafiya_xml.findtext("./Claim/ClaimNet") == "275.00", "Shafafiya ClaimNet missing")
+    require(shafafiya_xml.find("./Claim/ClaimNet") is None, "Shafafiya should not emit legacy ClaimNet")
+    require(shafafiya_xml.findtext("./Claim/Gross") == "275.00", "Shafafiya Gross missing")
+    require(shafafiya_xml.findtext("./Claim/PatientShare") == "0.00", "Shafafiya PatientShare missing")
+    require(shafafiya_xml.findtext("./Claim/Net") == "275.00", "Shafafiya Net missing")
     require(
-        shafafiya_xml.findtext("./Claim/Encounter/Diagnosis/Code") == "J18.9",
+        shafafiya_xml.findtext("./Claim/Encounter/PatientID") == "P-SHAFAFIYA-001",
+        "Shafafiya Encounter.PatientID missing",
+    )
+    require(
+        shafafiya_xml.findtext("./Claim/Diagnosis/Code") == "J18.9",
         "Shafafiya diagnosis code missing",
     )
+    require(
+        shafafiya_xml.findtext("./Claim/Diagnosis/Type") == "Principal",
+        "Shafafiya diagnosis type should use official title case",
+    )
+    require(shafafiya_xml.findtext("./Claim/Activity/Code") == "99213", "Shafafiya activity code missing")
+    require(shafafiya_xml.findtext("./Claim/Activity/Type") == "3", "Shafafiya CPT activity type must be 3")
+    require(shafafiya_xml.findtext("./Claim/Activity/Clinician"), "Shafafiya activity clinician missing")
 
     eclaimlink_xml = assert_common_claim_xml(eclaimlink, "ECLAIMLINK", "DUBAI")
     require(
@@ -122,6 +135,7 @@ def main() -> None:
         "eClaimLink XML should not use Shafafiya DispositionFlag",
     )
     require(eclaimlink_xml.findtext("./Claim/NetAmount") == "275.00", "eClaimLink NetAmount missing")
+    require(eclaimlink_xml.findtext("./Claim/Encounter/Activity/Code") == "99213", "eClaimLink activity code missing")
     require(
         eclaimlink_xml.findtext("./Claim/Encounter/Diagnosis/DiagnosisCode") == "J18.9",
         "eClaimLink diagnosis code missing",

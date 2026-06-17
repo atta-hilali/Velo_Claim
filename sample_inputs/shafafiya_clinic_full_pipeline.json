@@ -1,0 +1,181 @@
+{
+  "case_id": "CASE-SHAFAFIYA-CLINIC-001",
+  "trigger_source": "VELO_DOCTOR_APPROVED_ENCOUNTER",
+  "use_medgemma": false,
+  "use_knowledge_graph": false,
+  "claim_format": "AUTO",
+  "jurisdiction": "ABU_DHABI",
+  "encounter_package": {
+    "encounter": {
+      "resourceType": "Encounter",
+      "id": "ENC-AUH-CLINIC-001",
+      "status": "finished",
+      "class": {
+        "code": "AMB",
+        "display": "Ambulatory"
+      },
+      "type": [
+        {
+          "text": "Primary care consultation"
+        }
+      ],
+      "subject": {
+        "reference": "Patient/P-AUH-001"
+      },
+      "serviceProvider": {
+        "reference": "Organization/FAC-AUH-001"
+      },
+      "participant": [
+        {
+          "individual": {
+            "reference": "Practitioner/D-AUH-001"
+          }
+        }
+      ],
+      "period": {
+        "start": "2026-06-16T09:15:00+04:00",
+        "end": "2026-06-16T09:45:00+04:00"
+      },
+      "startType": "1",
+      "endType": "1",
+      "soap_note": "Patient presents with fever, productive cough, and focal right lower chest crackles. Chest X-ray supports pneumonia. Physician documents outpatient antibiotic treatment and follow-up instructions.",
+      "diagnoses": [
+        {
+          "diagnosisCode": "J18.9",
+          "system": "ICD-10",
+          "description": "Pneumonia, unspecified organism",
+          "type": "principal"
+        }
+      ],
+      "procedures": [
+        {
+          "procedureCode": "99213",
+          "system": "CPT",
+          "description": "Office or other outpatient visit for established patient",
+          "units": 1
+        }
+      ],
+      "attachments": [
+        {
+          "name": "soap_note_auh_001.pdf",
+          "type": "soap_note",
+          "status": "available"
+        },
+        {
+          "name": "chest_xray_report_auh_001.pdf",
+          "type": "radiology_report",
+          "status": "available"
+        }
+      ],
+      "charge_items": [
+        {
+          "id": "ACT-AUH-001",
+          "description": "Established patient outpatient visit",
+          "code": "99213",
+          "system": "CPT",
+          "start": "2026-06-16T09:20:00+04:00",
+          "amount": 450.0,
+          "currency": "AED",
+          "quantity": 1
+        }
+      ]
+    },
+    "patient": {
+      "resourceType": "Patient",
+      "id": "P-AUH-001",
+      "identifier": [
+        {
+          "system": "mrn",
+          "value": "MRN-AUH-0001"
+        },
+        {
+          "system": "velo/member-id",
+          "value": "AUH-M-0001"
+        },
+        {
+          "system": "uae/emirates-id",
+          "value": "784-1988-7654321-2"
+        }
+      ],
+      "name": [
+        {
+          "text": "Fatima Al Mansoori",
+          "given": [
+            "Fatima"
+          ],
+          "family": "Al Mansoori"
+        }
+      ],
+      "birthDate": "1988-04-19",
+      "gender": "female"
+    },
+    "coverage": {
+      "resourceType": "Coverage",
+      "id": "COV-AUH-001",
+      "status": "active",
+      "voi_status": "verified",
+      "subscriberId": "AUH-M-0001",
+      "payor": [
+        {
+          "identifier": {
+            "value": "A001"
+          },
+          "display": "DAMAN"
+        }
+      ],
+      "class": [
+        {
+          "type": {
+            "text": "plan"
+          },
+          "value": "THIQA",
+          "name": "Thiqa"
+        }
+      ],
+      "period": {
+        "start": "2026-01-01",
+        "end": "2026-12-31"
+      }
+    },
+    "provider": {
+      "resourceType": "Practitioner",
+      "id": "D-AUH-001",
+      "identifier": [
+        {
+          "system": "doh/clinician-license",
+          "value": "GD6476"
+        }
+      ],
+      "name": [
+        {
+          "text": "Dr. Sara Haddad",
+          "given": [
+            "Sara"
+          ],
+          "family": "Haddad",
+          "prefix": [
+            "Dr."
+          ]
+        }
+      ],
+      "qualification": [
+        {
+          "code": {
+            "text": "Family Medicine"
+          }
+        }
+      ]
+    },
+    "facility": {
+      "resourceType": "Organization",
+      "id": "FAC-AUH-001",
+      "name": "Velo Clinic Abu Dhabi",
+      "identifier": [
+        {
+          "system": "doh/facility-license",
+          "value": "MF2057"
+        }
+      ]
+    }
+  }
+}

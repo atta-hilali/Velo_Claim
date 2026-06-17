@@ -4,7 +4,7 @@
     "format": "SHAFAFIYA",
     "jurisdiction": "ABU_DHABI",
     "payload_type": "application/xml",
-    "payload": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<Claim.Submission>\n  <Header>\n    <SenderID>DOH-FAC-001</SenderID>\n    <ReceiverID>DAMAN</ReceiverID>\n    <TransactionDate>2026-06-16T18:32:07+00:00</TransactionDate>\n    <RecordCount>1</RecordCount>\n    <DispositionFlag>PRODUCTION_DRAFT</DispositionFlag>\n  </Header>\n  <Claim>\n    <ID>CLM-SHAFAFIYA-001-SHAFAFIYA-001</ID>\n    <MemberID>UAE-M-SHAFAFIYA</MemberID>\n    <EmiratesIDNumber>784-1990-1234567-1</EmiratesIDNumber>\n    <MemberBirthDate>1990-01-15</MemberBirthDate>\n    <MemberGender>male</MemberGender>\n    <PayerID>DAMAN</PayerID>\n    <ProviderID>DOH-FAC-001</ProviderID>\n    <ClaimGross>275.00</ClaimGross>\n    <ClaimNet>275.00</ClaimNet>\n    <ClaimPatientShare>0.00</ClaimPatientShare>\n    <Encounter>\n      <FacilityID>DOH-FAC-001</FacilityID>\n      <Type>1</Type>\n      <Start>2026-06-11</Start>\n      <End>2026-06-11</End>\n      <Diagnosis>\n        <Type>principal</Type>\n        <Code>J18.9</Code>\n        <Description>Pneumonia, unspecified organism</Description>\n      </Diagnosis>\n      <Activity>\n        <ID>ACT-NPHIES-001</ID>\n        <Start>2026-06-11</Start>\n        <Type>CPT</Type>\n        <Code>99213</Code>\n        <CodeSystem>CPT</CodeSystem>\n        <Quantity>1</Quantity>\n        <Net>275.00</Net>\n        <Clinician>SHAFAFIYA-D-001</Clinician>\n      </Activity>\n    </Encounter>\n    <Attachments>\n      <Attachment>\n        <FileName>chest_xray_report.pdf</FileName>\n        <Type>radiology_report</Type>\n        <Status>available</Status>\n      </Attachment>\n    </Attachments>\n  </Claim>\n</Claim.Submission>\n",
+    "payload": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<Claim.Submission>\n  <Header>\n    <SenderID>DOH-FAC-001</SenderID>\n    <ReceiverID>DAMAN</ReceiverID>\n    <TransactionDate>17/06/2026 19:04</TransactionDate>\n    <RecordCount>1</RecordCount>\n    <DispositionFlag>PTE_VALIDATE_ONLY</DispositionFlag>\n  </Header>\n  <Claim>\n    <ID>CLM-SHAFAFIYA-001-SHAFAFIYA-001</ID>\n    <MemberID>UAE-M-SHAFAFIYA</MemberID>\n    <PayerID>DAMAN</PayerID>\n    <ProviderID>DOH-FAC-001</ProviderID>\n    <EmiratesIDNumber>784-1990-1234567-1</EmiratesIDNumber>\n    <Gross>275.00</Gross>\n    <PatientShare>0.00</PatientShare>\n    <Net>275.00</Net>\n    <Encounter>\n      <FacilityID>DOH-FAC-001</FacilityID>\n      <Type>1</Type>\n      <PatientID>P-SHAFAFIYA-001</PatientID>\n      <Start>11/06/2026 10:30</Start>\n    </Encounter>\n    <Diagnosis>\n      <Type>Principal</Type>\n      <Code>J18.9</Code>\n    </Diagnosis>\n    <Activity>\n      <ID>ACT-NPHIES-001</ID>\n      <Start>11/06/2026 10:30</Start>\n      <Type>3</Type>\n      <Code>99213</Code>\n      <Quantity>1</Quantity>\n      <Net>275.00</Net>\n      <OrderingClinician>SHAFAFIYA-D-001</OrderingClinician>\n      <Clinician>SHAFAFIYA-D-001</Clinician>\n    </Activity>\n  </Claim>\n</Claim.Submission>\n",
     "warnings": []
   },
   "eclaimlink": {
@@ -12,7 +12,26 @@
     "format": "ECLAIMLINK",
     "jurisdiction": "DUBAI",
     "payload_type": "application/xml",
-    "payload": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<Claim.Submission>\n  <Header>\n    <SenderID>DHA-FAC-001</SenderID>\n    <ReceiverID>DHA-PAYER</ReceiverID>\n    <TransactionDate>2026-06-16T18:32:07+00:00</TransactionDate>\n    <RecordCount>1</RecordCount>\n  </Header>\n  <Claim>\n    <ID>CLM-ECLAIMLINK-001-ECLAIMLINK-001</ID>\n    <MemberID>UAE-M-ECLAIMLINK</MemberID>\n    <EmiratesIDNumber>784-1990-1234567-1</EmiratesIDNumber>\n    <PayerID>DHA-PAYER</PayerID>\n    <ProviderID>DHA-FAC-001</ProviderID>\n    <GrossAmount>275.00</GrossAmount>\n    <PatientShare>0.00</PatientShare>\n    <NetAmount>275.00</NetAmount>\n    <Encounter>\n      <FacilityID>DHA-FAC-001</FacilityID>\n      <Type>1</Type>\n      <Start>2026-06-11</Start>\n      <Diagnosis>\n        <DiagnosisCode>J18.9</DiagnosisCode>\n        <Type>principal</Type>\n      </Diagnosis>\n      <Activity>\n        <ID>ACT-NPHIES-001</ID>\n        <ActivityStart>2026-06-11</ActivityStart>\n        <Type>CPT</Type>\n        <Code>99213</Code>\n        <CodeSystem>CPT</CodeSystem>\n        <Quantity>1</Quantity>\n        <Net>275.00</Net>\n        <OrderingClinician>ECLAIMLINK-D-001</OrderingClinician>\n      </Activity>\n    </Encounter>\n    <Attachments>\n      <Attachment>\n        <FileName>chest_xray_report.pdf</FileName>\n        <Type>radiology_report</Type>\n        <Status>available</Status>\n      </Attachment>\n    </Attachments>\n  </Claim>\n</Claim.Submission>\n",
-    "warnings": []
+    "payload": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<Claim.Submission>\n  <Header>\n    <SenderID>DHA-FAC-001</SenderID>\n    <ReceiverID>DHA-PAYER</ReceiverID>\n    <TransactionDate>2026-06-17T19:04:28+00:00</TransactionDate>\n    <RecordCount>1</RecordCount>\n  </Header>\n  <Claim>\n    <ID>CLM-ECLAIMLINK-001-ECLAIMLINK-001</ID>\n    <MemberID>UAE-M-ECLAIMLINK</MemberID>\n    <EmiratesIDNumber>784-1990-1234567-1</EmiratesIDNumber>\n    <PayerID>DHA-PAYER</PayerID>\n    <ProviderID>DHA-FAC-001</ProviderID>\n    <GrossAmount>275.00</GrossAmount>\n    <PatientShare>0.00</PatientShare>\n    <NetAmount>275.00</NetAmount>\n    <Encounter>\n      <FacilityID>DHA-FAC-001</FacilityID>\n      <Type>1</Type>\n      <PatientID>P-ECLAIMLINK-001</PatientID>\n      <Start>2026-06-11T10:30:00+04:00</Start>\n      <Diagnosis>\n        <DiagnosisCode>J18.9</DiagnosisCode>\n        <Type>Principal</Type>\n      </Diagnosis>\n      <Activity>\n        <ID>ACT-NPHIES-001</ID>\n        <ActivityStart>2026-06-11T10:30:00+04:00</ActivityStart>\n        <Type>3</Type>\n        <Code>99213</Code>\n        <CodeSystem>CPT</CodeSystem>\n        <Quantity>1</Quantity>\n        <Net>275.00</Net>\n        <OrderingClinician>ECLAIMLINK-D-001</OrderingClinician>\n        <Clinician>ECLAIMLINK-D-001</Clinician>\n      </Activity>\n    </Encounter>\n    <Attachments>\n      <Attachment>\n        <FileName>chest_xray_report.pdf</FileName>\n        <Type>radiology_report</Type>\n        <Status>available</Status>\n      </Attachment>\n    </Attachments>\n  </Claim>\n</Claim.Submission>\n",
+    "warnings": [
+      {
+        "type": "CLAIM_FORMAT_WARNING",
+        "message": "eClaimLink ProviderID/SenderID looks synthetic; use the real DHA facility code before submission.",
+        "metadata": {
+          "format": "ECLAIMLINK",
+          "jurisdiction": "DUBAI"
+        },
+        "timestamp": "2026-06-17T19:04:28+00:00"
+      },
+      {
+        "type": "CLAIM_FORMAT_WARNING",
+        "message": "eClaimLink attachments are metadata-only; real submission usually needs uploaded attachment references or encoded content.",
+        "metadata": {
+          "format": "ECLAIMLINK",
+          "jurisdiction": "DUBAI"
+        },
+        "timestamp": "2026-06-17T19:04:28+00:00"
+      }
+    ]
   }
 }

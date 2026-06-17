@@ -1749,6 +1749,21 @@ class ClaimBuilder:
             trigger_source=state.get("trigger_source"),
             encounter_acceptance=state.get("encounter_acceptance"),
         )
+        warnings = [
+            *state.get("warnings", []),
+            *[
+                {
+                    "type": "CLAIM_FORMAT_WARNING",
+                    "message": warning,
+                    "metadata": {
+                        "format": claim["submission"]["format"],
+                        "jurisdiction": claim["submission"]["jurisdiction"],
+                    },
+                    "timestamp": utc_now(),
+                }
+                for warning in claim["submission"].get("warnings", [])
+            ],
+        ]
 
         return {
             **state,
@@ -1760,6 +1775,7 @@ class ClaimBuilder:
             "claim_payload": claim["submission"]["payload"],
             "claim_payload_type": claim["submission"]["payload_type"],
             "formatted_claim": claim["submission"],
+            "warnings": warnings,
             "status": "DRAFT_CLAIM_BUILT",
         }
 
@@ -2027,6 +2043,12 @@ def xml_text(parent: Element, tag: str, value: Any) -> Element:
     return element
 
 
+def xml_optional_text(parent: Element, tag: str, value: Any) -> Element | None:
+    if value in (None, ""):
+        return None
+    return xml_text(parent, tag, value)
+
+
 def pretty_xml(root: Element) -> str:
     rough = tostring(root, encoding="utf-8")
     parsed = minidom.parseString(rough)
@@ -2210,6 +2232,105 @@ def activity_type_for_line(line: dict[str, Any], format_name: str) -> str:
     if "DRUG" in system:
         return "DDC" if format_name == "ECLAIMLINK" else "PHARMACY"
     return "GENERIC"
+
+
+def shafafiya_datetime(value: Any) -> str:
+    if not value:
+        value = utc_now()
+    text = str(value).replace("Z", "+00:00")
+    try:
+        parsed = datetime.fromisoformat(text)
+    except ValueError:
+        try:
+            parsed = datetime.fromisoformat(text.split("T")[0])
+        except ValueError:
+            parsed = datetime.now(UTC)
+    return parsed.strftime("%d/%m/%Y %H:%M")
+
+
+def shafafiya_activity_type_for_line(line: dict[str, Any]) -> str:
+    system = str(line.get("system") or "").upper().replace("-", "_").strip()
+    if system in {"3", "4", "5", "6", "8", "9", "10"}:
+        return system
+    if system == "CPT":
+        return "3"
+    if system == "HCPCS":
+        return "4"
+    if system in {"DDC", "DHA", "NDC", "RX"} or "DRUG" in system:
+        return "5"
+    if system in {"CDT", "DENTAL"}:
+        return "6"
+    if system in {"DRG", "IR_DRG", "IRDRG"}:
+        return "9"
+    if system in {"GENERIC_DRUG", "GENERICDRUG"}:
+        return "10"
+    return "8"
+
+
+def eclaimlink_activity_type_for_line(line: dict[str, Any]) -> str:
+    return shafafiya_activity_type_for_line(line)
+
+
+def shafafiya_diagnosis_type(value: Any) -> str:
+    token = normalize_token(str(value or "principal"))
+    if token in {"SECONDARY", "ADDITIONAL"}:
+        return "Secondary"
+    if token in {"ADMITTING", "ADMISSION"}:
+        return "Admitting"
+    if token in {"REASONFORVISIT", "REASONVISIT", "VISITREASON"}:
+        return "ReasonForVisit"
+    return "Principal"
+
+
+def shafafiya_patient_id(canonical_claim: dict[str, Any]) -> str | None:
+    source_patient = canonical_claim.get("source_resources", {}).get("patient", {})
+    patient = canonical_claim.get("patient", {})
+    patient_id_systems = {"mrn", "medical-record-number", "patient-id", "velo/patient-id"}
+    for identifier in source_patient.get("identifier", []):
+        if str(identifier.get("system") or "").lower() in patient_id_systems:
+            return identifier.get("value") or patient.get("id")
+    return patient.get("id")
+
+
+def eclaimlink_datetime(value: Any) -> str:
+    if not value:
+        return utc_now()
+    text = str(value)
+    if "T" in text or re.search(r"\d{1,2}:\d{2}", text):
+        return text
+    return f"{text}T00:00:00"
+
+
+def eclaimlink_patient_id(canonical_claim: dict[str, Any]) -> str | None:
+    return shafafiya_patient_id(canonical_claim)
+
+
+def eclaimlink_diagnosis_type(value: Any) -> str:
+    return shafafiya_diagnosis_type(value)
+
+
+def looks_like_display_name(value: Any) -> bool:
+    text = str(value or "").strip()
+    return " " in text and not re.search(r"\d", text)
+
+
+def looks_like_synthetic_identifier(value: Any) -> bool:
+    text = str(value or "").strip().upper()
+    if not text:
+        return True
+    synthetic_markers = {"TEST", "SAMPLE", "PLACEHOLDER", "DUMMY", "FAKE"}
+    if any(marker in text for marker in synthetic_markers):
+        return True
+    return bool(re.search(r"\b(DHA-?FAC|DHA-?DXB|FAC-|D-?DXB)\b", text))
+
+
+def emirates_id_has_valid_shape(value: Any) -> bool:
+    return bool(re.fullmatch(r"784-\d{4}-\d{7}-\d", str(value or "")))
+
+
+def has_time_component(value: Any) -> bool:
+    text = str(value or "")
+    return "T" in text or bool(re.search(r"\d{1,2}:\d{2}", text))
 
 
 NPHIES_BASE_URL = "http://nphies.sa/fhir/ksa/nphies-fs"
@@ -2540,9 +2661,13 @@ def build_shafafiya_xml(canonical_claim: dict[str, Any]) -> str:
     header = SubElement(root, "Header")
     xml_text(header, "SenderID", canonical_claim["provider"].get("facility_license_number"))
     xml_text(header, "ReceiverID", canonical_claim["payer"].get("id"))
-    xml_text(header, "TransactionDate", canonical_claim["created_at"])
+    xml_text(header, "TransactionDate", shafafiya_datetime(canonical_claim["created_at"]))
     xml_text(header, "RecordCount", 1)
-    xml_text(header, "DispositionFlag", "PRODUCTION_DRAFT")
+    xml_text(
+        header,
+        "DispositionFlag",
+        os.getenv("SHAFAFIYA_DISPOSITION_FLAG") or "PTE_VALIDATE_ONLY",
+    )
 
     claim = SubElement(root, "Claim")
     patient = canonical_claim["patient"]
@@ -2550,53 +2675,104 @@ def build_shafafiya_xml(canonical_claim: dict[str, Any]) -> str:
     payer = canonical_claim["payer"]
     amount = canonical_claim["amount"]
     prior_auth = canonical_claim["prior_auth"]
+    source_encounter = canonical_claim.get("source_resources", {}).get("encounter", {})
+    source_period = source_encounter.get("period") or {}
+    encounter_start = source_period.get("start") or canonical_claim["service_date"]
 
     xml_text(claim, "ID", canonical_claim["claim_id"])
+    xml_optional_text(claim, "IDPayer", canonical_claim.get("payer_claim_id"))
     xml_text(claim, "MemberID", patient.get("member_id"))
-    xml_text(claim, "EmiratesIDNumber", patient.get("emirates_id"))
-    xml_text(claim, "MemberBirthDate", patient.get("date_of_birth"))
-    xml_text(claim, "MemberGender", patient.get("gender"))
     xml_text(claim, "PayerID", payer.get("id"))
     xml_text(claim, "ProviderID", provider.get("facility_license_number"))
-    xml_text(claim, "ClaimGross", decimal_text(amount.get("gross")))
-    xml_text(claim, "ClaimNet", decimal_text(amount.get("net")))
-    xml_text(claim, "ClaimPatientShare", decimal_text(amount.get("patient_share")))
-
-    if prior_auth.get("ref"):
-        resubmission = SubElement(claim, "Resubmission")
-        xml_text(resubmission, "OriginalClaimID", prior_auth["ref"])
+    xml_text(claim, "EmiratesIDNumber", patient.get("emirates_id"))
+    xml_text(claim, "Gross", decimal_text(amount.get("gross")))
+    xml_text(claim, "PatientShare", decimal_text(amount.get("patient_share")))
+    xml_text(claim, "Net", decimal_text(amount.get("net")))
+    xml_optional_text(claim, "VAT", decimal_text(amount.get("vat")) if amount.get("vat") is not None else None)
 
     encounter = SubElement(claim, "Encounter")
     xml_text(encounter, "FacilityID", provider.get("facility_license_number"))
     xml_text(encounter, "Type", canonical_claim["format_context"]["encounter_type"])
-    xml_text(encounter, "Start", canonical_claim["service_date"])
-    xml_text(encounter, "End", canonical_claim["service_date"])
+    xml_text(encounter, "PatientID", shafafiya_patient_id(canonical_claim))
+    xml_optional_text(encounter, "EligibilityIDPayer", canonical_claim.get("eligibility_id_payer"))
+    xml_text(encounter, "Start", shafafiya_datetime(encounter_start))
+    xml_optional_text(
+        encounter,
+        "End",
+        shafafiya_datetime(source_period.get("end"))
+        if source_period.get("end")
+        else None,
+    )
+    xml_optional_text(encounter, "StartType", source_encounter.get("start_type") or source_encounter.get("startType"))
+    xml_optional_text(encounter, "EndType", source_encounter.get("end_type") or source_encounter.get("endType"))
+    xml_optional_text(encounter, "TransferSource", source_encounter.get("transfer_source"))
+    xml_optional_text(encounter, "TransferDestination", source_encounter.get("transfer_destination"))
 
     for diagnosis in canonical_claim.get("diagnoses", []):
-        diagnosis_element = SubElement(encounter, "Diagnosis")
-        xml_text(diagnosis_element, "Type", diagnosis.get("type", "principal"))
+        diagnosis_element = SubElement(claim, "Diagnosis")
+        xml_text(diagnosis_element, "Type", shafafiya_diagnosis_type(diagnosis.get("type")))
         xml_text(diagnosis_element, "Code", diagnosis.get("code"))
-        xml_text(diagnosis_element, "Description", diagnosis.get("description"))
+        dx_info = diagnosis.get("dx_info") or diagnosis.get("poa")
+        if isinstance(dx_info, dict):
+            dx_info_element = SubElement(diagnosis_element, "DxInfo")
+            xml_text(dx_info_element, "Type", dx_info.get("type") or "POA")
+            xml_text(dx_info_element, "Code", dx_info.get("code") or dx_info.get("value"))
 
     for line in canonical_claim["line_items"]:
-        activity = SubElement(encounter, "Activity")
+        activity = SubElement(claim, "Activity")
+        activity_start = line.get("start") if has_time_component(line.get("start")) else encounter_start
         xml_text(activity, "ID", line["id"])
-        xml_text(activity, "Start", line["start"])
-        xml_text(activity, "Type", activity_type_for_line(line, "SHAFAFIYA"))
+        xml_text(activity, "Start", shafafiya_datetime(activity_start))
+        xml_text(activity, "Type", shafafiya_activity_type_for_line(line))
         xml_text(activity, "Code", line.get("code"))
-        xml_text(activity, "CodeSystem", line.get("system"))
         xml_text(activity, "Quantity", line.get("quantity"))
         xml_text(activity, "Net", decimal_text(line.get("net")))
+        xml_optional_text(activity, "OrderingClinician", provider.get("license_number"))
         xml_text(activity, "Clinician", provider.get("license_number"))
         if prior_auth.get("ref"):
             xml_text(activity, "PriorAuthorizationID", prior_auth["ref"])
+        xml_optional_text(activity, "VAT", decimal_text(line.get("vat")) if line.get("vat") is not None else None)
+        xml_optional_text(activity, "VATPercent", line.get("vat_percent"))
+        xml_optional_text(activity, "DateOrdered", shafafiya_datetime(line.get("date_ordered")) if line.get("date_ordered") else None)
 
-    attachments = SubElement(claim, "Attachments")
-    for attachment in canonical_claim.get("attachments", []):
-        attachment_element = SubElement(attachments, "Attachment")
-        xml_text(attachment_element, "FileName", attachment.get("name"))
-        xml_text(attachment_element, "Type", attachment.get("type"))
-        xml_text(attachment_element, "Status", attachment.get("status"))
+        observations = line.get("observations")
+        if not observations and canonical_claim.get("clinical_context", {}).get("medical_necessity_summary"):
+            observations = [
+                {
+                    "type": "Text",
+                    "code": "ClinicalJustification",
+                    "value": canonical_claim["clinical_context"]["medical_necessity_summary"],
+                    "value_type": "Text",
+                }
+            ]
+        for observation in observations or []:
+            if not isinstance(observation, dict):
+                continue
+            observation_element = SubElement(activity, "Observation")
+            xml_text(observation_element, "Type", observation.get("type") or "Text")
+            xml_text(observation_element, "Code", observation.get("code") or "ClinicalJustification")
+            xml_optional_text(observation_element, "Value", observation.get("value"))
+            xml_optional_text(
+                observation_element,
+                "ValueType",
+                observation.get("value_type") or observation.get("valueType") or "Text",
+            )
+
+    resubmission_data = canonical_claim.get("resubmission") or {}
+    if resubmission_data:
+        resubmission = SubElement(claim, "Resubmission")
+        xml_text(resubmission, "Type", resubmission_data.get("type"))
+        xml_text(resubmission, "Comment", resubmission_data.get("comment"))
+        xml_optional_text(resubmission, "Attachment", resubmission_data.get("attachment"))
+
+    contract = canonical_claim.get("contract") or {}
+    if contract.get("package_name") or contract.get("PackageName"):
+        contract_element = SubElement(claim, "Contract")
+        xml_optional_text(
+            contract_element,
+            "PackageName",
+            contract.get("package_name") or contract.get("PackageName"),
+        )
 
     return pretty_xml(root)
 
@@ -2615,6 +2791,9 @@ def build_eclaimlink_xml(canonical_claim: dict[str, Any]) -> str:
     payer = canonical_claim["payer"]
     amount = canonical_claim["amount"]
     prior_auth = canonical_claim["prior_auth"]
+    source_encounter = canonical_claim.get("source_resources", {}).get("encounter", {})
+    source_period = source_encounter.get("period") or {}
+    encounter_start = source_period.get("start") or canonical_claim["service_date"]
 
     xml_text(claim, "ID", canonical_claim["claim_id"])
     xml_text(claim, "MemberID", patient.get("member_id"))
@@ -2630,23 +2809,31 @@ def build_eclaimlink_xml(canonical_claim: dict[str, Any]) -> str:
     encounter = SubElement(claim, "Encounter")
     xml_text(encounter, "FacilityID", provider.get("facility_license_number"))
     xml_text(encounter, "Type", canonical_claim["format_context"]["encounter_type"])
-    xml_text(encounter, "Start", canonical_claim["service_date"])
+    xml_optional_text(encounter, "PatientID", eclaimlink_patient_id(canonical_claim))
+    xml_text(encounter, "Start", eclaimlink_datetime(encounter_start))
+    xml_optional_text(
+        encounter,
+        "End",
+        eclaimlink_datetime(source_period.get("end")) if source_period.get("end") else None,
+    )
 
     for diagnosis in canonical_claim.get("diagnoses", []):
         diagnosis_element = SubElement(encounter, "Diagnosis")
         xml_text(diagnosis_element, "DiagnosisCode", diagnosis.get("code"))
-        xml_text(diagnosis_element, "Type", diagnosis.get("type", "principal"))
+        xml_text(diagnosis_element, "Type", eclaimlink_diagnosis_type(diagnosis.get("type")))
 
     for line in canonical_claim["line_items"]:
         activity = SubElement(encounter, "Activity")
+        activity_start = line.get("start") if has_time_component(line.get("start")) else encounter_start
         xml_text(activity, "ID", line["id"])
-        xml_text(activity, "ActivityStart", line["start"])
-        xml_text(activity, "Type", activity_type_for_line(line, "ECLAIMLINK"))
+        xml_text(activity, "ActivityStart", eclaimlink_datetime(activity_start))
+        xml_text(activity, "Type", eclaimlink_activity_type_for_line(line))
         xml_text(activity, "Code", line.get("code"))
         xml_text(activity, "CodeSystem", line.get("system"))
         xml_text(activity, "Quantity", line.get("quantity"))
         xml_text(activity, "Net", decimal_text(line.get("net")))
-        xml_text(activity, "OrderingClinician", provider.get("license_number"))
+        xml_optional_text(activity, "OrderingClinician", provider.get("license_number"))
+        xml_text(activity, "Clinician", provider.get("license_number"))
         if prior_auth.get("ref"):
             xml_text(activity, "AuthorizationID", prior_auth["ref"])
 
@@ -2666,6 +2853,7 @@ def claim_format_warnings(canonical_claim: dict[str, Any], format_name: str) -> 
     provider = canonical_claim["provider"]
     source_patient = canonical_claim.get("source_resources", {}).get("patient", {})
     source_facility = canonical_claim.get("source_resources", {}).get("facility", {})
+    source_encounter = canonical_claim.get("source_resources", {}).get("encounter", {})
 
     if format_name == "NPHIES":
         if canonical_claim["amount"]["currency"].upper() != "SAR":
@@ -2681,13 +2869,20 @@ def claim_format_warnings(canonical_claim: dict[str, Any], format_name: str) -> 
     if format_name == "SHAFAFIYA":
         if canonical_claim["amount"]["currency"].upper() != "AED":
             warnings.append("Shafafiya usually expects AED; no currency conversion was applied.")
-        for field in ("emirates_id", "date_of_birth", "gender", "member_id"):
+        for field in ("emirates_id", "member_id"):
             if not patient.get(field):
                 warnings.append(f"Shafafiya required patient field is missing: {field}.")
+        if not shafafiya_patient_id(canonical_claim):
+            warnings.append("Shafafiya Encounter.PatientID/MRN is missing.")
+        if not canonical_claim["payer"].get("id"):
+            warnings.append("Shafafiya PayerID is missing.")
         if not provider.get("facility_license_number"):
             warnings.append("Shafafiya ProviderID/facility DOH license is missing.")
         if not resource_has_identifier_system(source_facility, "doh"):
             warnings.append("Shafafiya DOH facility identifier is missing.")
+        amount = canonical_claim["amount"]
+        if float(amount.get("gross") or 0.0) + 0.01 < float(amount.get("net") or 0.0) + float(amount.get("patient_share") or 0.0):
+            warnings.append("Shafafiya Claim.Gross should be greater than or equal to Net + PatientShare.")
         if canonical_claim["format_context"]["encounter_type"] == "3" and not canonical_claim.get("drg"):
             warnings.append("Shafafiya inpatient claims may require IR-DRG before submission.")
 
@@ -2696,14 +2891,36 @@ def claim_format_warnings(canonical_claim: dict[str, Any], format_name: str) -> 
             warnings.append("eClaimLink usually expects AED; no currency conversion was applied.")
         if not patient.get("emirates_id"):
             warnings.append("eClaimLink Emirates ID is missing.")
+        elif not emirates_id_has_valid_shape(patient.get("emirates_id")):
+            warnings.append("eClaimLink Emirates ID format should match 784-YYYY-XXXXXXX-C.")
         if not patient.get("member_id"):
             warnings.append("eClaimLink DHA member card number/member ID is missing.")
+        if not eclaimlink_patient_id(canonical_claim):
+            warnings.append("eClaimLink Encounter.PatientID/MRN is missing.")
+        if not canonical_claim["payer"].get("id"):
+            warnings.append("eClaimLink PayerID is missing.")
+        elif looks_like_display_name(canonical_claim["payer"].get("id")):
+            warnings.append("eClaimLink PayerID/ReceiverID should be the DHA payer code, not the payer display name.")
         if not provider.get("facility_license_number"):
             warnings.append("eClaimLink ProviderID/facility DHA code is missing.")
+        elif looks_like_synthetic_identifier(provider.get("facility_license_number")):
+            warnings.append("eClaimLink ProviderID/SenderID looks synthetic; use the real DHA facility code before submission.")
+        if not provider.get("license_number"):
+            warnings.append("eClaimLink Activity.Clinician/OrderingClinician DHA license is missing.")
+        elif looks_like_synthetic_identifier(provider.get("license_number")):
+            warnings.append("eClaimLink clinician license looks synthetic; use the real registered DHA clinician license before submission.")
         if not resource_has_identifier_system(source_facility, "dha"):
             warnings.append("eClaimLink DHA facility identifier is missing.")
+        source_period = source_encounter.get("period") or {}
+        if not has_time_component(source_period.get("start") or canonical_claim.get("service_date")):
+            warnings.append("eClaimLink Encounter.Start should include time, not only a date.")
+        if any(
+            not has_time_component(line.get("start")) and not has_time_component(source_period.get("start"))
+            for line in canonical_claim.get("line_items", [])
+        ):
+            warnings.append("eClaimLink ActivityStart should include time, not only a date.")
         has_pharmacy_line = any(
-            activity_type_for_line(line, "ECLAIMLINK") == "DDC"
+            eclaimlink_activity_type_for_line(line) == "5"
             for line in canonical_claim.get("line_items", [])
         )
         if has_pharmacy_line and not any(
@@ -2711,6 +2928,22 @@ def claim_format_warnings(canonical_claim: dict[str, Any], format_name: str) -> 
             for line in canonical_claim.get("line_items", [])
         ):
             warnings.append("eClaimLink pharmacy activities require Dubai Drug Code.")
+        metadata_only_attachments = [
+            attachment
+            for attachment in canonical_claim.get("attachments", [])
+            if not (
+                attachment.get("content")
+                or attachment.get("data")
+                or attachment.get("base64")
+                or attachment.get("url")
+                or attachment.get("attachment_id")
+                or attachment.get("attachmentId")
+            )
+        ]
+        if metadata_only_attachments:
+            warnings.append(
+                "eClaimLink attachments are metadata-only; real submission usually needs uploaded attachment references or encoded content."
+            )
 
     return warnings
 

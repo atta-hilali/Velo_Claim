@@ -35,7 +35,7 @@
       "submitted": true,
       "dry_run": true,
       "endpoint": "dry-run",
-      "pre_auth_ref": "PA-307278A9E329",
+      "pre_auth_ref": "PA-C4B4EBABE4CC",
       "decision": null,
       "body": {
         "resourceType": "Bundle",
@@ -44,9 +44,9 @@
           {
             "resource": {
               "resourceType": "ClaimResponse",
-              "id": "CR-56f35965",
+              "id": "CR-0942fe72",
               "outcome": "approved",
-              "preAuthRef": "PA-307278A9E329"
+              "preAuthRef": "PA-C4B4EBABE4CC"
             }
           }
         ]
@@ -59,7 +59,7 @@
       "submitted": true,
       "dry_run": true,
       "endpoint": "dry-run",
-      "pre_auth_ref": "PA-307278A9E329",
+      "pre_auth_ref": "PA-C4B4EBABE4CC",
       "decision": null,
       "body": {
         "resourceType": "Bundle",
@@ -68,21 +68,21 @@
           {
             "resource": {
               "resourceType": "ClaimResponse",
-              "id": "CR-56f35965",
+              "id": "CR-0942fe72",
               "outcome": "approved",
-              "preAuthRef": "PA-307278A9E329"
+              "preAuthRef": "PA-C4B4EBABE4CC"
             }
           }
         ]
       },
       "nphies_generated": false
     },
-    "pre_auth_ref": "PA-307278A9E329",
+    "pre_auth_ref": "PA-C4B4EBABE4CC",
     "updated_prior_auth": {
-      "ref": "PA-307278A9E329",
+      "ref": "PA-C4B4EBABE4CC",
       "approved": true,
       "status": "approved",
-      "approved_at": "2026-06-16T18:31:43+00:00",
+      "approved_at": "2026-06-17T18:40:07+00:00",
       "procedure_codes": [
         "27447"
       ],
@@ -97,7 +97,7 @@
         "metadata": {
           "format": "NPHIES"
         },
-        "timestamp": "2026-06-16T18:31:43+00:00"
+        "timestamp": "2026-06-17T18:40:07+00:00"
       }
     ],
     "errors": [],
@@ -107,52 +107,52 @@
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:43+00:00"
+        "timestamp": "2026-06-17T18:40:07+00:00"
       },
       {
         "node": "detect_prior_auth_requirement",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:43+00:00"
+        "timestamp": "2026-06-17T18:40:07+00:00"
       },
       {
         "node": "validate_existing_prior_auth",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:43+00:00"
+        "timestamp": "2026-06-17T18:40:07+00:00"
       },
       {
         "node": "collect_documents",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:43+00:00"
+        "timestamp": "2026-06-17T18:40:07+00:00"
       },
       {
         "node": "build_prior_auth_request",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:43+00:00"
+        "timestamp": "2026-06-17T18:40:07+00:00"
       },
       {
         "node": "submit_prior_auth",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:43+00:00"
+        "timestamp": "2026-06-17T18:40:07+00:00"
       },
       {
         "node": "poll_prior_auth",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:43+00:00"
+        "timestamp": "2026-06-17T18:40:07+00:00"
       }
     ],
-    "generated_at": "2026-06-16T18:31:43+00:00"
+    "generated_at": "2026-06-17T18:40:07+00:00"
   },
   "existing_valid": {
     "claim_id": "CLM-PA-BASE",
@@ -182,7 +182,7 @@
       }
     ],
     "message": "Existing prior authorization covers all required procedure codes.",
-    "generated_at": "2026-06-16T18:31:43+00:00"
+    "generated_at": "2026-06-17T18:40:07+00:00"
   },
   "not_required": {
     "claim_id": "CLM-PA-NOT-REQUIRED",
@@ -190,7 +190,7 @@
     "status": "PRIOR_AUTH_NOT_REQUIRED",
     "requirements": [],
     "message": "No prior authorization requirement was detected for this claim.",
-    "generated_at": "2026-06-16T18:31:44+00:00"
+    "generated_at": "2026-06-17T18:40:07+00:00"
   },
   "missing_documents": {
     "claim_id": "CLM-PA-MISSING-DOCS",
@@ -217,7 +217,7 @@
       "radiology_referral"
     ],
     "message": "Prior authorization is required, but supporting documents are missing.",
-    "generated_at": "2026-06-16T18:31:44+00:00"
+    "generated_at": "2026-06-17T18:40:08+00:00"
   },
   "pended_nphies": {
     "claim_id": "CLM-PA-BASE",
@@ -264,7 +264,7 @@
           {
             "resource": {
               "resourceType": "ClaimResponse",
-              "id": "CR-8614b0c7",
+              "id": "CR-3142edc8",
               "outcome": "pended"
             }
           }
@@ -296,7 +296,7 @@
           {
             "resource": {
               "resourceType": "ClaimResponse",
-              "id": "CR-8614b0c7",
+              "id": "CR-3142edc8",
               "outcome": "pended"
             }
           }
@@ -313,7 +313,7 @@
       },
       "nphies_generated": true
     },
-    "pre_auth_ref": "CR-8614b0c7",
+    "pre_auth_ref": "CR-3142edc8",
     "updated_prior_auth": {
       "approved": false,
       "status": "pended",
@@ -330,7 +330,7 @@
         "metadata": {
           "format": "NPHIES"
         },
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       }
     ],
     "errors": [],
@@ -340,52 +340,52 @@
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       },
       {
         "node": "detect_prior_auth_requirement",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       },
       {
         "node": "validate_existing_prior_auth",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       },
       {
         "node": "collect_documents",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       },
       {
         "node": "build_prior_auth_request",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       },
       {
         "node": "submit_prior_auth",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       },
       {
         "node": "poll_prior_auth",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       }
     ],
-    "generated_at": "2026-06-16T18:31:44+00:00"
+    "generated_at": "2026-06-17T18:40:08+00:00"
   },
   "queued_then_complete_approved": {
     "claim_id": "CLM-PA-BASE",
@@ -432,7 +432,7 @@
           {
             "resource": {
               "resourceType": "ClaimResponse",
-              "id": "CR-6ece650f",
+              "id": "CR-afba4196",
               "outcome": "queued"
             }
           }
@@ -446,7 +446,7 @@
       "submitted": true,
       "dry_run": true,
       "endpoint": "dry-run",
-      "pre_auth_ref": "PA-F2A0B795A5EC",
+      "pre_auth_ref": "PA-ED6D44EF2040",
       "decision": "approved",
       "body": {
         "resourceType": "Bundle",
@@ -455,11 +455,11 @@
           {
             "resource": {
               "resourceType": "ClaimResponse",
-              "id": "CR-8a3182d7",
+              "id": "CR-908e27ce",
               "outcome": "complete",
               "decision": "approved",
               "disposition": "approved",
-              "preAuthRef": "PA-F2A0B795A5EC"
+              "preAuthRef": "PA-ED6D44EF2040"
             }
           }
         ]
@@ -467,12 +467,12 @@
       "nphies_generated": false,
       "polled": true
     },
-    "pre_auth_ref": "PA-F2A0B795A5EC",
+    "pre_auth_ref": "PA-ED6D44EF2040",
     "updated_prior_auth": {
-      "ref": "PA-F2A0B795A5EC",
+      "ref": "PA-ED6D44EF2040",
       "approved": true,
       "status": "approved",
-      "approved_at": "2026-06-16T18:31:44+00:00",
+      "approved_at": "2026-06-17T18:40:08+00:00",
       "procedure_codes": [
         "27447"
       ],
@@ -487,7 +487,7 @@
         "metadata": {
           "format": "NPHIES"
         },
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       }
     ],
     "errors": [],
@@ -497,52 +497,52 @@
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       },
       {
         "node": "detect_prior_auth_requirement",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       },
       {
         "node": "validate_existing_prior_auth",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       },
       {
         "node": "collect_documents",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       },
       {
         "node": "build_prior_auth_request",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       },
       {
         "node": "submit_prior_auth",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       },
       {
         "node": "poll_prior_auth",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       }
     ],
-    "generated_at": "2026-06-16T18:31:44+00:00"
+    "generated_at": "2026-06-17T18:40:08+00:00"
   },
   "partial": {
     "claim_id": "CLM-PA-BASE",
@@ -589,7 +589,7 @@
           {
             "resource": {
               "resourceType": "ClaimResponse",
-              "id": "CR-a29adeb8",
+              "id": "CR-f1d75287",
               "outcome": "partial"
             }
           }
@@ -612,7 +612,7 @@
           {
             "resource": {
               "resourceType": "ClaimResponse",
-              "id": "CR-a29adeb8",
+              "id": "CR-f1d75287",
               "outcome": "partial"
             }
           }
@@ -620,7 +620,7 @@
       },
       "nphies_generated": false
     },
-    "pre_auth_ref": "CR-a29adeb8",
+    "pre_auth_ref": "CR-f1d75287",
     "updated_prior_auth": {
       "approved": false,
       "status": "partial",
@@ -635,7 +635,7 @@
         "metadata": {
           "format": "NPHIES"
         },
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       }
     ],
     "errors": [],
@@ -645,52 +645,52 @@
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       },
       {
         "node": "detect_prior_auth_requirement",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       },
       {
         "node": "validate_existing_prior_auth",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       },
       {
         "node": "collect_documents",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       },
       {
         "node": "build_prior_auth_request",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       },
       {
         "node": "submit_prior_auth",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       },
       {
         "node": "poll_prior_auth",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       }
     ],
-    "generated_at": "2026-06-16T18:31:44+00:00"
+    "generated_at": "2026-06-17T18:40:08+00:00"
   },
   "shafafiya": {
     "claim_id": "CLM-PA-SHAFAFIYA",
@@ -730,7 +730,7 @@
       "submitted": true,
       "dry_run": true,
       "endpoint": "dry-run",
-      "pre_auth_ref": "PA-4066D3AAE8BB",
+      "pre_auth_ref": "PA-93737E074EF6",
       "decision": null,
       "body": {
         "resourceType": "Bundle",
@@ -739,9 +739,9 @@
           {
             "resource": {
               "resourceType": "ClaimResponse",
-              "id": "CR-d007daf9",
+              "id": "CR-98755399",
               "outcome": "approved",
-              "preAuthRef": "PA-4066D3AAE8BB"
+              "preAuthRef": "PA-93737E074EF6"
             }
           }
         ]
@@ -754,7 +754,7 @@
       "submitted": true,
       "dry_run": true,
       "endpoint": "dry-run",
-      "pre_auth_ref": "PA-4066D3AAE8BB",
+      "pre_auth_ref": "PA-93737E074EF6",
       "decision": null,
       "body": {
         "resourceType": "Bundle",
@@ -763,21 +763,21 @@
           {
             "resource": {
               "resourceType": "ClaimResponse",
-              "id": "CR-d007daf9",
+              "id": "CR-98755399",
               "outcome": "approved",
-              "preAuthRef": "PA-4066D3AAE8BB"
+              "preAuthRef": "PA-93737E074EF6"
             }
           }
         ]
       },
       "nphies_generated": false
     },
-    "pre_auth_ref": "PA-4066D3AAE8BB",
+    "pre_auth_ref": "PA-93737E074EF6",
     "updated_prior_auth": {
-      "ref": "PA-4066D3AAE8BB",
+      "ref": "PA-93737E074EF6",
       "approved": true,
       "status": "approved",
-      "approved_at": "2026-06-16T18:31:44+00:00",
+      "approved_at": "2026-06-17T18:40:08+00:00",
       "procedure_codes": [
         "97110"
       ],
@@ -792,7 +792,7 @@
         "metadata": {
           "format": "SHAFAFIYA"
         },
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       }
     ],
     "errors": [],
@@ -802,52 +802,52 @@
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       },
       {
         "node": "detect_prior_auth_requirement",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       },
       {
         "node": "validate_existing_prior_auth",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       },
       {
         "node": "collect_documents",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       },
       {
         "node": "build_prior_auth_request",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       },
       {
         "node": "submit_prior_auth",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       },
       {
         "node": "poll_prior_auth",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       }
     ],
-    "generated_at": "2026-06-16T18:31:44+00:00"
+    "generated_at": "2026-06-17T18:40:08+00:00"
   },
   "eclaimlink": {
     "claim_id": "CLM-PA-ECLAIMLINK",
@@ -887,7 +887,7 @@
       "submitted": true,
       "dry_run": true,
       "endpoint": "dry-run",
-      "pre_auth_ref": "PA-B60AB9E404F8",
+      "pre_auth_ref": "PA-631AB689AB16",
       "decision": null,
       "body": {
         "resourceType": "Bundle",
@@ -896,9 +896,9 @@
           {
             "resource": {
               "resourceType": "ClaimResponse",
-              "id": "CR-1caae6fd",
+              "id": "CR-b9b42e64",
               "outcome": "approved",
-              "preAuthRef": "PA-B60AB9E404F8"
+              "preAuthRef": "PA-631AB689AB16"
             }
           }
         ]
@@ -911,7 +911,7 @@
       "submitted": true,
       "dry_run": true,
       "endpoint": "dry-run",
-      "pre_auth_ref": "PA-B60AB9E404F8",
+      "pre_auth_ref": "PA-631AB689AB16",
       "decision": null,
       "body": {
         "resourceType": "Bundle",
@@ -920,21 +920,21 @@
           {
             "resource": {
               "resourceType": "ClaimResponse",
-              "id": "CR-1caae6fd",
+              "id": "CR-b9b42e64",
               "outcome": "approved",
-              "preAuthRef": "PA-B60AB9E404F8"
+              "preAuthRef": "PA-631AB689AB16"
             }
           }
         ]
       },
       "nphies_generated": false
     },
-    "pre_auth_ref": "PA-B60AB9E404F8",
+    "pre_auth_ref": "PA-631AB689AB16",
     "updated_prior_auth": {
-      "ref": "PA-B60AB9E404F8",
+      "ref": "PA-631AB689AB16",
       "approved": true,
       "status": "approved",
-      "approved_at": "2026-06-16T18:31:44+00:00",
+      "approved_at": "2026-06-17T18:40:08+00:00",
       "procedure_codes": [
         "97140"
       ],
@@ -949,7 +949,7 @@
         "metadata": {
           "format": "ECLAIMLINK"
         },
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       }
     ],
     "errors": [],
@@ -959,51 +959,51 @@
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       },
       {
         "node": "detect_prior_auth_requirement",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       },
       {
         "node": "validate_existing_prior_auth",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       },
       {
         "node": "collect_documents",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       },
       {
         "node": "build_prior_auth_request",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       },
       {
         "node": "submit_prior_auth",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       },
       {
         "node": "poll_prior_auth",
         "status": "completed",
         "message": null,
         "metadata": {},
-        "timestamp": "2026-06-16T18:31:44+00:00"
+        "timestamp": "2026-06-17T18:40:08+00:00"
       }
     ],
-    "generated_at": "2026-06-16T18:31:44+00:00"
+    "generated_at": "2026-06-17T18:40:08+00:00"
   }
 }

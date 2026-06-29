@@ -1,113 +1,86 @@
-﻿# Velo Claim
+# Velo Claim
 
-Velo Claim is a local agent chain for preparing, validating, and routing medical claims.
+Velo Claim is a clean, package-based medical-claim automation prototype for
+UAE/KSA claim preparation, validation, prior authorization, and future
+submission workflows.
 
-Current agents:
+The active implementation lives in `velo_claim/`. The old monolithic prototype
+scripts have been removed; reusable business capabilities now live in modules,
+and LangGraph agents only orchestrate those modules.
 
-- `Claim Preparation Agent.py` builds a source-extracted draft claim from encounter/FHIR-style data.
-- `Claim Validation Agent.py` validates eligibility, coding presence, documentation, payer rules, timely filing, and prior-auth presence.
-- `Prior Authorization Agent.py` prepares prior authorization requests and supports real-time, queued, partial, pended, and complete response flows.
+## Active Package Layout
 
-## EHR / HIE FHIR Adapters
+- `velo_claim/context/` resolves raw encounter/FHIR input into `source_context`
+  and `routing_context`.
+- `velo_claim/context/vendor_fhir_adapters.py` preserves the previous Epic,
+  TrakCare/IRIS, Oracle Health/Cerner, NABIDH, and generic FHIR connection
+  logic for future integration into the new context layer.
+- `velo_claim/routing/` persists exactly one route decision per claim.
+- `velo_claim/routing/payer_registry.py` preserves the Phase 1 payer registry
+  helper logic.
+- `velo_claim/builders/claim/` builds canonical claims and serializes to
+  NPHIES, Shafafiya, or eClaimLink payloads.
+- `velo_claim/builders/prior_auth/` builds reusable prior-authorization
+  payloads.
+- `velo_claim/checks/` contains reusable validation checks: metadata, payload
+  conformity, financial consistency, eligibility, prior auth, coding,
+  documentation, duplicate, and readiness.
+- `velo_claim/fallback/` contains idempotency, callback, and waiting-for-payer
+  primitives.
+- `velo_claim/storage/` defines PostgreSQL/S3/Redis-shaped interfaces with
+  in-memory implementations for local development.
+- `velo_claim/kg/` and `velo_claim/rules/` provide mock Neo4j and mock payer
+  rule loaders behind production-ready interfaces.
+- `velo_claim/agents/` contains thin LangGraph state machines.
+- `velo_claim/security/generate_jwks.py` preserves JWKS generation without
+  exposing private keys.
+- `velo_claim/migrations/001_initial_schema.sql` contains the first PostgreSQL
+  schema migration.
 
-The shared adapter layer is in `fhir_adapters.py`. It keeps the agent interface stable:
+## Preserved Data And Connection Artifacts
 
-- `read(resource_type, id)`
-- `search(resource_type, params)`
-- `search_first(resource_type, params)`
+These are intentionally kept:
 
-Supported profiles:
+- `.env` and `.env.example`
+- `keys/` private key directory, ignored by git
+- `public/nonprod/jwks.json` and `public/prod/jwks.json`
+- `data/coding_knowledge_graph.json`
+- `data/payer_rules/default_rules.json`
+- `data/payers/phase1_payers.json`
+- `data/prior_auth_extraction/velo_claim_prior_auth_extraction_register.json`
+- `sample_inputs/` encounter and claim fixtures
 
-- `generic`
-- `epic`
-- `trakcare_iris` for InterSystems TrakCare / IRIS for Health
-- `oracle_health` for Oracle Health / Cerner Millennium
-- `nabidh` for Dubai NABIDH HIE
+Generated `sample_outputs/` files were removed because they can be recreated
+from tests and should not be the source of truth.
 
-To select a source, set:
-
-```powershell
-FHIR_ADAPTER=trakcare_iris
-TRAKCARE_FHIR_BASE_URL=https://your-trakcare-iris-server.example/fhir/r4
-TRAKCARE_FHIR_AUTH_TYPE=backend_services_jwt
-TRAKCARE_FHIR_TOKEN_URL=https://your-auth-server.example/oauth2/token
-TRAKCARE_FHIR_CLIENT_ID=your_client_id
-TRAKCARE_FHIR_CLIENT_AUTH_METHOD=private_key_jwt
-TRAKCARE_FHIR_PRIVATE_KEY_PATH=./keys/nonprod/private.pem
-TRAKCARE_FHIR_KEY_ID=your_key_id
-TRAKCARE_FHIR_SCOPE=system/Patient.read system/Coverage.read system/Encounter.read system/Practitioner.read system/Organization.read system/Condition.read system/Procedure.read system/DocumentReference.read system/ChargeItem.read
-```
-
-Use the same pattern for:
-
-- `ORACLE_HEALTH_FHIR_*`
-- `EPIC_FHIR_*`
-- `NABIDH_FHIR_*`
-
-If a profile-specific variable is empty, the adapter falls back to the generic `FHIR_*` value. The claim preparation agent now uses this adapter behind `get_fhir_client(state)`, so an incoming encounter can be minimal: the agent can fetch patient, coverage, provider, facility, conditions, procedures, documents, and charge items from the configured FHIR source when IDs/references are available. The validation agent also uses the shared adapter when `FHIR_ADAPTER` is set to a non-generic profile.
-
-Run the adapter tests:
-
-```powershell
-python "test_fhir_adapters.py"
-```
-
-## Payer Rule Validation
-
-The payer-rule layer in `Claim Validation Agent.py` now runs in three passes:
-
-1. Deterministic checks: ICD requirements, max units, specialty restrictions, generic payer rules.
-2. Local KG checks: `data/coding_knowledge_graph.json` verifies known ICD-to-procedure support edges when available.
-3. Optional LLM checks: only rules with `action.requires_llm=true` are sent to the validation LLM, and only when enabled.
-
-Defaults:
+## Run The Clean Pipeline Test
 
 ```powershell
-USE_VALIDATION_KG=true
-VALIDATION_KG_PATH=./data/coding_knowledge_graph.json
-USE_VALIDATION_LLM=false
-VALIDATION_LLM_BASE_URL=
-VALIDATION_LLM_MODEL=medgemma
-VALIDATION_LLM_API_STYLE=openai_chat
+python -m pytest test_clean_rebuild_pipeline.py -q
 ```
 
-LLM review is intentionally off by default so local validation does not make network calls unless explicitly configured.
+The test runs the current package end to end:
 
-## Prior Auth Extraction Register
-
-The Daman/Shafafiya extraction workbook has been added as a source artifact:
-
-`data/prior_auth_extraction/velo_claim_prior_auth_extraction_register.json`
-
-This register is not treated as a fully active production rulebook yet. It is used as source evidence for:
-
-- Daman prior-authorization candidate rules.
-- Missing production data such as exact CPT/HCPCS/SRVC mappings.
-- Shafafiya prior-authorization ingestion services.
-- Implementation steps for building an auth store and matcher.
-
-The key production gap remains: public payer documents tell when prior authorization may be required, but actual patient-approved authorization status must come from Shafafiya, payer transaction data, or the Velo Claim auth store.
-
-## Phase 1 Payers
-
-The Phase 1 payer routing registry is stored at:
-
-`data/payers/phase1_payers.json`
-
-It normalizes payer aliases and routes payers to the correct transaction standard:
-
-- Saudi Arabia: `NPHIES`
-- Abu Dhabi: `SHAFAFIYA`
-- Dubai: `ECLAIMLINK`
-
-Run the payer registry test:
-
-```powershell
-python "test_phase1_payer_registry.py"
+```text
+FHIR/context resolution
+-> route decision
+-> claim preparation
+-> Shafafiya payload build
+-> validation checks
+-> final READY_TO_SUBMIT decision
 ```
 
-Run the register test:
+## Local Default Stack
 
-```powershell
-python "test_prior_auth_extraction_register.py"
+The local default container uses runnable development implementations:
+
+```text
+InMemoryRepository  -> PostgreSQL-shaped records
+InMemoryObjectStore -> S3/MinIO-shaped payload storage
+InMemoryCacheStore  -> Redis-shaped cache/locks
+MockNeo4jClient     -> coding and prior-auth graph queries
+MockPayerRuleLoader -> payer/plan rules
 ```
+
+Production replacements should implement the same interfaces, not change the
+agent code.

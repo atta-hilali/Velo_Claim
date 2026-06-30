@@ -135,6 +135,7 @@ def build_claim_validation_agent(*, container: ServiceContainer | None = None):
         final_status = state.get("final_status")
         payload_status = {
             "READY_TO_SUBMIT": PayloadStatus.READY_TO_SUBMIT,
+            "WAITING_FOR_PAYER": PayloadStatus.WAITING_FOR_PAYER,
             "NEEDS_PRIOR_AUTH": PayloadStatus.NEEDS_PRIOR_AUTH,
             "NEEDS_PAYLOAD_REBUILD": PayloadStatus.NEEDS_PAYLOAD_REBUILD,
             "HOLD_CRITICAL": PayloadStatus.HOLD_CRITICAL,

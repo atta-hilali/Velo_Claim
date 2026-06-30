@@ -4,647 +4,586 @@ Source brief: `C:\Users\User\Downloads\velo_claim_codex_prompt_v2.md`
 
 Audit date: 2026-06-29
 
+Verification run: `python -m pytest -q` -> `3 passed`
+
 ## Executive Summary
 
-The current `velo_claim/` package is clean, runnable, and much better organized
-than the old prototype. It does **not** match every detail of the MD yet.
+The current `velo_claim/` package is now a clean, modular implementation of the
+MD architecture. The core pipeline shape is present and runnable:
 
-Current status:
+`FHIR/Input Context -> Claim Preparation -> Claim Validation -> [future Submission]`
 
-- Architecture skeleton: **mostly present**
-- Clean reusable modules: **present**
-- Full production behavior from the MD: **partial**
-- Exact conformance with every node/state/fallback/audit requirement: **not yet**
+The package now includes LangGraph agents, reusable eligibility and prior-auth
+subgraphs, route persistence, claim/PA builders, validation checks, audit events,
+storage adapters, callback/poll primitives, mock KG, mock payer rules, and a
+production-shaped payer-rule circuit breaker.
 
-The biggest gaps are:
+It is **not yet exact production conformance**. The largest remaining gaps are
+live external behavior and official conformance assets:
 
-1. Eligibility and Prior Auth are reusable functions, not LangGraph sub-graphs.
-2. Fallback/callback exists as primitives, but no webhook route, poll worker, or
-   graph resume/checkpoint integration exists.
-3. Audit trail is defined in storage but not written on every node entry/exit.
-4. Real PostgreSQL/S3/Redis implementations are not present yet; only interfaces
-   and in-memory development implementations exist.
-5. Schema/profile validation for NPHIES, Shafafiya, and eClaimLink is only
-   lightweight parsing, not full FHIR profile or XSD validation.
-6. Payer-rule and FHIR vendor logic are preserved but not fully wired into the
-   new package flow.
+- Eligibility and prior-auth subgraphs exist, but their payer submit/poll/parse
+  paths are still mostly local/manual placeholders.
+- Full NPHIES/Shafafiya/eClaimLink validation needs official FHIR validator/IG
+  assets and XSD files configured at runtime.
+- Real payer portal/API fetchers and OpenJet/NPHIES submission adapters are not
+  implemented.
+- Idempotency is implemented for callbacks, but not yet wrapped around every
+  external touch as required by the MD.
+- Claim Preparation has no explicit ErrorHandler branch and performs only a
+  payload-presence check; deeper payload conformance currently happens in Claim
+  Validation.
 
-## Section-by-Section Conformance
+## Status Legend
 
-## 0. Mental Model
+- **Implemented**: present and wired in the package.
+- **Mostly implemented**: present and used, but with some production caveat.
+- **Partial**: structure exists, but important behavior is stubbed/local/manual.
+- **Missing**: not implemented.
+- **Manual/config required**: code supports it, but real credentials/assets are
+  needed.
 
-MD requirement:
-
-`Input Resolution -> Claim Preparation -> Claim Validation -> [FUTURE Submission]`,
-with each stage as a LangGraph state machine, reusable sub-machines for
-Eligibility and Prior Auth, and one canonical state object.
-
-Current implementation:
-
-- Full pipeline exists in `velo_claim/pipeline.py`.
-- FHIR/context, claim prep, and validation are LangGraph agents:
-  - `velo_claim/agents/fhir_context_agent.py:15`
-  - `velo_claim/agents/claim_preparation.py:12`
-  - `velo_claim/agents/claim_validation.py:15`
-- Prior authorization is a plain function wrapper, not a LangGraph state
-  machine: `velo_claim/agents/prior_authorization.py:9`.
-- Eligibility and Prior Auth are functions, not reusable LangGraph sub-graphs:
-  - `velo_claim/checks/eligibility.py:10`
-  - `velo_claim/checks/prior_auth.py:13`
-
-Conformance: **Partial**
-
-Needed:
-
-- Convert eligibility check into a reusable LangGraph subgraph.
-- Convert prior-auth check into a reusable LangGraph subgraph.
-- Decide whether `fhir_context_agent` is Agent 1 or an input-resolution module,
-  because the MD labels it as Agent 1.
-
-## 1. Technology Stack
+## Section 0 - Mental Model
 
 MD requirement:
 
-LangGraph, PostgreSQL, S3/MinIO, Redis, mock Neo4j, internal Redis-backed async
-jobs, FHIR adapters, and NPHIES/Shafafiya/eClaimLink standards.
+- Sequential pipeline: Input Resolution -> Claim Preparation -> Claim Validation
+  -> future Submission.
+- Each major stage is a LangGraph state machine.
+- Eligibility and Prior Auth are reusable LangGraph subgraphs.
+- One canonical state object is enriched through the flow.
 
-Current implementation:
+Current code:
 
-- LangGraph is used in three agents.
-- PostgreSQL schema exists: `velo_claim/migrations/001_initial_schema.sql`.
-- Storage interfaces exist: `velo_claim/storage/interfaces.py:11`.
-- In-memory repository/object/cache exist:
-  - `velo_claim/storage/memory.py:18`
-  - `velo_claim/storage/memory.py:128`
-  - `velo_claim/storage/memory.py:144`
-- Mock Neo4j exists:
-  - `velo_claim/kg/interface.py:8`
-  - `velo_claim/kg/mock.py:5`
-- Mock payer rule loader exists: `velo_claim/rules/mock_loader.py:6`.
-- FHIR vendor adapter logic is preserved:
-  `velo_claim/context/vendor_fhir_adapters.py`.
-- Claim standards builders exist:
-  - `velo_claim/builders/claim/nphies.py`
-  - `velo_claim/builders/claim/shafafiya.py`
-  - `velo_claim/builders/claim/eclaimlink.py`
-
-Conformance: **Partial**
-
-Needed:
-
-- Add real PostgreSQL repository implementation.
-- Add real S3/MinIO object-store implementation.
-- Add real Redis cache/lock implementation.
-- Add Redis-backed background job worker.
-- Wire vendor FHIR adapters into the new `AdapterInterface`.
-
-## 2. Canonical State Object
-
-MD requirement:
-
-One JSON state object with identity, payload, PA payload, route, source context,
-routing context, callback state, next agent, errors, and warnings. Errors and
-warnings are append-only. Payload rebuild count must cap at 3.
-
-Current implementation:
-
-- Default state exists: `velo_claim/core/models.py:200`.
-- Key fields are present:
-  - `claim_payload`: `velo_claim/core/models.py:206`
-  - `pa_payload`: `velo_claim/core/models.py:211`
-  - `callback_state`: `velo_claim/core/models.py:217`
-  - `errors/warnings`: `velo_claim/core/models.py:219`
-- Error model exists: `velo_claim/core/models.py:19`.
-- Append helpers exist: `velo_claim/core/models.py:192`.
-- Validation checks use `CheckIssue`, not `ClaimError`, and do not append all
-  issues into `state.errors`.
-- `rebuild_attempt_count` exists but is only checked in validation:
-  `velo_claim/agents/claim_validation.py:29`.
-
-Conformance: **Partial**
-
-Needed:
-
-- Enforce append-only `state.errors` and `state.warnings` across all agents.
-- Convert validation issues into state errors/warnings where appropriate.
-- Make payload storage follow the MD rule consistently: raw payload only when
-  small/local, object URI as source of truth.
-- Enforce rebuild attempt cap in fallback flow, not only validation input.
-
-## 3. Storage Architecture
-
-MD requirement:
-
-PostgreSQL tables, S3/MinIO object layout, Redis key patterns, mock Neo4j, mock
-payer rules, and circuit-breaker pattern.
-
-Current implementation:
-
-- Initial PostgreSQL schema exists and includes the major tables:
-  `velo_claim/migrations/001_initial_schema.sql`.
-- `route_decision.claim_id` is unique:
-  `velo_claim/migrations/001_initial_schema.sql:29`.
-- `callback_event.idempotency_key` is unique:
-  `velo_claim/migrations/001_initial_schema.sql:170`.
-- In-memory repository has corresponding methods:
-  `velo_claim/storage/memory.py:18`.
-- In-memory object store exists: `velo_claim/storage/memory.py:128`.
-- In-memory cache exists: `velo_claim/storage/memory.py:144`.
-- Mock Neo4j interface and implementation match the MD shape:
-  - `velo_claim/kg/interface.py:8`
-  - `velo_claim/kg/mock.py:38`
-- Mock payer loader exists: `velo_claim/rules/mock_loader.py:6`.
-
-Conformance: **Partial**
-
-Needed:
-
-- Real PostgreSQL repository.
-- Real object store.
-- Real Redis implementation.
-- Enforce the exact S3 key layout from the MD.
-- Add `LivePayerRuleLoader` with circuit breaker and cached fallback.
-- Add persistent `external_transaction` equivalent if desired; the MD uses
-  `prior_auth_request`, `callback_event`, etc., but the architecture discussion
-  also pointed to an external transaction manager.
-
-## 4. FHIR Context Layer
-
-MD requirement:
-
-InputResolver supports RCM upload, Velo Doctor call, and encounter ID. FHIR
-Adapter supports Epic, Cerner, Nabidh, TrakCare. FhirReaderTool dereferences
-all references, fetches missing resources, normalizes documents. Routing and
-clinical context extraction are separate responsibilities.
-
-Current implementation:
-
-- Input resolver exists: `velo_claim/context/input_resolver.py`.
-- Adapter contract exists: `velo_claim/context/adapters.py:10`.
-- In-memory FHIR adapter exists.
-- Context resolver fetches missing patient/coverage/provider/facility and
-  related resources when an adapter is provided:
-  `velo_claim/context/fhir_context.py:18`.
-- Routing context extraction exists:
-  `velo_claim/context/fhir_context.py:91`.
-- Old vendor adapters are preserved, but not wired into the new contract:
-  `velo_claim/context/vendor_fhir_adapters.py`.
-
-Conformance: **Partial**
-
-Needed:
-
-- Add RCM upload parsing for multipart/HL7/CSV.
-- Add Velo Doctor input shape explicitly.
-- Integrate `vendor_fhir_adapters.py` behind `AdapterInterface`.
-- Add OAuth token cache via Redis key `token_cache:{provider_id}:{payer_id}`.
-- Normalize documents into a stable internal document schema.
-
-## 5. Router
-
-MD requirement:
-
-Router takes `routing_context`, resolves jurisdiction, standards, eligibility
-profile, payer rule profile, submission channel, persists exactly one route
-decision, and everyone downstream uses persisted route.
-
-Current implementation:
-
-- Router exists: `velo_claim/routing/router.py:9`.
-- Route decision is persisted: `velo_claim/routing/router.py:34`.
-- In-memory repository enforces one route unless identical:
-  `velo_claim/storage/memory.py:40`.
-- PostgreSQL migration has `route_decision.claim_id UNIQUE`:
-  `velo_claim/migrations/001_initial_schema.sql:29`.
-- Validation reloads persisted route:
-  `velo_claim/agents/claim_validation.py:23`.
+- Full in-process pipeline exists in `velo_claim/pipeline.py`.
+- FHIR context/input agent exists in `velo_claim/agents/fhir_context_agent.py`.
+- Claim preparation agent exists in `velo_claim/agents/claim_preparation.py`.
+- Claim validation agent exists in `velo_claim/agents/claim_validation.py`.
+- Prior authorization agent exists in `velo_claim/agents/prior_authorization.py`.
+- Eligibility subgraph exists in `velo_claim/checks/eligibility_graph.py`.
+- Prior-auth subgraph exists in `velo_claim/checks/prior_auth_graph.py`.
+- Canonical state defaults exist in `velo_claim/core/models.py`.
 
 Conformance: **Mostly implemented**
 
-Needed:
+Remaining:
 
-- Use `data/payers/phase1_payers.json` registry directly in route resolution.
-- Make zero/multiple route checks explicit in validation. The DB uniqueness
-  prevents multiple in production, but validation currently only checks missing.
-- Add richer payer/platform profiles from the payer registry.
+- Decide whether `FHIRContextAgent` is officially Agent 1 or an input-resolution
+  module. The code treats it as an agent.
+- Future submission agent is intentionally out of scope.
 
-## 6. Claim Preparation State Machine
-
-MD requirement:
-
-`Start -> SupervisorNode -> PrepareClaimNode -> Validate_Claim -> End`, with an
-ErrorHandler loop. Claim builder has source reader, SourceCodeExtractor,
-canonical builder, format-specific builder. Validate_Claim performs structural
-schema check.
-
-Current implementation:
-
-- Graph shape exists without ErrorHandler:
-  `velo_claim/agents/claim_preparation.py:50`.
-- Supervisor writes claim row:
-  `velo_claim/agents/claim_preparation.py:19`.
-- Claim builder exists:
-  `velo_claim/builders/claim/builder.py`.
-- Canonical claim builder exists:
-  `velo_claim/builders/claim/canonical.py:13`.
-- Bundling query is used during canonical build:
-  `velo_claim/builders/claim/canonical.py:130`.
-- Payload hash and object URI are stored:
-  `velo_claim/builders/claim/builder.py:70`.
-- Validate node only checks payload presence, not schema/XSD/FHIR profile:
-  `velo_claim/agents/claim_preparation.py:41`.
-
-Conformance: **Partial**
-
-Needed:
-
-- Add ErrorHandler route.
-- Add structural schema/FHIR-profile/XSD validation.
-- Split SourceCodeExtractor as its own reusable module/class if exact MD shape
-  matters.
-- Add audit events for every node entry/exit/error.
-
-## 7. Claim Validation State Machine
+## Section 1 - Technology Stack
 
 MD requirement:
 
-Graph nodes:
+- LangGraph, PostgreSQL, S3/MinIO, Redis, mock Neo4j, Redis-backed async jobs,
+  FHIR adapters, NPHIES, Shafafiya, eClaimLink.
 
-`normalize_validation_input -> load_route_and_context -> load_payer_rule ->
-parse_payload -> ValidationNode -> CalculateScore -> Router -> End`, with
-fallback loop.
+Current code:
 
-Current implementation:
-
-- Graph nodes mostly match:
-  `velo_claim/agents/claim_validation.py:126`.
-- `load_route_and_context` is a no-op:
-  `velo_claim/agents/claim_validation.py:39`.
-- Payer rules load exists:
-  `velo_claim/agents/claim_validation.py:42`.
-- Payload parsing once exists:
-  `velo_claim/agents/claim_validation.py:57`.
-- Validation orchestrator exists:
-  `velo_claim/checks/orchestrator.py:19`.
-- Score calculation exists:
-  `velo_claim/checks/orchestrator.py:54`.
-- No fallback edge/loop exists.
-- No payload rebuild trigger back to Claim Preparation exists.
-- Payer Rules Check is not a separate check module; payer rules are used inside
-  prior-auth/documentation logic.
-
-Conformance: **Partial**
-
-Needed:
-
-- Implement fallback node and loop.
-- Implement payload rebuild handoff.
-- Add dedicated payer rules check.
-- Cache loaded rule set in Redis as the MD says.
-- Add exact route-decision count check semantics.
-
-## 8. Eligibility Check Sub-Graph
-
-MD requirement:
-
-Reusable LangGraph subgraph with normalize, cached eligibility, requirement
-determination, platform routing, payload build, submit, poll, parse response,
-validate details, patch claim, store record, finish.
-
-Current implementation:
-
-- Eligibility exists as one function:
-  `velo_claim/checks/eligibility.py:10`.
-- Cache support exists.
-- Coverage active/period checks exist.
-- DAMAN VOI check exists:
-  `velo_claim/checks/eligibility.py:46`.
-
-Conformance: **Low / Partial**
-
-Needed:
-
-- Convert to LangGraph subgraph.
-- Add platform routing.
-- Add eligibility payload builders.
-- Add submit/poll/parse response path.
-- Upsert `eligibility_check` records in repository.
-- Patch claim with coverage/member/benefit details.
-
-## 9. Prior Auth Check Sub-Graph
-
-MD requirement:
-
-Reusable LangGraph subgraph with normalize, requirement, existing auth,
-idempotency route decision, PA builder, submit/task, poll, parse response,
-patch claim, finish.
-
-Current implementation:
-
-- Prior-auth check exists as a function:
-  `velo_claim/checks/prior_auth.py:13`.
-- It determines PA requirement from rules/KG.
-- It checks existing auth response validity.
-- It builds PA payload when missing:
-  `velo_claim/checks/prior_auth.py:57`.
-- It inserts a prior auth request:
-  `velo_claim/checks/prior_auth.py:62`.
-- Prior-auth agent is not LangGraph:
-  `velo_claim/agents/prior_authorization.py:9`.
-
-Conformance: **Partial**
-
-Needed:
-
-- Convert to LangGraph subgraph.
-- Add idempotency check for already submitted request.
-- Add payer adapter submit/manual task creation.
-- Add polling/waiting state integration.
-- Add parse final response and raw response S3 storage.
-- Add claim patch + payload rebuild workflow after approval.
-
-## 9a. PA Claim Builder
-
-MD requirement:
-
-PA source reader, PA canonical form, PA router, NPHIES PA builder,
-Shafafiya PA builder with OpenJet envelope, validation against profile/XSD,
-store payload in S3 and PostgreSQL.
-
-Current implementation:
-
-- PA canonical form exists:
-  `velo_claim/builders/prior_auth/canonical.py`.
-- PA builder router exists:
-  `velo_claim/builders/prior_auth/builder.py`.
-- NPHIES PA builder exists:
-  `velo_claim/builders/prior_auth/nphies.py`.
-- Shafafiya PA builder exists:
-  `velo_claim/builders/prior_auth/shafafiya.py`.
-- eClaimLink PA placeholder exists:
-  `velo_claim/builders/prior_auth/eclaimlink.py`.
-- Payload URI/hash/version stored:
-  `velo_claim/builders/prior_auth/builder.py`.
-
-Conformance: **Partial**
-
-Needed:
-
-- Add OpenJet envelope for Shafafiya.
-- Add FHIR profile validation for NPHIES PA.
-- Add XSD validation for Shafafiya PA.
-- Make eClaimLink PA real or explicitly out of scope.
-
-## 10. Status Enums
-
-MD requirement:
-
-PayloadStatus, EligibilityStatus, PriorAuthStatus exactly as listed.
-
-Current implementation:
-
-- Enums exist:
-  - `velo_claim/core/enums.py:18`
-  - `velo_claim/core/enums.py:34`
-  - `velo_claim/core/enums.py:43`
-  - `velo_claim/core/enums.py:53`
+- LangGraph is used by the FHIR, preparation, validation, prior-auth,
+  eligibility, and prior-auth check graphs.
+- PostgreSQL adapter exists: `velo_claim/storage/postgres.py`.
+- S3/MinIO object adapter exists: `velo_claim/storage/object_store.py`.
+- Redis cache/lock adapter exists: `velo_claim/storage/redis_cache.py`.
+- In-memory dev implementations exist in `velo_claim/storage/memory.py`.
+- Mock KG exists in `velo_claim/kg/mock.py`.
+- Mock payer rules exist in `velo_claim/rules/mock_loader.py`.
+- Live/cached/mock payer-rule loader exists in `velo_claim/rules/live_loader.py`.
+- FHIR adapter interface and vendor bridge exist:
+  `velo_claim/context/adapters.py`, `velo_claim/context/vendor_bridge.py`.
+- Claim builders exist for NPHIES, Shafafiya, and eClaimLink.
 
 Conformance: **Mostly implemented**
 
-Note:
+Remaining:
 
-- `PriorAuthStatus.REQUIRED_MISSING` was added beyond the MD. It is useful, but
-  not exact.
+- Production mode requires real `DATABASE_URL`, `REDIS_URL`,
+  `OBJECT_STORE_BUCKET`, object-store credentials, and optional dependencies
+  `psycopg`, `boto3`, and `redis`.
+- Real Neo4j driver implementation is not present; only the mock interface is
+  present as expected for this sprint.
 
-## 11. Idempotency
-
-MD requirement:
-
-Every external-system touch uses idempotency key + Redis `SET NX EX`; callbacks
-have shared idempotency key and DB unique constraint.
-
-Current implementation:
-
-- Idempotency helper exists:
-  `velo_claim/fallback/idempotency.py:19`.
-- Callback DB uniqueness exists:
-  `velo_claim/migrations/001_initial_schema.sql:170`.
-- Callback processor uses lock and unique callback event:
-  `velo_claim/fallback/callbacks.py:17`.
-
-Conformance: **Partial**
-
-Needed:
-
-- Actually wrap external writes/calls in idempotency guard.
-- Apply it to S3 writes, repository writes, FHIR calls, payer submit calls.
-- Store/reuse result summaries as specified.
-
-## 12. Polling, Background Jobs & Fallback/Callback
+## Section 2 - Canonical State Object
 
 MD requirement:
 
-Entering WAITING_FOR_PAYER persists checkpoint, bg job, callback state. Webhook
-receiver and poll worker both resume LangGraph safely. Uses callback lock,
-poll lock, callback event uniqueness. 24h escalation.
+- One shared JSON state with claim identity, payloads, route, source context,
+  routing context, callback state, next agent, errors, and warnings.
+- Errors/warnings append-only.
+- Rebuild attempts capped at 3.
 
-Current implementation:
+Current code:
 
-- Waiting helper exists:
-  `velo_claim/fallback/waiting.py:14`.
-- Backoff schedule exists:
-  `velo_claim/fallback/waiting.py:11`.
-- Callback processor exists:
-  `velo_claim/fallback/callbacks.py:10`.
-- No webhook API route exists.
-- No poll worker exists.
-- No real LangGraph checkpoint persistence/resume exists.
-- No `poll_lock` implementation exists.
-- No 24h escalation implementation exists.
+- `default_state()` defines the expected canonical keys.
+- `ClaimError`, `CheckIssue`, `CallbackState`, `SourceContext`,
+  `RoutingContext`, and `Route` exist.
+- Validation converts report issues into canonical `errors` and `warnings`.
+- Rebuild attempts are capped in validation input and fallback rebuild.
 
-Conformance: **Low / Partial**
+Conformance: **Mostly implemented**
 
-Needed:
+Remaining:
 
-- Add webhook endpoint module.
-- Add background polling worker.
-- Add checkpoint integration.
-- Add poll lock.
-- Add timeout escalation with `PAYER_RESPONSE_TIMEOUT`.
+- Append-only behavior is mostly respected by convention, but not enforced by a
+  central immutable state mechanism.
+- Claim payload is still stored both in state and object store for local
+  convenience. The MD says large payloads should rely on object URI as source of
+  truth.
 
-## 13. Error Taxonomy
+## Section 3 - Storage Architecture
 
 MD requirement:
 
-Every error appended to `state.errors` follows `ClaimError` schema. CRITICAL
-stops, ERROR/WARNING score, INFO informational.
+- PostgreSQL tables listed in the MD.
+- S3 key layout for payloads, reports, PA payloads, callbacks, audit, etc.
+- Redis keys for sessions, FHIR context, checkpoints, poll locks, tokens,
+  idempotency, bg jobs, eligibility cache, callback locks.
+- Mock Neo4j and mock payer rules.
+- Circuit-breaker pattern for live payer rules.
 
-Current implementation:
+Current code:
 
-- `ClaimError` exists:
-  `velo_claim/core/models.py:19`.
-- Checks currently return `CheckIssue`, not `ClaimError`.
-- Validation report stores issues but does not append all errors into
-  `state.errors`.
+- Migration exists at `velo_claim/migrations/001_initial_schema.sql`.
+- Repository interface and in-memory/Postgres implementations exist.
+- Claim payloads use `claims/{claim_id}/versions/{version}/payload.{ext}`.
+- Validation reports use `claims/{claim_id}/validation_reports/{report_id}.json`.
+- PA payloads use `claims/{claim_id}/prior_auth/pa_payloads/{version}/payload.{ext}`.
+- Callback payload archival exists in `velo_claim/fallback/callbacks.py`.
+- Audit archival exists in `velo_claim/agents/audit.py`.
+- Redis-backed cache supports NX locks and key scanning.
+- Payer-rule live/cached/mock circuit breaker exists.
 
-Conformance: **Partial**
+Conformance: **Mostly implemented**
 
-Needed:
+Remaining:
 
-- Add central conversion from `CheckIssue` to `ClaimError`.
-- Append errors/warnings to canonical state.
-- Enforce routing semantics for CRITICAL/ERROR/WARNING/INFO across all agents.
+- Repository interface does not yet include first-class methods for every MD
+  table/action, for example eligibility upsert, submission attempts, and
+  external transaction abstractions.
+- Eligibility storage currently uses an in-memory-only attribute path in the
+  eligibility subgraph; it is not a repository interface method.
+- Some exact S3 paths in the MD are not yet produced, such as prior-auth request
+  and response archival paths from the PA parser.
+- No schema migration runner is included; migration must be applied manually.
 
-## 14. Audit Trail
-
-MD requirement:
-
-Every node in every agent writes audit event on entry, exit, and error. Store in
-PostgreSQL and S3.
-
-Current implementation:
-
-- Repository method exists:
-  `velo_claim/storage/memory.py:103`.
-- Migration table exists:
-  `velo_claim/migrations/001_initial_schema.sql:151`.
-- No agent node calls `insert_audit_event`.
-- No S3 archival audit write exists.
-
-Conformance: **Missing behavior / Storage only**
-
-Needed:
-
-- Add `audit_node` wrapper for LangGraph node functions.
-- Write NODE_ENTER, NODE_EXIT, NODE_ERROR.
-- Store audit event in repository and object store.
-
-## 15. Out of Scope
+## Section 4 - FHIR Context Layer
 
 MD requirement:
 
-Submission Agent is future. Inter-agent handoff is future.
+- InputResolver supports RCM upload, Velo Doctor call, and encounter ID.
+- FHIR adapter supports Epic, Cerner, Nabidh, TrakCare through one interface.
+- FHIR reader dereferences Encounter references and fetches Patient, Coverage,
+  Practitioner, Organization, Condition, Procedure, DocumentReference,
+  ChargeItem.
+- OAuth token cache in Redis.
+- Normalize documents into stable internal schema.
 
-Current implementation:
+Current code:
 
-- Submission agent is not implemented.
-- Validation sets `next_agent = "SubmissionAgent"` only when ready:
-  `velo_claim/agents/claim_validation.py:114`.
+- Input resolver handles canonical raw state and `encounter_package`.
+- FHIR context resolver fetches encounter-dependent resources through
+  `AdapterInterface`.
+- Vendor bridge wraps the preserved vendor FHIR adapter logic.
+- FHIR context agent auto-builds the vendor adapter when FHIR env vars are
+  present.
+- OAuth tokens can be cached under `token_cache:{provider_id}:{payer_id}`.
+- Routing context extraction happens once after context loading.
+
+Conformance: **Partial / Mostly implemented for FHIR JSON**
+
+Remaining:
+
+- RCM multipart, HL7, and CSV parsing are not implemented.
+- Velo Doctor-specific envelope is not explicitly modeled beyond
+  `encounter_package`.
+- Vendor adapters are generic/profile-driven; there are not separate strongly
+  typed Epic/Cerner/NABIDH/TrakCare adapter classes in the new interface.
+- Document normalization is still basic; attachments are carried as FHIR-ish
+  dicts rather than normalized document records with object storage.
+
+## Section 5 - Router
+
+MD requirement:
+
+- Router takes routing context and resolves jurisdiction, claim standard,
+  prior-auth standard, eligibility profile, payer-rule profile, and submission
+  channel.
+- Persists exactly one route decision per claim.
+- Downstream agents reload and use persisted route.
+
+Current code:
+
+- Router exists in `velo_claim/routing/router.py`.
+- Phase-1 payer registry is used for jurisdiction/standard inference.
+- Route decision is persisted by repository.
+- In-memory repository rejects conflicting route rewrites.
+- PostgreSQL migration has `route_decision.claim_id UNIQUE`.
+- Validation checks that exactly one route decision exists.
 
 Conformance: **Implemented**
 
-## 16. Production Readiness Checklist
+Remaining:
 
-Current checklist status:
+- Payer/platform profiles can become richer as payer onboarding matures.
+
+## Section 6 - Claim Preparation State Machine
+
+MD requirement:
+
+- `Start -> SupervisorNode -> PrepareClaimNode -> Validate_Claim -> End`, with
+  ErrorHandler loop.
+- Claim builder has source reader, SourceCodeExtractor, canonical builder, and
+  format-specific builder.
+- Validate_Claim performs structural schema check.
+- Audit on every node.
+
+Current code:
+
+- LangGraph shape exists: supervisor -> prepare_claim -> validate_claim.
+- All nodes are audited.
+- ClaimBuilderModule builds canonical claim, selects standard-specific builder,
+  stores payload in object store, persists payload row and claim version.
+- Canonical builder extracts diagnoses, procedures, line items, payer/provider,
+  amount, and KG bundling context.
+- NPHIES, Shafafiya, eClaimLink claim builders exist.
+
+Conformance: **Partial**
+
+Remaining:
+
+- No explicit ErrorHandler branch.
+- `validate_claim` only checks payload presence; full XSD/FHIR/profile checks
+  currently run in Claim Validation.
+- SourceCodeExtractor is not a separately named module/class. Extraction exists
+  inside canonical builder helper functions.
+- Format-specific builders are still simplified and need official payer/schema
+  hardening before real submission.
+
+## Section 7 - Claim Validation State Machine
+
+MD requirement:
+
+- `normalize_validation_input -> load_route_and_context -> load_payer_rule ->
+  parse_payload -> ValidationNode -> CalculateScore -> Router -> End`.
+- Fallback loop for payload rebuild, max 3.
+- ValidationNode orchestrates metadata, payload conformity, financial,
+  eligibility, prior auth, coding, documentation, payer rules, duplicate, and
+  readiness checks.
+
+Current code:
+
+- Graph nodes and fallback loop exist in `claim_validation.py`.
+- Persisted route is loaded and exactly-one route is enforced.
+- Payer rules are loaded.
+- Payload validator runs once before validation checks.
+- Orchestrator runs the full check list, including eligibility and PA subgraphs.
+- Validation report and issues are persisted.
+- Full report JSON is stored in object store.
+- Validation issues are appended back into canonical `errors` or `warnings`.
+
+Conformance: **Mostly implemented**
+
+Remaining:
+
+- `load_route_and_context` is currently a no-op after normalization.
+- Rule set is not explicitly cached under a session/checkpoint Redis key.
+- Fallback rebuild rebuilds in-process with `ClaimBuilderModule`; it is not a
+  separate handoff back to ClaimPreparationAgent.
+
+## Section 8 - Eligibility Check Subgraph
+
+MD requirement:
+
+- Reusable LangGraph subgraph:
+  normalize, check cache, determine requirement, route platform, build payload,
+  submit, poll, parse, validate, patch claim, store record, finish.
+- Supports cached eligibility and payer-specific TTL.
+- DAMAN VOI check.
+
+Current code:
+
+- Reusable LangGraph subgraph exists with the required node names.
+- Nodes are audited.
+- Eligibility cache key is `eligibility:{patient_id}:{payer_id}:{service_date}`.
+- Local coverage validation checks coverage existence, active status, period,
+  and DAMAN VOI.
+- Eligibility result patches payer eligibility status and benefit summary into
+  canonical claim.
+
+Conformance: **Partial**
+
+Remaining:
+
+- `submit_eligibility_request`, `poll_if_async`, and
+  `parse_eligibility_response` are local/manual placeholders.
+- No real platform-specific eligibility payload builders yet
+  (`CoverageEligibilityRequest`, Shafafiya XML, eClaimLink XML).
+- No live eligibility adapter submission/polling.
+- Repository has no formal `upsert_eligibility_check`; storage is only
+  in-memory via an attribute when present.
+- WAITING_FOR_PAYER integration is not wired into this subgraph yet.
+
+## Section 9 - Prior Auth Check Subgraph
+
+MD requirement:
+
+- Reusable LangGraph subgraph:
+  normalize, determine requirement, validate existing auth, idempotency route,
+  PA builder, submit/task, poll, parse response, patch claim, finish.
+- Existing auth checks expiration, CPT match, service date, payer match.
+- Queued/pended responses enter callback/poll flow.
+- Approved auth patches claim and triggers payload rebuild.
+
+Current code:
+
+- Reusable LangGraph subgraph exists with the required node names.
+- Nodes are audited.
+- Requirement uses payer rules and KG.
+- Existing auth validation uses `auth_valid`.
+- PA payload builder is invoked when PA is missing.
+- Prior-auth request row is inserted.
+- Valid existing auth patches `pre_auth_ref`.
+- Missing PA produces `PA_REQUIRED_MISSING`.
+
+Conformance: **Partial**
+
+Remaining:
+
+- `pa_route_decision` idempotency only scans in-memory repository internals when
+  available; no repository method exists for pending-request lookup.
+- `submit_or_create_task` always creates a local/manual task path; no live payer
+  or OpenJet submit adapter.
+- `poll_if_needed` and `parse_final_response` are stubs.
+- WAITING_FOR_PAYER/callback integration is not called from this subgraph yet.
+- Raw PA response S3 storage is not implemented in `parse_final_response`.
+- Approved final PA response does not yet automatically trigger claim payload
+  rebuild/new hash/new claim payload version.
+
+## Section 9a - PA Claim Builder
+
+MD requirement:
+
+- PA source context reader.
+- PA canonical builder.
+- PA router.
+- NPHIES PA builder with FHIR R4 Claim `use=preauthorization`.
+- Shafafiya PA builder with DOH XML and OpenJet envelope.
+- Validate PA payload against NPHIES profile or XSD.
+- Store payload in S3 and PostgreSQL.
+
+Current code:
+
+- `PACanonicalForm` and canonical builder exist.
+- PAClaimBuilderModule routes by `route.prior_auth_standard`.
+- NPHIES PA builder emits FHIR JSON with `use=preauthorization`.
+- Shafafiya PA builder emits XML.
+- eClaimLink PA builder exists as a subclass placeholder.
+- PA payload is hashed, stored in object store, and persisted in repository.
+
+Conformance: **Partial**
+
+Remaining:
+
+- NPHIES PA bundle is minimal and lacks full MessageHeader/profile/resource
+  conformance expected by a real NPHIES PA submission.
+- Shafafiya PA builder does not include real OpenJet envelope details.
+- PA builders do not call the payload validator before returning.
+- eClaimLink PA builder is explicitly a placeholder.
+
+## Section 10 - Status Enums
+
+MD requirement:
+
+- PayloadStatus, EligibilityStatus, PriorAuthStatus as listed.
+
+Current code:
+
+- All required enum values exist.
+- Additional useful value exists: `PriorAuthStatus.REQUIRED_MISSING`.
+
+Conformance: **Mostly implemented**
+
+Remaining:
+
+- If exact enum matching is mandatory, decide whether to keep or remove the
+  extra `REQUIRED_MISSING` value.
+
+## Section 11 - Idempotency
+
+MD requirement:
+
+- Every external touch uses idempotency key plus Redis `SET NX EX`.
+- Callback idempotency is shared by webhook and poll.
+- DB unique constraint protects callback double-processing.
+
+Current code:
+
+- Idempotency key helper exists.
+- CallbackProcessor computes callback idempotency and uses `callback_lock`.
+- Callback table has unique `idempotency_key`.
+- Poll worker uses both `callback_lock` and `poll_lock`.
+
+Conformance: **Partial**
+
+Remaining:
+
+- S3 writes, repository writes, FHIR reads/token calls, payer submits, and
+  payload builds are not universally wrapped in the idempotency helper.
+- Result-summary reuse for non-callback idempotency is not implemented.
+
+## Section 12 - Polling, Background Jobs, Fallback/Callback
+
+MD requirement:
+
+- Enter WAITING_FOR_PAYER writes LangGraph checkpoint, Redis checkpoint key,
+  bg job, callback state.
+- Webhook receiver and poll worker resume safely.
+- Locks: callback lock, poll lock, callback unique key.
+- 24h escalation to NEEDS_REVIEW and `PAYER_RESPONSE_TIMEOUT`.
+
+Current code:
+
+- `enter_waiting_for_payer` writes checkpoint key, bg job, callback state, and
+  `WAITING_FOR_PAYER`.
+- `MemoryCheckpointStore` supports checkpoint storage and node-result injection.
+- Webhook receiver exists and can build a FastAPI router.
+- Poll worker finds due jobs, uses locks, processes final response, injects
+  checkpoint result, archives callback, and escalates after 24h.
+- CallbackProcessor stores callback_event and object-store callback payload.
+
+Conformance: **Partial / production-shaped**
+
+Remaining:
+
+- The reusable eligibility/PA subgraphs do not currently call
+  `enter_waiting_for_payer`.
+- Checkpoint resume is injection plus `resume_callback`; it is not wired to a
+  production LangGraph checkpointer/runtime.
+- No long-running worker loop entrypoint/CLI is included; only worker functions.
+- Escalation writes audit and returns error, but does not load and mutate the
+  full canonical state from persistent storage.
+
+## Section 13 - Error Taxonomy
+
+MD requirement:
+
+- Errors appended to `state.errors` follow `ClaimError`.
+- CRITICAL stops, ERROR/WARNING score, INFO informational.
+
+Current code:
+
+- ClaimError exists.
+- Checks emit CheckIssue.
+- Validation converts CheckIssue to ClaimError and appends into canonical
+  `errors` or `warnings`.
+- Scoring handles CRITICAL, ERROR, WARNING, INFO.
+
+Conformance: **Mostly implemented**
+
+Remaining:
+
+- Non-validation node exceptions are audited but not always converted into
+  canonical `ClaimError` before graph failure.
+- Error routing is strongest in validation, weaker in FHIR/context and
+  preparation graphs.
+
+## Section 14 - Audit Trail
+
+MD requirement:
+
+- Every node in every agent writes NODE_ENTER, NODE_EXIT, NODE_ERROR.
+- Store audit in PostgreSQL and S3/object store.
+
+Current code:
+
+- `audited_node` wrapper exists.
+- FHIR context agent nodes are audited.
+- Claim preparation nodes are audited.
+- Claim validation nodes are audited.
+- Prior authorization agent node is audited.
+- Eligibility subgraph nodes are audited.
+- Prior-auth subgraph nodes are audited.
+- Poll worker 24h escalation writes audit and object-store archive.
+
+Conformance: **Mostly implemented**
+
+Remaining:
+
+- Audit is present for graph nodes; non-graph helper functions are not all
+  audited individually.
+- Audit payload snapshots are intentionally compact, not full input/output.
+
+## Section 15 - Out of Scope
+
+MD requirement:
+
+- Submission Agent is future.
+- Inter-agent handoff protocol is future.
+- Current agents are called sequentially in-process.
+
+Current code:
+
+- No submission agent exists.
+- Validation sets `next_agent = "SubmissionAgent"` only when ready to submit.
+- Pipeline runs in-process.
+
+Conformance: **Implemented**
+
+## Section 16 - Production Readiness Checklist
+
+MD checklist status against current code:
 
 - PA Claim Builder: **Partial**
-- Fallback/Callback: **Partial**
-- Neo4j mock: **Implemented**
-- Payer rules mock: **Implemented**
-- Live payer rule loader/circuit breaker: **Missing**
-- LLM coding enrichment: **Missing**
-- Eligibility TTL: **Implemented in function path**
+- Fallback/Callback: **Partial / production-shaped**
+- Mock Neo4j: **Implemented**
+- Mock payer rules: **Implemented**
+- Live payer-rule circuit breaker: **Implemented, fetchers still manual**
+- LLM coding enrichment: **Implemented as optional, non-authoritative**
+- Eligibility TTL: **Implemented in rule model and local cache path**
 - DAMAN VOI flag: **Implemented**
-- Shafafiya OpenJet integration: **Missing**
-- Single route decision: **Mostly implemented**
-- Payload rebuild loop guard: **Partial**
-- SHA256 payload hash: **Implemented on payload builds**
+- Shafafiya OpenJet integration: **Partial / not real integration**
+- Single route decision: **Implemented**
+- Payload rebuild loop guard: **Implemented in validation**
+- SHA256 payload hash: **Implemented on claim and PA payload builds**
 
-## Priority Fix List
+## Highest-Priority Remaining Fixes
 
-### P0 - Required For MD Exactness
+### P0 - Required For Real Workflow Behavior
 
-1. Add node audit wrapper and call it in all LangGraph agents.
-2. Convert Eligibility Check to a reusable LangGraph subgraph.
-3. Convert Prior Auth Check to a reusable LangGraph subgraph.
-4. Implement fallback/rebuild loop in Claim Validation.
-5. Implement callback/poll worker/checkpoint resume flow.
-6. Add real schema validation for payloads.
+1. Wire `enter_waiting_for_payer` into eligibility and PA subgraphs for queued
+   or pended payer responses.
+2. Add live eligibility and prior-auth payer/OpenJet/NPHIES adapters with submit
+   and status polling.
+3. Add repository methods for pending prior-auth request lookup and eligibility
+   upsert; remove in-memory-only checks from the subgraphs.
+4. Run official validation in claim prep or move `Validate_Claim` responsibility
+   explicitly to validation stage.
+5. Add ErrorHandler routes to FHIR context and claim preparation graphs.
 
-### P1 - Required For Production Shape
+### P1 - Required For Standards Readiness
 
-1. Add PostgreSQL repository implementation.
-2. Add S3/MinIO object store implementation.
-3. Add Redis cache/lock implementation.
-4. Wire vendor FHIR adapters into the new adapter interface.
-5. Add live payer rule loader with circuit breaker.
-6. Add dedicated payer rules check module.
+1. Configure official Shafafiya and eClaimLink XSD paths and test against real
+   schemas.
+2. Configure official NPHIES FHIR validator command and IG assets.
+3. Expand NPHIES PA builder to full message bundle profile.
+4. Add real Shafafiya/OpenJet envelope for PA.
+5. Replace eClaimLink PA placeholder with real schema-specific builder.
 
-### P2 - Useful Refinements
+### P2 - Production Hardening
 
-1. Add LLM-assisted coding enrichment behind a flag.
-2. Add exact S3 object key layout tests.
-3. Add conformance tests per MD section.
-4. Add generated sample outputs from the new pipeline only.
+1. Apply idempotency guard to S3 writes, repository writes, FHIR calls, payer
+   submits, and payload builds.
+2. Add worker loop/CLI for polling jobs.
+3. Add persistent checkpoint implementation backed by Redis/Postgres or the
+   chosen LangGraph production checkpointer.
+4. Add conformance tests for every MD section, not just the happy path.
+5. Add RCM upload parsing for multipart, HL7, and CSV.
 
 ## Bottom Line
 
-The codebase now has the right **shape** and is cleanly organized. It is not yet
-an exact implementation of the MD. The next pass should focus on behavior that
-the MD explicitly requires but the package currently only represents as
-interfaces or simplified functions: subgraphs, audit trail, callback/polling,
-fallback rebuild, real storage adapters, and schema validation.
+The project now matches the MD at the architectural level and passes local
+pipeline tests. It is ready for local development and integration testing.
 
-## Implementation Update - 2026-06-29
-
-This follow-up pass closed the specific audit gaps called out after the clean
-rebuild:
-
-- Eligibility and Prior Auth are now reusable LangGraph subgraphs:
-  - `velo_claim/checks/eligibility_graph.py`
-  - `velo_claim/checks/prior_auth_graph.py`
-- The dedicated Prior Authorization agent now wraps the reusable PA subgraph:
-  - `velo_claim/agents/prior_authorization.py`
-- Node audit is now applied to top-level agents and reusable subgraph nodes.
-  Audit events write `NODE_ENTER`, `NODE_EXIT`, and `NODE_ERROR` to the
-  repository and object store when available:
-  - `velo_claim/agents/audit.py`
-- PostgreSQL, S3/MinIO, and Redis production adapters now exist behind the same
-  interfaces as the in-memory dev adapters:
-  - `velo_claim/storage/postgres.py`
-  - `velo_claim/storage/object_store.py`
-  - `velo_claim/storage/redis_cache.py`
-- Fallback/callback now includes:
-  - webhook receiver/router helper: `velo_claim/api/webhooks.py`
-  - poll worker with `callback_lock`, `poll_lock`, checkpoint injection, and
-    24h escalation: `velo_claim/jobs/poll_worker.py`
-  - local checkpoint store: `velo_claim/fallback/checkpoints.py`
-  - WAITING_FOR_PAYER helper that writes `lg_checkpoint:*`, `bg_job:*`, and
-    callback state: `velo_claim/fallback/waiting.py`
-- Payload validation is standard-aware:
-  - NPHIES local FHIR Bundle/Claim checks plus optional external FHIR validator
-    command via `NPHIES_FHIR_VALIDATOR_COMMAND`
-  - Shafafiya/eClaimLink XML parse checks plus XSD validation when
-    `SHAFAFIYA_CLAIM_XSD_PATH` or `ECLAIMLINK_CLAIM_XSD_PATH` is configured
-  - `velo_claim/validation/payload_validators.py`
-- Vendor FHIR adapters are bridged into the new `AdapterInterface`, auto-wired
-  when FHIR env vars are present, and OAuth tokens can be cached in Redis under
-  `token_cache:{provider_id}:{payer_id}`:
-  - `velo_claim/context/vendor_bridge.py`
-  - `velo_claim/agents/fhir_context_agent.py`
-- The phase-1 payer registry is now used by the router for jurisdiction and
-  standard inference:
-  - `velo_claim/routing/router.py`
-  - `velo_claim/routing/payer_registry.py`
-- A dedicated payer-rules validation module now exists:
-  - `velo_claim/checks/payer_rules.py`
-- Payer rule loading now has a production-shaped live/cached/mock circuit
-  breaker:
-  - `velo_claim/rules/live_loader.py`
-- Coding consistency now supports optional LLM enrichment behind environment
-  flags:
-  - `velo_claim/checks/coding.py`
-- Validation now explicitly checks that exactly one route decision exists and
-  appends validation findings back into canonical state `errors`/`warnings`.
-
-Remaining infrastructure-dependent items:
-
-- Real payer portal fetchers are still not implemented; `LivePayerRuleLoader`
-  accepts an injected fetcher and falls back to cached/mock data.
-- Full NPHIES FHIR profile validation requires an external configured validator
-  command and IG assets.
-- Full Shafafiya/eClaimLink validation requires the official XSD paths to be
-  configured.
-- Webhook/poll resume supports checkpoint injection plus a `resume_callback`
-  hook; production deployment still needs to wire that hook to the chosen
-  LangGraph runtime/checkpointer.
+The remaining work is not spaghetti cleanup anymore; it is standards and
+external-system integration work: real payer adapters, official schemas, real
+OpenJet/NPHIES behavior, and stronger idempotent production orchestration.

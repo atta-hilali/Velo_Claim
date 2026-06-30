@@ -11,7 +11,7 @@ from velo_claim.checks.payload import check_payload_conformity
 from velo_claim.checks.payer_rules import check_payer_rules
 from velo_claim.checks.prior_auth_graph import run_prior_auth_subgraph
 from velo_claim.checks.readiness import check_submission_readiness
-from velo_claim.core.enums import Severity, ValidationStatus
+from velo_claim.core.enums import EligibilityStatus, PriorAuthStatus, Severity, ValidationStatus
 from velo_claim.core.models import CheckResult, PayerRuleSet, ValidationReport
 from velo_claim.kg.interface import Neo4jClientInterface
 from velo_claim.storage.interfaces import CacheStoreInterface, ObjectStoreInterface, RepositoryInterface
@@ -44,7 +44,9 @@ def run_validation_checks(
         object_store=object_store,
     )
     checks.append(eligibility)
-    if eligibility.passes:
+    if str(eligibility.status) == EligibilityStatus.WAITING_FOR_PAYER:
+        return state, checks
+    if str(eligibility.status) in {EligibilityStatus.PASS, EligibilityStatus.CACHED_VALID}:
         state, prior_auth = run_prior_auth_subgraph(
             state=state,
             payer_rules=payer_rules,
@@ -66,6 +68,16 @@ def run_validation_checks(
 
 def calculate_validation_report(claim_id: str, checks: list[CheckResult]) -> ValidationReport:
     issues = [issue for check in checks for issue in check.issues]
+    if any(
+        str(check.status) in {EligibilityStatus.WAITING_FOR_PAYER, PriorAuthStatus.WAITING_FOR_PAYER}
+        for check in checks
+    ):
+        return ValidationReport(claim_id, 100, ValidationStatus.WAITING_FOR_PAYER, issues, checks)
+    if any(
+        check.check_type == "PRIOR_AUTH" and check.data.get("payload_rebuild_required")
+        for check in checks
+    ):
+        return ValidationReport(claim_id, 100, ValidationStatus.NEEDS_PAYLOAD_REBUILD, issues, checks)
     if any(issue.severity == Severity.CRITICAL for issue in issues):
         return ValidationReport(claim_id, 0, ValidationStatus.HOLD_CRITICAL, issues, checks)
     if any(issue.code == "PA_REQUIRED_MISSING" for issue in issues):

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+import xml.etree.ElementTree as ET
 from typing import Any
 
 from langgraph.graph import END, START, StateGraph
@@ -7,11 +9,298 @@ from langgraph.graph import END, START, StateGraph
 from velo_claim.agents.audit import audited_node
 from velo_claim.builders.prior_auth.builder import PAClaimBuilderModule
 from velo_claim.checks.prior_auth import auth_valid
-from velo_claim.core.enums import PriorAuthStatus, Severity
+from velo_claim.core.enums import PayloadStatus, PriorAuthStatus, Severity
 from velo_claim.core.models import CheckIssue, CheckResult, PayerRuleSet
+from velo_claim.core.utils import normalize_code
 from velo_claim.kg.interface import Neo4jClientInterface
 from velo_claim.rules.engine import pa_required_for_code
 from velo_claim.storage.interfaces import ObjectStoreInterface, RepositoryInterface
+
+
+WAITING_RESPONSE_STATUSES = {"queued", "pending", "pended", "partial", "in-progress", "inprogress"}
+APPROVED_RESPONSE_STATUSES = {"approved", "active", "authorized", "authorised"}
+REFERENCE_ACCEPTED_RESPONSE_STATUSES = {"accepted"}
+DENIED_RESPONSE_STATUSES = {"denied", "rejected", "declined", "cancelled", "canceled"}
+ERROR_RESPONSE_STATUSES = {"error", "failed", "invalid"}
+COMPLETE_RESPONSE_STATUSES = {"complete", "completed"}
+
+
+def normalize_prior_auth_response(raw_response: Any, state: dict[str, Any]) -> dict[str, Any]:
+    """Normalize payer/NPHIES/Shafafiya PA responses into storage-ready data."""
+
+    raw = _coerce_response(raw_response)
+    claim = state.get("canonical_claim", {})
+    payer = claim.get("payer", {})
+    required_codes = [normalize_code(code) for code in state.get("prior_auth_required_codes", []) if code]
+
+    parsed = _extract_response_fields(raw)
+    status = _authorization_status(parsed)
+    cpt_codes = [normalize_code(code) for code in parsed.get("cpt_codes", []) if code]
+    if status == "approved" and not cpt_codes:
+        cpt_codes = required_codes
+
+    return {
+        "status": status,
+        "transaction_status": parsed.get("transaction_status"),
+        "outcome": parsed.get("outcome"),
+        "decision": parsed.get("decision"),
+        "pre_auth_ref": parsed.get("pre_auth_ref"),
+        "payer_id": parsed.get("payer_id") or payer.get("id"),
+        "claim_id": parsed.get("claim_id") or claim.get("claim_id"),
+        "cpt_codes": cpt_codes,
+        "valid_from": parsed.get("valid_from"),
+        "valid_to": parsed.get("valid_to"),
+        "message": parsed.get("message"),
+        "raw_response": raw,
+    }
+
+
+def _coerce_response(raw_response: Any) -> dict[str, Any]:
+    if raw_response is None:
+        return {}
+    if isinstance(raw_response, dict):
+        return raw_response
+    if isinstance(raw_response, str):
+        text = raw_response.strip()
+        if not text:
+            return {}
+        if text.startswith("{") or text.startswith("["):
+            try:
+                parsed = json.loads(text)
+                return parsed if isinstance(parsed, dict) else {"items": parsed}
+            except json.JSONDecodeError:
+                return {"payload": text}
+        return {"payload": text}
+    return {"payload": raw_response}
+
+
+def _extract_response_fields(raw: dict[str, Any]) -> dict[str, Any]:
+    payload = raw.get("payload") or raw.get("body") or raw.get("response")
+    if isinstance(payload, dict):
+        raw = {**raw, **payload}
+    elif isinstance(payload, str) and payload.strip().startswith("<"):
+        return _extract_xml_response_fields(payload, raw)
+
+    bundle = raw if raw.get("resourceType") == "Bundle" else None
+    if not bundle and isinstance(payload, str) and payload.strip().startswith("{"):
+        try:
+            candidate = json.loads(payload)
+            if isinstance(candidate, dict) and candidate.get("resourceType") == "Bundle":
+                bundle = candidate
+        except json.JSONDecodeError:
+            bundle = None
+    if bundle:
+        return _extract_fhir_response_fields(bundle, raw)
+
+    return _extract_flat_response_fields(raw)
+
+
+def _extract_flat_response_fields(raw: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "transaction_status": _first_value(raw, "transaction_status", "outcome", "status"),
+        "outcome": _first_value(raw, "outcome"),
+        "decision": _first_value(raw, "decision", "authorization_status", "auth_status", "approval_status", "result"),
+        "pre_auth_ref": _first_value(
+            raw,
+            "pre_auth_ref",
+            "preAuthRef",
+            "prior_authorization_id",
+            "priorAuthorizationId",
+            "authorization_id",
+            "authorizationId",
+            "authorization_number",
+            "authorizationNumber",
+            "reference",
+        ),
+        "payer_id": _first_value(raw, "payer_id", "payerId", "payer"),
+        "claim_id": _first_value(raw, "claim_id", "claimId"),
+        "cpt_codes": _codes_from(raw),
+        "valid_from": _first_value(raw, "valid_from", "validFrom", "start", "startDate"),
+        "valid_to": _first_value(raw, "valid_to", "validTo", "end", "endDate", "expires", "expiryDate"),
+        "message": _first_value(raw, "message", "disposition", "error", "reason"),
+    }
+
+
+def _extract_fhir_response_fields(bundle: dict[str, Any], raw: dict[str, Any]) -> dict[str, Any]:
+    resources = [
+        entry.get("resource", {})
+        for entry in bundle.get("entry", [])
+        if isinstance(entry, dict) and isinstance(entry.get("resource"), dict)
+    ]
+    claim_response = next(
+        (
+            resource
+            for resource in resources
+            if resource.get("resourceType") in {"ClaimResponse", "AuthorizationResponse"}
+        ),
+        {},
+    )
+    if not claim_response:
+        claim_response = next((resource for resource in resources if resource.get("preAuthRef")), {})
+
+    pre_auth_ref = claim_response.get("preAuthRef")
+    if isinstance(pre_auth_ref, list):
+        pre_auth_ref = pre_auth_ref[0] if pre_auth_ref else None
+
+    return {
+        **_extract_flat_response_fields(raw),
+        "transaction_status": claim_response.get("outcome") or claim_response.get("status") or raw.get("status"),
+        "outcome": claim_response.get("outcome") or raw.get("outcome"),
+        "decision": _first_value(claim_response, "decision", "authorizationStatus", "status") or raw.get("decision"),
+        "pre_auth_ref": pre_auth_ref or _extract_flat_response_fields(raw).get("pre_auth_ref"),
+        "payer_id": _identifier_value(claim_response.get("insurer")) or _extract_flat_response_fields(raw).get("payer_id"),
+        "claim_id": _reference_id(claim_response.get("request", {}).get("reference")) or _extract_flat_response_fields(raw).get("claim_id"),
+        "cpt_codes": _codes_from_fhir_claim_response(claim_response) or _extract_flat_response_fields(raw).get("cpt_codes", []),
+        "valid_from": _first_value(claim_response, "validFrom", "valid_from") or _extract_flat_response_fields(raw).get("valid_from"),
+        "valid_to": _first_value(claim_response, "validTo", "valid_to", "expirationDate") or _extract_flat_response_fields(raw).get("valid_to"),
+        "message": claim_response.get("disposition") or _extract_flat_response_fields(raw).get("message"),
+    }
+
+
+def _extract_xml_response_fields(payload: str, raw: dict[str, Any]) -> dict[str, Any]:
+    try:
+        root = ET.fromstring(payload)
+    except ET.ParseError:
+        return _extract_flat_response_fields(raw)
+
+    values: dict[str, list[str]] = {}
+    for element in root.iter():
+        key = _local_name(element.tag).lower()
+        text = (element.text or "").strip()
+        if text:
+            values.setdefault(key, []).append(text)
+
+    def xml_first(*names: str) -> str | None:
+        for name in names:
+            items = values.get(name.lower())
+            if items:
+                return items[0]
+        return None
+
+    codes = []
+    for key in ("code", "cpt", "procedurecode", "activitycode"):
+        codes.extend(values.get(key, []))
+
+    return {
+        **_extract_flat_response_fields(raw),
+        "transaction_status": xml_first("status", "outcome", "result"),
+        "outcome": xml_first("outcome"),
+        "decision": xml_first("decision", "authorizationstatus", "approvalstatus", "result"),
+        "pre_auth_ref": xml_first(
+            "preauthref",
+            "priorauthorizationid",
+            "idpayer",
+            "authorizationid",
+            "authorizationnumber",
+            "preauthorizationno",
+            "preauthid",
+        ),
+        "payer_id": xml_first("payerid", "receiverid"),
+        "claim_id": xml_first("claimid", "id"),
+        "cpt_codes": codes,
+        "valid_from": xml_first("validfrom", "start", "fromdate"),
+        "valid_to": xml_first("validto", "end", "todate", "expirydate"),
+        "message": xml_first("message", "denialreason", "comment", "disposition"),
+    }
+
+
+def _authorization_status(parsed: dict[str, Any]) -> str:
+    values = [
+        str(parsed.get("decision") or "").strip().lower(),
+        str(parsed.get("outcome") or "").strip().lower(),
+        str(parsed.get("transaction_status") or "").strip().lower(),
+    ]
+    if any(value in WAITING_RESPONSE_STATUSES for value in values):
+        return "waiting"
+    if any(value in ERROR_RESPONSE_STATUSES for value in values):
+        return "error"
+    if any(value in DENIED_RESPONSE_STATUSES for value in values):
+        return "denied"
+    if any(value in APPROVED_RESPONSE_STATUSES for value in values):
+        return "approved"
+    if parsed.get("pre_auth_ref") and any(value in REFERENCE_ACCEPTED_RESPONSE_STATUSES for value in values):
+        return "approved"
+    if parsed.get("pre_auth_ref") and any(value in COMPLETE_RESPONSE_STATUSES for value in values):
+        return "approved"
+    if parsed.get("pre_auth_ref") and not any(values):
+        return "approved"
+    if any(value in COMPLETE_RESPONSE_STATUSES for value in values):
+        return "denied"
+    return "unknown"
+
+
+def _codes_from(raw: dict[str, Any]) -> list[str]:
+    candidates = []
+    for key in ("cpt_codes", "procedure_codes", "service_codes", "approved_codes", "codes"):
+        value = raw.get(key)
+        if isinstance(value, list):
+            candidates.extend(value)
+        elif value:
+            candidates.append(value)
+    return [str(code) for code in candidates if code]
+
+
+def _codes_from_fhir_claim_response(claim_response: dict[str, Any]) -> list[str]:
+    codes = []
+    for item in claim_response.get("item", []):
+        service = item.get("productOrService", {})
+        for coding in service.get("coding", []):
+            if coding.get("code"):
+                codes.append(coding["code"])
+    return codes
+
+
+def _first_value(data: dict[str, Any], *keys: str) -> Any:
+    for key in keys:
+        value = data.get(key)
+        if value not in (None, ""):
+            return value
+    return None
+
+
+def _identifier_value(value: Any) -> str | None:
+    if not isinstance(value, dict):
+        return None
+    identifier = value.get("identifier")
+    if isinstance(identifier, dict):
+        return identifier.get("value")
+    return None
+
+
+def _reference_id(reference: str | None) -> str | None:
+    if not reference:
+        return None
+    return str(reference).split("/")[-1]
+
+
+def _local_name(tag: str) -> str:
+    return tag.rsplit("}", 1)[-1]
+
+
+def _callback_response(state: dict[str, Any]) -> Any:
+    callback_results = state.get("callback_results", {})
+    if isinstance(callback_results, dict):
+        for key in ("parse_final_response", "prior_auth_response", "pa_response"):
+            if callback_results.get(key):
+                return callback_results[key]
+    return state.get("prior_auth_response") or state.get("payer_response")
+
+
+def _payload_contains_pre_auth_ref(state: dict[str, Any], pre_auth_ref: str | None) -> bool:
+    if not pre_auth_ref:
+        return False
+    payload = state.get("claim_payload") or ""
+    return str(pre_auth_ref) in str(payload)
+
+
+def _prior_auth_request_id(state: dict[str, Any], normalized: dict[str, Any]) -> str | None:
+    raw = normalized.get("raw_response") or {}
+    if isinstance(raw, dict):
+        for key in ("request_id", "prior_auth_request_id", "authorization_request_id"):
+            if raw.get(key):
+                return raw[key]
+    existing = state.get("prior_auth_existing_request") or {}
+    return state.get("prior_auth_request_id") or existing.get("request_id")
 
 
 def build_prior_auth_subgraph(
@@ -91,10 +380,16 @@ def build_prior_auth_subgraph(
             result = CheckResult("PRIOR_AUTH", PriorAuthStatus.HOLD_CRITICAL, issues)
             return {**state, "prior_auth_result": result.to_dict(), "_prior_auth_result_object": result, "prior_auth_terminal": True}
         if valid_refs and not missing_codes:
-            result = CheckResult("PRIOR_AUTH", PriorAuthStatus.ALREADY_VALID, data={"valid_refs": valid_refs})
+            rebuild_required = not _payload_contains_pre_auth_ref(state, valid_refs[0])
+            result = CheckResult(
+                "PRIOR_AUTH",
+                PriorAuthStatus.ALREADY_VALID,
+                data={"valid_refs": valid_refs, "payload_rebuild_required": rebuild_required},
+            )
             return {
                 **state,
                 "canonical_claim": {**claim, "pre_auth_ref": valid_refs[0]},
+                "payload_rebuild_required": rebuild_required,
                 "prior_auth_result": result.to_dict(),
                 "_prior_auth_result_object": result,
                 "prior_auth_terminal": True,
@@ -138,7 +433,107 @@ def build_prior_auth_subgraph(
         return state
 
     def parse_final_response(state: dict[str, Any]) -> dict[str, Any]:
-        return state
+        if state.get("prior_auth_terminal") or state.get("_prior_auth_result_object"):
+            return state
+        raw_response = _callback_response(state)
+        if not raw_response:
+            return state
+
+        claim = state.get("canonical_claim", {})
+        normalized = normalize_prior_auth_response(raw_response, state)
+        request_id = _prior_auth_request_id(state, normalized)
+        status = normalized["status"]
+
+        if status == "waiting":
+            result = CheckResult(
+                "PRIOR_AUTH",
+                PriorAuthStatus.WAITING_FOR_PAYER,
+                data={"response": normalized, "request_id": request_id},
+            )
+            return {
+                **state,
+                "prior_auth_response": normalized,
+                "prior_auth_result": result.to_dict(),
+                "_prior_auth_result_object": result,
+                "payload_status": PayloadStatus.WAITING_FOR_PAYER,
+                "prior_auth_terminal": True,
+            }
+
+        if request_id and status in {"approved", "denied", "error"}:
+            repository.insert_prior_auth_response(request_id, normalized)
+
+        if status == "approved":
+            pre_auth_ref = normalized.get("pre_auth_ref")
+            if not pre_auth_ref:
+                issue = CheckIssue(
+                    code="PA_APPROVED_WITHOUT_REFERENCE",
+                    severity=Severity.CRITICAL,
+                    check_type="PRIOR_AUTH",
+                    field="prior_auth_response.pre_auth_ref",
+                    message="Payer returned an approved prior authorization response without an authorization reference.",
+                    suggestion="Do not submit until the payer authorization reference is available.",
+                    penalty=100,
+                    evidence={"request_id": request_id, "response": normalized},
+                )
+                result = CheckResult("PRIOR_AUTH", PriorAuthStatus.HOLD_CRITICAL, [issue], {"response": normalized})
+                return {**state, "prior_auth_result": result.to_dict(), "_prior_auth_result_object": result, "prior_auth_terminal": True}
+
+            cpt_codes = normalized.get("cpt_codes") or state.get("prior_auth_required_codes", [])
+            invalid_codes = [
+                code
+                for code in cpt_codes
+                if not auth_valid(normalized, code, claim.get("encounter", {}).get("service_date"))
+            ]
+            if invalid_codes:
+                issue = CheckIssue(
+                    code="PA_RESPONSE_NOT_VALID_FOR_SERVICE",
+                    severity=Severity.CRITICAL,
+                    check_type="PRIOR_AUTH",
+                    field="prior_auth_response",
+                    message="Approved prior authorization response does not cover the claim service date or requested code.",
+                    suggestion="Confirm the payer authorization details before rebuilding the claim.",
+                    penalty=100,
+                    evidence={"invalid_codes": invalid_codes, "response": normalized},
+                )
+                result = CheckResult("PRIOR_AUTH", PriorAuthStatus.HOLD_CRITICAL, [issue], {"response": normalized})
+                return {**state, "prior_auth_result": result.to_dict(), "_prior_auth_result_object": result, "prior_auth_terminal": True}
+
+            rebuild_required = not _payload_contains_pre_auth_ref(state, pre_auth_ref)
+            result = CheckResult(
+                "PRIOR_AUTH",
+                PriorAuthStatus.APPROVED,
+                data={
+                    "valid_refs": [pre_auth_ref],
+                    "response": normalized,
+                    "request_id": request_id,
+                    "payload_rebuild_required": rebuild_required,
+                },
+            )
+            return {
+                **state,
+                "canonical_claim": {**claim, "pre_auth_ref": pre_auth_ref},
+                "prior_auth_response": normalized,
+                "prior_auth_valid_refs": [pre_auth_ref],
+                "payload_rebuild_required": rebuild_required,
+                "prior_auth_result": result.to_dict(),
+                "_prior_auth_result_object": result,
+                "prior_auth_terminal": True,
+            }
+
+        severity = Severity.CRITICAL if status == "error" else Severity.ERROR
+        result_status = PriorAuthStatus.HOLD_CRITICAL if status == "error" else PriorAuthStatus.DENIED_NEEDS_REVIEW
+        issue = CheckIssue(
+            code="PA_RESPONSE_NOT_APPROVED",
+            severity=severity,
+            check_type="PRIOR_AUTH",
+            field="prior_auth_response.status",
+            message="Prior authorization response was not approved.",
+            suggestion="Route to RCM review, correct the request, or use the payer portal escalation path.",
+            penalty=100 if severity == Severity.CRITICAL else 30,
+            evidence={"request_id": request_id, "response": normalized},
+        )
+        result = CheckResult("PRIOR_AUTH", result_status, [issue], {"response": normalized, "request_id": request_id})
+        return {**state, "prior_auth_response": normalized, "prior_auth_result": result.to_dict(), "_prior_auth_result_object": result, "prior_auth_terminal": True}
 
     def patch_claim(state: dict[str, Any]) -> dict[str, Any]:
         if state.get("prior_auth_valid_refs"):

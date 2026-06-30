@@ -11,6 +11,14 @@ class NphiesClaimBuilder:
         claim_id = canonical_claim["claim_id"]
         patient_id = canonical_claim["patient"].get("id") or "UNKNOWN"
         provider_id = canonical_claim["provider"].get("facility_license") or canonical_claim["provider"].get("facility_id") or "UNKNOWN"
+        coverage_id = canonical_claim["payer"].get("coverage_id") or "UNKNOWN-COVERAGE"
+        insurance = {
+            "sequence": 1,
+            "focal": True,
+            "coverage": {"reference": f"Coverage/{coverage_id}"},
+        }
+        if canonical_claim.get("pre_auth_ref"):
+            insurance["preAuthRef"] = [canonical_claim["pre_auth_ref"]]
         bundle = {
             "resourceType": "Bundle",
             "id": str(uuid4()),
@@ -49,6 +57,7 @@ class NphiesClaimBuilder:
                         "provider": {"identifier": {"value": provider_id}},
                         "insurer": {"identifier": {"value": canonical_claim["payer"].get("id")}},
                         "priority": {"coding": [{"system": "http://terminology.hl7.org/CodeSystem/processpriority", "code": "normal"}]},
+                        "insurance": [insurance],
                         "diagnosis": [
                             {
                                 "sequence": index + 1,

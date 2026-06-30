@@ -46,6 +46,9 @@ class ClaimBuilderModule:
             payer_rules=payer_rules,
             kg_client=self.kg_client,
         )
+        existing_pre_auth_ref = state.get("canonical_claim", {}).get("pre_auth_ref") or state.get("pre_auth_ref")
+        if existing_pre_auth_ref:
+            canonical_claim["pre_auth_ref"] = existing_pre_auth_ref
         claim_id = canonical_claim["claim_id"]
         self.repository.upsert_claim(
             claim_id,
@@ -97,6 +100,7 @@ class ClaimBuilderModule:
             "claim_payload_type": payload_type,
             "payload_status": PayloadStatus.DRAFT_BUILT,
             "payload_version": version,
+            "payload_rebuild_required": False,
             "claim_format": standard,
             "jurisdiction": route.get("jurisdiction"),
             "next_agent": "ClaimValidationAgent",

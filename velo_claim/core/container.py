@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 
+from velo_claim.core.env import load_env_file
 from velo_claim.kg.mock import MockNeo4jClient
 from velo_claim.rules.interface import PayerRuleLoaderInterface
 from velo_claim.rules.live_loader import LivePayerRuleLoader
@@ -47,6 +48,7 @@ def build_container_from_env() -> ServiceContainer:
     VELO_CLAIM_STORAGE=production to use PostgreSQL, S3/MinIO, and Redis.
     """
 
+    load_env_file()
     if os.getenv("VELO_CLAIM_STORAGE", "memory").lower() != "production":
         return build_default_container()
     repository = PostgresRepository()

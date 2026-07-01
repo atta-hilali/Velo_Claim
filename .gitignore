@@ -3,3 +3,5 @@ __pycache__/
 *.pyc
 keys/
 *.pem
+frontend/node_modules/
+frontend/dist/

@@ -23,6 +23,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from velo_claim.core.env import load_env_file, project_root
+
+
+load_env_file()
+
 
 DEFAULT_FHIR_AUTH_TYPE = "STATIC_BEARER"
 DEFAULT_FHIR_CLIENT_AUTH_METHOD = "client_secret_basic"
@@ -42,6 +47,7 @@ DEFAULT_FHIR_SCOPE = (
 ADAPTER_ALIASES = {
     "": "generic",
     "DEFAULT": "generic",
+    "AUTO": "auto",
     "GENERIC": "generic",
     "FHIR": "generic",
     "EPIC": "epic",
@@ -160,6 +166,8 @@ def adapter_config_from_env(state: dict[str, Any] | None = None) -> FHIRAdapterC
         or os.getenv("EHR_ADAPTER")
         or "generic"
     )
+    if adapter == "auto":
+        adapter = infer_adapter_from_config(state)
     profile = ADAPTER_PROFILES.get(adapter, ADAPTER_PROFILES["generic"])
     prefix = profile["env_prefix"]
 
@@ -211,8 +219,34 @@ def base64url(data: bytes) -> str:
 def resolve_local_path(path: str) -> Path:
     candidate = Path(path)
     if not candidate.is_absolute():
-        candidate = Path(__file__).resolve().parent / candidate
+        for base in (Path.cwd(), project_root(), Path(__file__).resolve().parent):
+            resolved = (base / candidate).resolve()
+            if resolved.exists():
+                return resolved
+        candidate = (project_root() / candidate).resolve()
     return candidate
+
+
+def infer_adapter_from_config(state: dict[str, Any] | None = None) -> str:
+    text = " ".join(
+        value
+        for value in (
+            _state_value(state, "fhir_base_url", "base_url"),
+            _state_value(state, "fhir_token_url", "token_url"),
+            os.getenv("FHIR_BASE_URL", ""),
+            os.getenv("FHIR_TOKEN_URL", ""),
+        )
+        if value
+    ).lower()
+    if "epic" in text:
+        return "epic"
+    if "nabidh" in text or "dha" in text:
+        return "nabidh"
+    if "cerner" in text or "oracle" in text:
+        return "oracle_health"
+    if "trakcare" in text or "intersystems" in text or "iris" in text:
+        return "trakcare_iris"
+    return "generic"
 
 
 def post_form(

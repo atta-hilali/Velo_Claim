@@ -139,6 +139,83 @@ class InMemoryRepository(RepositoryInterface):
     def get_cached_payer_rule_set(self, payer_id: str, plan_id: str) -> dict[str, Any] | None:
         return self.payer_rule_sets.get((payer_id, plan_id))
 
+    def list_claim_summaries(self, limit: int = 100) -> list[dict[str, Any]]:
+        rows = [self._claim_detail(claim_id) for claim_id in self.claims]
+        rows = [row for row in rows if row]
+        rows.sort(key=lambda row: str(row.get("updated_at") or row.get("created_at") or ""), reverse=True)
+        return rows[:limit]
+
+    def get_claim_detail(self, claim_id: str) -> dict[str, Any] | None:
+        return self._claim_detail(claim_id)
+
+    def update_claim_status(self, claim_id: str, status: str, metadata: dict[str, Any] | None = None) -> None:
+        existing = self.claims.get(claim_id, {})
+        self.claims[claim_id] = {
+            **existing,
+            "claim_id": claim_id,
+            "status": status,
+            "metadata": {**existing.get("metadata", {}), **(metadata or {})},
+            "updated_at": utc_now(),
+        }
+        self.claims[claim_id].setdefault("created_at", utc_now())
+
+    def _claim_detail(self, claim_id: str) -> dict[str, Any] | None:
+        claim = self.claims.get(claim_id)
+        if not claim:
+            return None
+
+        latest_payload = self.latest_claim_payload(claim_id)
+        versions = [row for row in self.claim_versions if row["claim_id"] == claim_id]
+        latest_version = max(versions, key=lambda row: row["version"]) if versions else {}
+        reports = [row for row in self.validation_reports.values() if row.get("claim_id") == claim_id]
+        latest_report = max(reports, key=lambda row: row.get("created_at", "")) if reports else {}
+        report_id = latest_report.get("report_id")
+        validation_issues = [
+            issue for issue in self.validation_issues if not report_id or issue.get("report_id") == report_id
+        ]
+        latest_eligibility = next(
+            (
+                row
+                for row in reversed(self.eligibility_checks)
+                if row.get("claim_id") == claim_id
+                or row.get("input", {}).get("claim_id") == claim_id
+                or row.get("result", {}).get("claim_id") == claim_id
+            ),
+            None,
+        )
+        pa_requests = [
+            {**request, "request_id": request_id}
+            for request_id, request in self.prior_auth_requests.items()
+            if request.get("claim_id") == claim_id
+        ]
+        pa_responses = [response for response in self.prior_auth_responses if response.get("claim_id") == claim_id]
+        audit_events = [event for event in self.audit_events if event.get("claim_id") == claim_id]
+
+        canonical_claim = latest_version.get("canonical_claim", {})
+        route = self.route_decisions.get(claim_id, {}).get("route", latest_version.get("route", {}))
+        source_context = latest_version.get("source_context", {})
+
+        return {
+            **claim,
+            "claim_id": claim_id,
+            "route": route,
+            "routing_context": latest_version.get("routing_context", {}),
+            "canonical_claim": canonical_claim,
+            "source_context": source_context,
+            "claim_payload": latest_payload,
+            "validation_report": latest_report.get("report", {}),
+            "validation_report_row": latest_report,
+            "validation_issues": validation_issues,
+            "eligibility_result": latest_eligibility or {},
+            "prior_auth": {
+                "requests": pa_requests,
+                "responses": pa_responses,
+                "latest_request": pa_requests[-1] if pa_requests else None,
+                "latest_response": pa_responses[-1] if pa_responses else None,
+            },
+            "audit_events": audit_events,
+        }
+
 
 @dataclass(slots=True)
 class InMemoryObjectStore(ObjectStoreInterface):

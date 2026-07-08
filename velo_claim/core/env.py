@@ -18,6 +18,7 @@ def load_env_file(path: str | Path = ".env") -> None:
     if not env_path.exists():
         return
 
+    file_values: dict[str, str] = {}
     for raw_line in env_path.read_text(encoding="utf-8").splitlines():
         line = raw_line.strip()
         if not line or line.startswith("#") or "=" not in line:
@@ -25,5 +26,9 @@ def load_env_file(path: str | Path = ".env") -> None:
         key, value = line.split("=", 1)
         key = key.strip()
         value = value.strip().strip('"').strip("'")
-        if key and key not in os.environ:
+        if key:
+            file_values[key] = value
+
+    for key, value in file_values.items():
+        if key not in os.environ:
             os.environ[key] = value

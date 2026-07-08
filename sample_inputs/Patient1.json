@@ -1,0 +1,134 @@
+{
+  "jurisdiction": "SAUDI_ARABIA",
+  "patient": {
+    "id": "SA-PAT-0001",
+    "nationalId": "1023456789",
+    "idType": "NATIONAL_ID",
+    "firstName": "Abdullah",
+    "lastName": "Al-Qahtani",
+    "gender": "male",
+    "dateOfBirth": "1985-04-12",
+    "nationality": "SAU",
+    "maritalStatus": "married",
+    "contact": {
+      "phone": "+966501234567",
+      "email": "abdullah.q@example.com",
+      "address": {
+        "line": "King Fahd Road, Al Olaya",
+        "city": "Riyadh",
+        "region": "Riyadh Province",
+        "postalCode": "12212",
+        "country": "SA"
+      }
+    }
+  },
+  "coverage": {
+    "id": "SA-COV-0001",
+    "payer": "Bupa Arabia",
+    "payerId": "BUPA-SA-001",
+    "policyNumber": "POL-778899",
+    "planType": "employer_sponsored",
+    "memberId": "MEM-445566",
+    "class": "comprehensive",
+    "network": "in_network",
+    "status": "active",
+    "startDate": "2026-01-01",
+    "endDate": "2026-12-31",
+    "relationshipToSubscriber": "self"
+  },
+  "provider": {
+    "id": "SA-PROV-0001",
+    "name": "Dr. Sara Al-Harbi",
+    "role": "physician",
+    "specialty": "Internal Medicine",
+    "licenseNumber": "SCFHS-334455",
+    "nphiesProviderId": "NPHIES-PRV-1029"
+  },
+  "facility": {
+    "id": "SA-FAC-0001",
+    "name": "King Faisal Specialist Hospital",
+    "type": "hospital",
+    "city": "Riyadh",
+    "moh": true,
+    "nphiesFacilityId": "NPHIES-FAC-5567"
+  },
+  "encounter": {
+    "id": "SA-ENC-0001",
+    "type": "outpatient",
+    "class": "ambulatory",
+    "admissionDate": "2026-06-15T09:30:00+03:00",
+    "dischargeDate": "2026-06-15T11:00:00+03:00",
+    "reasonForVisit": "Follow-up for hypertension management",
+    "status": "finished"
+  },
+  "conditions": [
+    {
+      "code": "I10",
+      "codeSystem": "ICD-10",
+      "display": "Essential (primary) hypertension",
+      "onsetDate": "2022-03-10",
+      "clinicalStatus": "active"
+    },
+    {
+      "code": "E11.9",
+      "codeSystem": "ICD-10",
+      "display": "Type 2 diabetes mellitus without complications",
+      "onsetDate": "2023-07-20",
+      "clinicalStatus": "active"
+    }
+  ],
+  "procedures": [
+    {
+      "code": "99213",
+      "codeSystem": "CPT",
+      "display": "Office visit, established patient, low complexity",
+      "date": "2026-06-15",
+      "performedBy": "SA-PROV-0001"
+    },
+    {
+      "code": "80053",
+      "codeSystem": "CPT",
+      "display": "Comprehensive metabolic panel",
+      "date": "2026-06-15",
+      "performedBy": "SA-PROV-0001"
+    }
+  ],
+  "charge_items": [
+    {
+      "id": "CHG-0001",
+      "description": "Physician consultation - follow-up",
+      "code": "99213",
+      "quantity": 1,
+      "unitPrice": 250.00,
+      "currency": "SAR",
+      "totalAmount": 250.00,
+      "coveredAmount": 200.00,
+      "patientResponsibility": 50.00
+    },
+    {
+      "id": "CHG-0002",
+      "description": "Comprehensive metabolic panel (lab test)",
+      "code": "80053",
+      "quantity": 1,
+      "unitPrice": 180.00,
+      "currency": "SAR",
+      "totalAmount": 180.00,
+      "coveredAmount": 144.00,
+      "patientResponsibility": 36.00
+    }
+  ],
+  "attachments": [
+    {
+      "id": "ATT-0001",
+      "type": "lab_report",
+      "fileName": "cmp_result_20260615.pdf",
+      "uploadedDate": "2026-06-15T12:00:00+03:00"
+    },
+    {
+      "id": "ATT-0002",
+      "type": "physician_note",
+      "fileName": "followup_note_20260615.pdf",
+      "uploadedDate": "2026-06-15T11:15:00+03:00"
+    }
+  ]
+}

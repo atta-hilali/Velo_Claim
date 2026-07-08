@@ -140,6 +140,17 @@ def build_claim_validation_agent(*, container: ServiceContainer | None = None):
             "NEEDS_PAYLOAD_REBUILD": PayloadStatus.NEEDS_PAYLOAD_REBUILD,
             "HOLD_CRITICAL": PayloadStatus.HOLD_CRITICAL,
         }.get(str(final_status), PayloadStatus.NEEDS_REVIEW)
+        claim_id = state.get("canonical_claim", {}).get("claim_id") or state.get("claim", {}).get("claim_id")
+        if claim_id:
+            services.repository.update_claim_status(
+                claim_id,
+                str(payload_status),
+                {
+                    "final_status": str(final_status),
+                    "score": state.get("score"),
+                    "updated_by": "ClaimValidationAgent.decision_router",
+                },
+            )
         return {**state, "payload_status": payload_status, "next_agent": "SubmissionAgent" if payload_status == PayloadStatus.READY_TO_SUBMIT else None}
 
     def fallback_rebuild(state: dict[str, Any]) -> dict[str, Any]:

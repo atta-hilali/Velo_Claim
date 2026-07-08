@@ -1,0 +1,242 @@
+{
+  "encounter_id": "ENC-UAE-2024-001",
+  "input_type": "encounter",
+  "standard": "SHAFAFIYA",
+  "jurisdiction": "ABU_DHABI",
+
+  "patient": {
+    "id": "PAT-UAE-001",
+    "name": {
+      "family": "Al Mansoori",
+      "given": ["Mohammed", "Khalid"]
+    },
+    "birth_date": "1985-03-15",
+    "gender": "male",
+    "identifiers": [
+      {
+        "type": "emirates_id",
+        "value": "784-1985-1234567-8",
+        "system": "urn:ae:emiratesid"
+      },
+      {
+        "type": "member_id",
+        "value": "DAMAN-MBR-99123",
+        "system": "urn:daman:memberid"
+      }
+    ],
+    "address": {
+      "city": "Abu Dhabi",
+      "country": "AE",
+      "state": "Abu Dhabi"
+    },
+    "phone": "+971501234567",
+    "nationality": "AE"
+  },
+
+  "coverage": {
+    "id": "COV-UAE-001",
+    "payer_id": "A001",
+    "payer_name": "DAMAN",
+    "plan_id": "TH4QF",
+    "plan_name": "Thiqa Enhanced",
+    "member_id": "DAMAN-MBR-99123",
+    "policy_number": "POL-2024-88821",
+    "group_number": "GRP-ABUDHABI-001",
+    "coverage_start": "2024-01-01",
+    "coverage_end": "2024-12-31",
+    "network": "in_network",
+    "type": "primary",
+    "patient_share_pct": 20,
+    "deductible_annual": 500.00,
+    "deductible_met": 200.00,
+    "copay_outpatient": 20.00,
+    "voi_flag": true,
+    "currency": "AED"
+  },
+
+  "provider": {
+    "id": "PRV-001",
+    "name": "Dr. Sarah Ahmed Al Hashimi",
+    "license": "GDN478",
+    "license_system": "doh/clinician-license",
+    "specialty": "Internal Medicine",
+    "npi": "DOH-MD-2024-0478"
+  },
+
+  "facility": {
+    "id": "FAC-001",
+    "name": "Al Noor Specialist Hospital",
+    "license": "MF2057",
+    "license_system": "doh/facility-license",
+    "type": "hospital",
+    "address": {
+      "line": "Khalifa Street, Al Manhal",
+      "city": "Abu Dhabi",
+      "state": "Abu Dhabi",
+      "country": "AE",
+      "postal_code": "12345"
+    },
+    "phone": "+97124444000",
+    "tpa_id": "DAMAN-FAC-MF2057"
+  },
+
+  "encounter": {
+    "id": "ENC-UAE-2024-001",
+    "type": "outpatient",
+    "class": "AMB",
+    "status": "finished",
+    "service_date": "2024-11-15",
+    "admission_date": null,
+    "discharge_date": null,
+    "chief_complaint": "Persistent lower back pain radiating to left leg, worsening over 3 months",
+    "visit_type": "specialist_consultation"
+  },
+
+  "conditions": [
+    {
+      "sequence": 1,
+      "type": "principal",
+      "icd_code": "M51.16",
+      "icd_version": "10",
+      "description": "Intervertebral disc degeneration, lumbar region",
+      "onset_date": "2024-08-15",
+      "clinical_status": "active",
+      "verification_status": "confirmed"
+    },
+    {
+      "sequence": 2,
+      "type": "secondary",
+      "icd_code": "M54.4",
+      "icd_version": "10",
+      "description": "Lumbago with sciatica, left side",
+      "onset_date": "2024-09-01",
+      "clinical_status": "active",
+      "verification_status": "confirmed"
+    },
+    {
+      "sequence": 3,
+      "type": "secondary",
+      "icd_code": "E11.9",
+      "icd_version": "10",
+      "description": "Type 2 diabetes mellitus without complications",
+      "onset_date": "2019-06-01",
+      "clinical_status": "active",
+      "verification_status": "confirmed"
+    }
+  ],
+
+  "procedures": [
+    {
+      "sequence": 1,
+      "cpt_code": "99213",
+      "description": "Office or other outpatient visit, established patient, moderate complexity",
+      "service_date": "2024-11-15",
+      "quantity": 1,
+      "unit_price": 350.00,
+      "gross": 350.00,
+      "patient_share": 70.00,
+      "net": 280.00,
+      "requires_prior_auth": false,
+      "tooth_number": null,
+      "body_site": null
+    },
+    {
+      "sequence": 2,
+      "cpt_code": "72148",
+      "description": "MRI lumbar spine without contrast",
+      "service_date": "2024-11-15",
+      "quantity": 1,
+      "unit_price": 1200.00,
+      "gross": 1200.00,
+      "patient_share": 240.00,
+      "net": 960.00,
+      "requires_prior_auth": true,
+      "body_site": "lumbar_spine"
+    },
+    {
+      "sequence": 3,
+      "cpt_code": "97110",
+      "description": "Therapeutic exercises, each 15 minutes",
+      "service_date": "2024-11-15",
+      "quantity": 2,
+      "unit_price": 150.00,
+      "gross": 300.00,
+      "patient_share": 60.00,
+      "net": 240.00,
+      "requires_prior_auth": false,
+      "body_site": "lumbar_region"
+    }
+  ],
+
+  "charge_items": [
+    {
+      "sequence": 1,
+      "reference_procedure": 1,
+      "amount": 350.00,
+      "currency": "AED"
+    },
+    {
+      "sequence": 2,
+      "reference_procedure": 2,
+      "amount": 1200.00,
+      "currency": "AED"
+    },
+    {
+      "sequence": 3,
+      "reference_procedure": 3,
+      "amount": 300.00,
+      "currency": "AED"
+    }
+  ],
+
+  "claim_totals": {
+    "gross": 1850.00,
+    "patient_share": 370.00,
+    "net": 1480.00,
+    "currency": "AED",
+    "line_count": 3
+  },
+
+  "attachments": [
+    {
+      "id": "ATT-001",
+      "type": "referral_letter",
+      "title": "GP Referral Letter",
+      "content_type": "application/pdf",
+      "data": "JVBERi0xLjQKJcOkw7zDtsOfCjIgMCBvYmoKPDwvTGVuZ3RoIDMgMCBSL0ZpbHRlci9GbGF0ZURlY29kZT4+CnN0cmVhbQp4nCvkMlAwUDC1NNUzMVcozy/KSQEAEkgEWgplbmRzdHJlYW0KZW5kb2JqCg==",
+      "description": "GP referral for specialist consultation and MRI",
+      "date": "2024-11-10"
+    },
+    {
+      "id": "ATT-002",
+      "type": "clinical_notes",
+      "title": "Specialist Clinical Notes",
+      "content_type": "application/pdf",
+      "data": "JVBERi0xLjQKJcOkw7zDtsOfCjIgMCBvYmoKPDwvTGVuZ3RoIDMgMCBSL0ZpbHRlci9GbGF0ZURlY29kZT4+CnN0cmVhbQp4nCvkMlAwUDC1NNUzMVcozy/KSQEAEkgEWgplbmRzdHJlYW0KZW5kb2JqCg==",
+      "description": "Consultation notes documenting examination findings and treatment plan",
+      "date": "2024-11-15"
+    },
+    {
+      "id": "ATT-003",
+      "type": "prior_auth_support",
+      "title": "MRI Clinical Justification",
+      "content_type": "application/pdf",
+      "data": "JVBERi0xLjQKJcOkw7zDtsOfCjIgMCBvYmoKPDwvTGVuZ3RoIDMgMCBSL0ZpbHRlci9GbGF0ZURlY29kZT4+CnN0cmVhbQp4nCvkMlAwUDC1NNUzMVcozy/KSQEAEkgEWgplbmRzdHJlYW0KZW5kb2JqCg==",
+      "description": "Clinical justification for lumbar MRI — failed conservative treatment",
+      "date": "2024-11-15"
+    }
+  ],
+
+  "prior_auth": {
+    "required_for": ["72148"],
+    "existing": null
+  },
+
+  "metadata": {
+    "created_by": "velo_doctor_app",
+    "created_at": "2024-11-15T10:30:00Z",
+    "source_system": "VeloDoctor",
+    "source_version": "2.1.0",
+    "test_scenario": "full_pipeline_with_prior_auth"
+  }
+}

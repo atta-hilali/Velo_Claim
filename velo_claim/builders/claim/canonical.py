@@ -24,9 +24,9 @@ def build_canonical_claim(
     diagnoses = _diagnoses(source)
     procedures = _procedures(source, payer_rules, kg_client)
     line_items = _line_items(source, procedures, routing.currency)
-    gross = round(sum(float(item.get("gross", item.get("net", 0.0))) for item in line_items), 2)
-    patient_share = round(sum(float(item.get("patient_share", 0.0)) for item in line_items), 2)
-    net = round(sum(float(item.get("net", 0.0)) for item in line_items), 2)
+    gross = round(sum(_money(item.get("gross", item.get("net", 0.0))) for item in line_items), 2)
+    patient_share = round(sum(_money(item.get("patient_share", 0.0)) for item in line_items), 2)
+    net = round(sum(_money(item.get("net", 0.0)) for item in line_items), 2)
     return {
         "claim_id": effective_claim_id,
         "patient": {
@@ -158,7 +158,7 @@ def _procedures(source: SourceContext, payer_rules: PayerRuleSet, kg_client: Neo
 def _line_items(source: SourceContext, procedures: list[dict[str, Any]], currency: str) -> list[dict[str, Any]]:
     lines = []
     for index, charge in enumerate(source.charge_items):
-        amount = float(charge.get("amount") or charge.get("net") or charge.get("gross") or 0.0)
+        amount = _money(charge.get("amount") or charge.get("net") or charge.get("gross") or 0.0)
         code = normalize_code(charge.get("code") or charge.get("cpt") or (procedures[index]["code"] if index < len(procedures) else ""))
         lines.append(
             {
@@ -167,10 +167,11 @@ def _line_items(source: SourceContext, procedures: list[dict[str, Any]], currenc
                 "system": charge.get("system", "CPT"),
                 "description": charge.get("description") or code,
                 "quantity": int(charge.get("quantity") or 1),
-                "gross": float(charge.get("gross", amount)),
-                "patient_share": float(charge.get("patient_share", 0.0)),
-                "net": float(charge.get("net", amount)),
+                "gross": _money(charge.get("gross", amount)),
+                "patient_share": _money(charge.get("patient_share", 0.0)),
+                "net": _money(charge.get("net", amount)),
                 "currency": charge.get("currency") or currency,
+                "missing_financial_fields": charge.get("missing_financial_fields", []),
             }
         )
     if lines:
@@ -218,3 +219,12 @@ def _procedure_system(system: str | None) -> str:
 def _service_date(encounter: dict[str, Any]) -> str | None:
     period = encounter.get("period", {})
     return (period.get("start") or encounter.get("service_date") or "").split("T")[0] or None
+
+
+def _money(value: Any) -> float:
+    if value in (None, ""):
+        return 0.0
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return 0.0

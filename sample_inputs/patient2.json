@@ -1,0 +1,108 @@
+{
+  "jurisdiction": "SAUDI_ARABIA",
+  "patient": {
+    "id": "SA-PAT-0003",
+    "nationalId": "",
+    "idType": "IQAMA",
+    "iqamaNumber": "2077889911",
+    "firstName": "Fatima",
+    "lastName": "Al-Zahrani",
+    "gender": "female",
+    "dateOfBirth": "1990-11-02",
+    "nationality": "EGY",
+    "maritalStatus": "",
+    "contact": {
+      "phone": "+966558887766",
+      "email": "",
+      "address": {
+        "line": "",
+        "city": "Jeddah",
+        "region": "Makkah Province",
+        "postalCode": "",
+        "country": "SA"
+      }
+    }
+  },
+  "coverage": {
+    "id": "SA-COV-0002",
+    "payer": "Tawuniya",
+    "payerId": "TAW-SA-002",
+    "policyNumber": "POL-112233",
+    "planType": "",
+    "memberId": "MEM-990011",
+    "class": "basic",
+    "network": "in_network",
+    "status": "active",
+    "startDate": "2026-02-01",
+    "endDate": "",
+    "relationshipToSubscriber": "spouse"
+  },
+  "provider": {
+    "id": "SA-PROV-0002",
+    "name": "Dr. Omar Al-Mutairi",
+    "role": "physician",
+    "specialty": "",
+    "licenseNumber": "SCFHS-667788",
+    "nphiesProviderId": ""
+  },
+  "facility": {
+    "id": "SA-FAC-0002",
+    "name": "Dr. Sulaiman Al Habib Hospital",
+    "type": "hospital",
+    "city": "Jeddah",
+    "moh": false,
+    "nphiesFacilityId": "NPHIES-FAC-6621"
+  },
+  "encounter": {
+    "id": "SA-ENC-0002",
+    "type": "emergency",
+    "class": "emergency",
+    "admissionDate": "2026-05-20T22:10:00+03:00",
+    "dischargeDate": "",
+    "reasonForVisit": "Acute abdominal pain",
+    "status": "in-progress"
+  },
+  "conditions": [
+    {
+      "code": "R10.9",
+      "codeSystem": "ICD-10",
+      "display": "Unspecified abdominal pain",
+      "onsetDate": "",
+      "clinicalStatus": "active"
+    }
+  ],
+  "procedures": [
+    {
+      "code": "76700",
+      "codeSystem": "CPT",
+      "display": "Abdominal ultrasound, complete",
+      "date": "2026-05-20",
+      "performedBy": ""
+    }
+  ],
+  "charge_items": [
+    {
+      "id": "CHG-0003",
+      "description": "Emergency room visit",
+      "code": "99284",
+      "quantity": 1,
+      "unitPrice": 400.00,
+      "currency": "SAR",
+      "totalAmount": 400.00,
+      "coveredAmount": "",
+      "patientResponsibility": ""
+    },
+    {
+      "id": "CHG-0004",
+      "description": "Abdominal ultrasound",
+      "code": "76700",
+      "quantity": 1,
+      "unitPrice": "",
+      "currency": "SAR",
+      "totalAmount": "",
+      "coveredAmount": "",
+      "patientResponsibility": ""
+    }
+  ],
+  "attachments": []
+}

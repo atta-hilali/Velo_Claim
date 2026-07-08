@@ -67,4 +67,17 @@ def run_fhir_context(
     container: ServiceContainer | None = None,
     adapter: AdapterInterface | None = None,
 ) -> dict[str, Any]:
-    return build_fhir_context_agent(container=container, adapter=adapter).invoke(initial_state)
+    return build_fhir_context_agent(container=container, adapter=adapter).invoke(
+        _ensure_claim_id(initial_state)
+    )
+
+
+def _ensure_claim_id(initial_state: dict[str, Any]) -> dict[str, Any]:
+    """Ensure audited graph nodes have a stable claim id from the first step."""
+
+    state = dict(initial_state)
+    claim = dict(state.get("claim") or {})
+    claim_id = claim.get("claim_id") or state.get("claim_id") or f"CLM-{uuid4().hex[:12].upper()}"
+    state["claim_id"] = claim_id
+    state["claim"] = {**claim, "claim_id": claim_id}
+    return state

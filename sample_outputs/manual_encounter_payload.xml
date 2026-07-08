@@ -1,0 +1,39 @@
+<?xml version="1.0" ?>
+<Claim.Submission>
+  <Header>
+    <SenderID>DHA123456</SenderID>
+    <ReceiverID>A001</ReceiverID>
+    <TransactionDate>01/07/2026 15:03</TransactionDate>
+    <RecordCount>1</RecordCount>
+    <DispositionFlag>TEST</DispositionFlag>
+  </Header>
+  <Claim>
+    <ID>CLM-5D4633C4D34D</ID>
+    <MemberID>DXB-M-0001</MemberID>
+    <PatientID>P-DXB-001</PatientID>
+    <PayerID>A001</PayerID>
+    <ProviderID>DHA123456</ProviderID>
+    <EmiratesIDNumber>784-1992-1234567-8</EmiratesIDNumber>
+    <GrossAmount>320.00</GrossAmount>
+    <PatientShare>0.00</PatientShare>
+    <NetAmount>320.00</NetAmount>
+    <Encounter>
+      <FacilityID>DHA123456</FacilityID>
+      <Type>1</Type>
+      <Start>15/06/2026 10:30</Start>
+      <End>15/06/2026 10:55</End>
+      <StartType>1</StartType>
+      <EndType>1</EndType>
+    </Encounter>
+    <Activity>
+      <ID>ACT-DXB-001</ID>
+      <Start>15/06/2026 10:30</Start>
+      <Type>3</Type>
+      <Code>99213</Code>
+      <Quantity>1</Quantity>
+      <Net>320.00</Net>
+      <OrderingClinician>DHA98765</OrderingClinician>
+      <Clinician>DHA98765</Clinician>
+    </Activity>
+  </Claim>
+</Claim.Submission>

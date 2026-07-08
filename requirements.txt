@@ -1,0 +1,17 @@
+# Velo Claim backend runtime
+fastapi==0.116.1
+uvicorn[standard]==0.35.0
+pydantic==2.11.7
+langgraph==1.2.4
+
+# Production storage adapters
+psycopg[binary]==3.3.4
+psycopg-pool==3.3.1
+redis==5.2.1
+boto3==1.43.40
+
+# Security / SMART backend-services key tooling
+cryptography==45.0.6
+
+# Local verification
+pytest==9.0.3

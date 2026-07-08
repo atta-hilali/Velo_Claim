@@ -63,6 +63,15 @@ class RepositoryInterface(ABC):
     @abstractmethod
     def get_cached_payer_rule_set(self, payer_id: str, plan_id: str) -> dict[str, Any] | None: ...
 
+    @abstractmethod
+    def list_claim_summaries(self, limit: int = 100) -> list[dict[str, Any]]: ...
+
+    @abstractmethod
+    def get_claim_detail(self, claim_id: str) -> dict[str, Any] | None: ...
+
+    @abstractmethod
+    def update_claim_status(self, claim_id: str, status: str, metadata: dict[str, Any] | None = None) -> None: ...
+
 
 class ObjectStoreInterface(ABC):
     @abstractmethod

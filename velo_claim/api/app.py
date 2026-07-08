@@ -1,0 +1,264 @@
+from __future__ import annotations
+
+from typing import Any
+
+from pydantic import BaseModel, Field
+
+from velo_claim.core.container import ServiceContainer, build_container_from_env
+from velo_claim.core.utils import utc_now
+from velo_claim.fallback.checkpoints import MemoryCheckpointStore
+from velo_claim.pipeline import run_full_pipeline
+
+from .serializers import claim_for_api
+from .webhooks import receive_payer_webhook
+
+
+class EncounterIngestRequest(BaseModel):
+    """Raw encounter/context package.
+
+    The API accepts a flexible dict because Velo Doctor, FHIR upload, and
+    sandbox tests do not always send identical envelopes yet.
+    """
+
+    payload: dict[str, Any] | None = None
+
+
+class StatusUpdateRequest(BaseModel):
+    status: str
+    note: str | None = None
+    reason: str | None = None
+    override: bool = False
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class ActionRequest(BaseModel):
+    reason: str | None = None
+    note: str | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+_services: ServiceContainer | None = None
+_checkpoint_store = MemoryCheckpointStore()
+
+
+def get_services() -> ServiceContainer:
+    global _services
+    if _services is None:
+        _services = build_container_from_env()
+    return _services
+
+
+def create_app(services: ServiceContainer | None = None):
+    try:
+        from fastapi import FastAPI, HTTPException, Response
+        from fastapi.middleware.cors import CORSMiddleware
+    except ImportError as exc:
+        raise RuntimeError("Install FastAPI to run the API: pip install fastapi uvicorn") from exc
+
+    if services is not None:
+        global _services
+        _services = services
+
+    app = FastAPI(
+        title="Velo Claim API",
+        version="0.1.0",
+        description="HTTP facade for Velo Claim agents and reusable claim operations.",
+    )
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=False,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+    @app.get("/health")
+    def health() -> dict[str, Any]:
+        try:
+            services = get_services()
+        except Exception as exc:
+            return {
+                "status": "degraded",
+                "error": str(exc),
+                "timestamp": utc_now(),
+            }
+        return {
+            "status": "ok",
+            "storage": type(services.repository).__name__,
+            "object_store": type(services.object_store).__name__,
+            "cache": type(services.cache).__name__,
+            "timestamp": utc_now(),
+        }
+
+    @app.post("/encounters")
+    def ingest_encounter(body: dict[str, Any]) -> dict[str, Any]:
+        services = get_services()
+        initial_state = body.get("payload") if set(body.keys()) == {"payload"} else body
+        if not isinstance(initial_state, dict):
+            raise HTTPException(status_code=400, detail="Encounter payload must be a JSON object.")
+        try:
+            result_state = run_full_pipeline(initial_state, container=services)
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+        claim_id = (
+            result_state.get("claim", {}).get("claim_id")
+            or result_state.get("canonical_claim", {}).get("claim_id")
+            or result_state.get("claim_id")
+        )
+        detail = services.repository.get_claim_detail(claim_id) if claim_id else None
+        return {
+            "status": "completed",
+            "claim_id": claim_id,
+            "claim": claim_for_api(detail or _state_detail(result_state), services.object_store),
+            "state": _state_summary(result_state),
+        }
+
+    @app.get("/claims")
+    def list_claims(limit: int = 100) -> dict[str, Any]:
+        services = get_services()
+        rows = services.repository.list_claim_summaries(limit=limit)
+        details = [
+            services.repository.get_claim_detail(row.get("claim_id")) or row
+            for row in rows
+            if row.get("claim_id")
+        ]
+        claims = [claim_for_api(detail, services.object_store) for detail in details]
+        return {"claims": claims, "count": len(claims)}
+
+    @app.get("/claims/{claim_id}")
+    def get_claim(claim_id: str) -> dict[str, Any]:
+        services = get_services()
+        detail = services.repository.get_claim_detail(claim_id)
+        if not detail:
+            raise HTTPException(status_code=404, detail=f"Claim not found: {claim_id}")
+        return claim_for_api(detail, services.object_store)
+
+    @app.get("/claims/{claim_id}/payload")
+    def get_claim_payload(claim_id: str) -> Response:
+        services = get_services()
+        detail = services.repository.get_claim_detail(claim_id)
+        if not detail:
+            raise HTTPException(status_code=404, detail=f"Claim not found: {claim_id}")
+        payload_row = detail.get("claim_payload") or {}
+        object_uri = payload_row.get("object_uri") or detail.get("claim_payload_uri")
+        if not object_uri:
+            raise HTTPException(status_code=404, detail=f"No built claim payload is stored for {claim_id}.")
+        try:
+            payload = services.object_store.get_text(object_uri)
+        except Exception as exc:
+            raise HTTPException(status_code=404, detail=f"Stored payload could not be read: {exc}") from exc
+        media_type = str(payload_row.get("payload_type") or "text/plain")
+        if media_type == "xml":
+            media_type = "application/xml"
+        return Response(content=payload, media_type=media_type)
+
+    @app.patch("/claims/{claim_id}/status")
+    def update_status(claim_id: str, body: StatusUpdateRequest) -> dict[str, Any]:
+        services = get_services()
+        if not services.repository.get_claim_detail(claim_id):
+            raise HTTPException(status_code=404, detail=f"Claim not found: {claim_id}")
+        metadata = {
+            **body.metadata,
+            "note": body.note,
+            "reason": body.reason,
+            "override": body.override,
+            "updated_via": "api",
+        }
+        services.repository.update_claim_status(claim_id, body.status, metadata)
+        services.repository.insert_audit_event(
+            claim_id,
+            {
+                "agent": "VeloClaimAPI",
+                "node": "update_status",
+                "event_type": "STATUS_UPDATED",
+                "payload": {"status": body.status, "metadata": metadata},
+                "ts": utc_now(),
+            },
+        )
+        detail = services.repository.get_claim_detail(claim_id)
+        return {"ok": True, "claim": claim_for_api(detail, services.object_store)}
+
+    @app.post("/claims/{claim_id}/actions/{action}")
+    def claim_action(claim_id: str, action: str, body: ActionRequest | None = None) -> dict[str, Any]:
+        services = get_services()
+        detail = services.repository.get_claim_detail(claim_id)
+        if not detail:
+            raise HTTPException(status_code=404, detail=f"Claim not found: {claim_id}")
+        body = body or ActionRequest()
+        action_key = action.strip().lower()
+        if action_key in {"send_back", "sendback"}:
+            new_status = "review"
+        elif action_key in {"escalate", "needs_review"}:
+            new_status = "review"
+        elif action_key in {"approve_submit", "submit", "submitted"}:
+            new_status = "submitted"
+        elif action_key in {"hold", "hold_critical"}:
+            new_status = "hold"
+        else:
+            new_status = str(detail.get("status") or "review")
+        metadata = {**body.metadata, "action": action_key, "reason": body.reason, "note": body.note}
+        services.repository.update_claim_status(claim_id, new_status, metadata)
+        services.repository.insert_audit_event(
+            claim_id,
+            {
+                "agent": "VeloClaimAPI",
+                "node": f"action:{action_key}",
+                "event_type": "ACTION_REQUESTED",
+                "payload": metadata,
+                "ts": utc_now(),
+            },
+        )
+        updated = services.repository.get_claim_detail(claim_id)
+        return {"ok": True, "action": action_key, "claim": claim_for_api(updated, services.object_store)}
+
+    @app.post("/webhooks/payer/{claim_id}")
+    async def payer_webhook(claim_id: str, body: dict[str, Any]) -> dict[str, Any]:
+        services = get_services()
+        return receive_payer_webhook(
+            claim_id=claim_id,
+            body=body,
+            repository=services.repository,
+            cache=services.cache,
+            checkpoint_store=_checkpoint_store,
+            object_store=services.object_store,
+        )
+
+    return app
+
+
+def _state_summary(state: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "claim": state.get("claim"),
+        "claim_format": str(state.get("claim_format")),
+        "jurisdiction": str(state.get("jurisdiction")),
+        "payload_status": str(state.get("payload_status")),
+        "final_status": str(state.get("final_status")),
+        "score": state.get("score"),
+        "claim_payload_uri": state.get("claim_payload_uri"),
+        "claim_payload_type": state.get("claim_payload_type"),
+        "validation_report_uri": state.get("validation_report_uri"),
+        "errors": state.get("errors", []),
+        "warnings": state.get("warnings", []),
+    }
+
+
+def _state_detail(state: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "claim_id": state.get("claim", {}).get("claim_id") or state.get("canonical_claim", {}).get("claim_id"),
+        "status": state.get("payload_status"),
+        "route": state.get("route", {}),
+        "canonical_claim": state.get("canonical_claim", {}),
+        "source_context": state.get("source_context", {}),
+        "claim_payload": {
+            "version": state.get("payload_version", 1),
+            "payload_type": state.get("claim_payload_type"),
+            "object_uri": state.get("claim_payload_uri"),
+            "sha256_hash": "",
+            "status": state.get("payload_status"),
+        },
+        "validation_report": state.get("validation_report", {}),
+        "audit_events": [],
+    }
+
+
+app = create_app()

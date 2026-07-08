@@ -1,0 +1,162 @@
+{
+  "resourceType": "Bundle",
+  "id": "7272f333-bcb8-47f9-b4fa-0f34c6c171e5",
+  "meta": {
+    "profile": [
+      "http://nphies.sa/fhir/ksa/nphies-fs/StructureDefinition/bundle|1.0.0"
+    ]
+  },
+  "type": "message",
+  "entry": [
+    {
+      "fullUrl": "urn:uuid:fa7905b8-51ac-440a-86e1-82dd6dfd4e9f",
+      "resource": {
+        "resourceType": "MessageHeader",
+        "eventCoding": {
+          "system": "http://nphies.sa/terminology/CodeSystem/ksa-message-events",
+          "code": "claim-request"
+        },
+        "source": {
+          "endpoint": "https://veloclaim.local/fhir"
+        },
+        "destination": [
+          {
+            "name": "Tawuniya",
+            "receiver": {
+              "identifier": {
+                "system": "http://nphies.sa/license/payer-license",
+                "value": "TAW-SA-002"
+              }
+            }
+          }
+        ],
+        "focus": [
+          {
+            "reference": "Claim/CLM-C5B9793115C3"
+          }
+        ]
+      }
+    },
+    {
+      "fullUrl": "Claim/CLM-C5B9793115C3",
+      "resource": {
+        "resourceType": "Claim",
+        "id": "CLM-C5B9793115C3",
+        "meta": {
+          "profile": [
+            "http://nphies.sa/fhir/ksa/nphies-fs/StructureDefinition/claim|1.0.0"
+          ]
+        },
+        "status": "active",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/claim-type",
+              "code": "professional"
+            }
+          ]
+        },
+        "use": "claim",
+        "patient": {
+          "reference": "Patient/SA-PAT-0003"
+        },
+        "created": "2026-05-20",
+        "provider": {
+          "identifier": {
+            "value": "NPHIES-FAC-6621"
+          }
+        },
+        "insurer": {
+          "identifier": {
+            "value": "TAW-SA-002"
+          }
+        },
+        "priority": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/processpriority",
+              "code": "normal"
+            }
+          ]
+        },
+        "insurance": [
+          {
+            "sequence": 1,
+            "focal": true,
+            "coverage": {
+              "reference": "Coverage/SA-COV-0002"
+            }
+          }
+        ],
+        "diagnosis": [
+          {
+            "sequence": 1,
+            "diagnosisCodeableConcept": {
+              "coding": [
+                {
+                  "system": "http://hl7.org/fhir/sid/icd-10",
+                  "code": "R10.9",
+                  "display": "Unspecified abdominal pain"
+                }
+              ]
+            },
+            "type": [
+              {
+                "coding": [
+                  {
+                    "system": "http://terminology.hl7.org/CodeSystem/ex-diagnosistype",
+                    "code": "principal"
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "item": [
+          {
+            "sequence": 1,
+            "productOrService": {
+              "coding": [
+                {
+                  "system": "http://www.ama-assn.org/go/cpt",
+                  "code": "99284",
+                  "display": "Emergency room visit"
+                }
+              ]
+            },
+            "quantity": {
+              "value": 1
+            },
+            "net": {
+              "value": 400.0,
+              "currency": "SAR"
+            }
+          },
+          {
+            "sequence": 2,
+            "productOrService": {
+              "coding": [
+                {
+                  "system": "http://www.ama-assn.org/go/cpt",
+                  "code": "76700",
+                  "display": "Abdominal ultrasound"
+                }
+              ]
+            },
+            "quantity": {
+              "value": 1
+            },
+            "net": {
+              "value": 0.0,
+              "currency": "SAR"
+            }
+          }
+        ],
+        "total": {
+          "value": 400.0,
+          "currency": "SAR"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,71 @@
+<?xml version="1.0" ?>
+<Claim.Submission>
+  <Header>
+    <SenderID>MF2057</SenderID>
+    <ReceiverID>A001</ReceiverID>
+    <TransactionDate>03/07/2026 15:43</TransactionDate>
+    <RecordCount>1</RecordCount>
+    <DispositionFlag>PTE_VALIDATE_ONLY</DispositionFlag>
+  </Header>
+  <Claim>
+    <ID>CLM-FE344F470DE4</ID>
+    <MemberID>DAMAN-MBR-99123</MemberID>
+    <PayerID>A001</PayerID>
+    <ProviderID>MF2057</ProviderID>
+    <EmiratesIDNumber>784-1985-1234567-8</EmiratesIDNumber>
+    <Gross>1850.00</Gross>
+    <PatientShare>370.00</PatientShare>
+    <Net>1480.00</Net>
+    <Encounter>
+      <FacilityID>MF2057</FacilityID>
+      <Type>1</Type>
+      <PatientID>PAT-UAE-001</PatientID>
+      <Start>15/11/2024 00:00</Start>
+      <End>15/11/2024 00:00</End>
+      <StartType>1</StartType>
+      <EndType>1</EndType>
+    </Encounter>
+    <Diagnosis>
+      <Type>Principal</Type>
+      <Code>M51.16</Code>
+    </Diagnosis>
+    <Diagnosis>
+      <Type>Secondary</Type>
+      <Code>M54.4</Code>
+    </Diagnosis>
+    <Diagnosis>
+      <Type>Secondary</Type>
+      <Code>E11.9</Code>
+    </Diagnosis>
+    <Activity>
+      <ID>ACT-001</ID>
+      <Start>15/11/2024 00:00</Start>
+      <Type>3</Type>
+      <Code>99213</Code>
+      <Quantity>1</Quantity>
+      <Net>280.00</Net>
+      <OrderingClinician>GDN478</OrderingClinician>
+      <Clinician>GDN478</Clinician>
+    </Activity>
+    <Activity>
+      <ID>ACT-002</ID>
+      <Start>15/11/2024 00:00</Start>
+      <Type>3</Type>
+      <Code>72148</Code>
+      <Quantity>1</Quantity>
+      <Net>960.00</Net>
+      <OrderingClinician>GDN478</OrderingClinician>
+      <Clinician>GDN478</Clinician>
+    </Activity>
+    <Activity>
+      <ID>ACT-003</ID>
+      <Start>15/11/2024 00:00</Start>
+      <Type>3</Type>
+      <Code>97110</Code>
+      <Quantity>2</Quantity>
+      <Net>240.00</Net>
+      <OrderingClinician>GDN478</OrderingClinician>
+      <Clinician>GDN478</Clinician>
+    </Activity>
+  </Claim>
+</Claim.Submission>

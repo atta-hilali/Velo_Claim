@@ -96,7 +96,7 @@ def extract_routing_context(source_context: SourceContext, state: dict[str, Any]
         ],
     )
     jurisdiction_hint = state.get("jurisdiction") or _jurisdiction_from_license(facility_system, facility_license)
-    currency = "SAR" if jurisdiction_hint == "KSA" else "AED"
+    currency = "SAR" if _is_ksa_hint(jurisdiction_hint, facility_system, facility_license) else "AED"
     return RoutingContext(
         payer_id=state.get("payer_id") or payer_id or "UNKNOWN",
         payer_name=state.get("payer_name") or payer_name or "UNKNOWN",
@@ -139,11 +139,11 @@ def _coverage_plan(coverage: dict[str, Any]) -> str | None:
 
 
 def _license(resource: dict[str, Any], systems: list[str]) -> tuple[str | None, str | None]:
-    for system in systems:
-        value = first_identifier(resource, system)
-        if value:
-            return system, value
     identifiers = resource.get("identifier", [])
+    for system in systems:
+        for identifier in identifiers:
+            if identifier.get("system") == system and identifier.get("value"):
+                return system, identifier.get("value")
     if identifiers:
         return identifiers[0].get("system"), identifiers[0].get("value")
     return None, None
@@ -158,6 +158,11 @@ def _jurisdiction_from_license(system: str | None, value: str | None) -> str | N
     if "doh" in text or value and value.upper().startswith("MF"):
         return "ABU_DHABI"
     return None
+
+
+def _is_ksa_hint(hint: str | None, facility_system: str | None, facility_license: str | None) -> bool:
+    text = f"{hint or ''} {facility_system or ''} {facility_license or ''}".replace("_", "").replace(" ", "").lower()
+    return any(token in text for token in ("ksa", "saudi", "saudiarabia", "nphies"))
 
 
 def _patient_identifier_types(patient: dict[str, Any]) -> list[str]:

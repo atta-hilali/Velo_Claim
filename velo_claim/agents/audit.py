@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+import os
 from collections.abc import Callable
 from time import perf_counter
 from typing import Any
@@ -70,10 +72,16 @@ def _write_audit(
         "ts": utc_now(),
     }
     repository.insert_audit_event(claim_id or "UNKNOWN_CLAIM", event)
-    if object_store:
+    if object_store and _object_audit_enabled(object_store):
         safe_claim = claim_id or "UNKNOWN_CLAIM"
         key = f"claims/{safe_claim}/audit/{event['ts']}-{agent}-{node}-{event_type}.json"
-        object_store.put_text(key, __import__("json").dumps(event, indent=2, default=str), content_type="application/json")
+        object_store.put_text(key, json.dumps(event, indent=2, default=str), content_type="application/json")
+
+
+def _object_audit_enabled(object_store: ObjectStoreInterface) -> bool:
+    if type(object_store).__name__ == "InMemoryObjectStore":
+        return True
+    return os.getenv("VELO_CLAIM_AUDIT_OBJECT_STORE", "false").lower() in {"1", "true", "yes", "on"}
 
 
 def _claim_id(state: dict[str, Any]) -> str | None:

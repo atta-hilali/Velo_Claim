@@ -3,9 +3,9 @@
   "private": true,
   "version": "0.1.0",
   "scripts": {
-    "api": "python -m uvicorn velo_claim.api.app:app --reload --host 127.0.0.1 --port 8000",
-    "api:memory": "set VELO_CLAIM_STORAGE=memory&& python -m uvicorn velo_claim.api.app:app --reload --host 127.0.0.1 --port 8000",
-    "submit:encounter": "python -m velo_claim.examples.submit_manual_encounter --input sample_inputs/dubai_clinic_full_pipeline.json --output sample_outputs/manual_encounter_response.json --payload-output sample_outputs/manual_encounter_payload.xml",
+    "api": "python3 -m uvicorn velo_claim.api.app:app --reload --host 0.0.0.0 --port 8002",
+    "api:memory": "set VELO_CLAIM_STORAGE=memory&& python3 -m uvicorn velo_claim.api.app:app --reload --host 0.0.0.0 --port 8002",
+    "submit:encounter": "python3 -m velo_claim.examples.submit_manual_encounter --input sample_inputs/dubai_clinic_full_pipeline.json --output sample_outputs/manual_encounter_response.json --payload-output sample_outputs/manual_encounter_payload.xml",
     "dev": "npm --prefix frontend run dev",
     "dev:frontend": "npm --prefix frontend run dev",
     "build": "npm --prefix frontend run build",

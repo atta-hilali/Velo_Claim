@@ -99,5 +99,5 @@ Write-Host "Next steps:" -ForegroundColor Cyan
 Write-Host "  1. Keep the SSH tunnel PowerShell window open."
 Write-Host "  2. Start the backend: npm run api"
 Write-Host "  3. Start the frontend: npm run dev"
-Write-Host "  4. Open frontend: http://127.0.0.1:5173"
-Write-Host "  5. API health: http://127.0.0.1:8000/health"
+Write-Host "  4. Open frontend: http://127.0.0.1:5174"
+Write-Host "  5. API health: http://127.0.0.1:8002/health"

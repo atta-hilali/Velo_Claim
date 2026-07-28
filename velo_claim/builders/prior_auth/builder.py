@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from velo_claim.builders.prior_auth.canonical import build_pa_canonical_form
 from velo_claim.builders.prior_auth.eclaimlink import EClaimLinkPABuilder
+import uuid
 from velo_claim.builders.prior_auth.nphies import NphiesPABuilder
 from velo_claim.builders.prior_auth.shafafiya import ShafafiyaPABuilder
 from velo_claim.core.enums import ClaimStandard
@@ -25,29 +26,45 @@ class PAClaimBuilderModule:
         standard = ClaimStandard(route.get("prior_auth_standard") or route.get("claim_standard") or ClaimStandard.SHAFAFIYA)
         builder = self._builders[standard]
         form = build_pa_canonical_form(state, required_codes)
+
+        claim_id = form.claim_id
+
+        linked_claim_id = claim_id if (claim_id and self.repository.get_claim_detail(claim_id)) else None
         payload = builder.build(form)
-        version = int(state.get("pa_payload_version") or 0) + 1
+        request_id = str(uuid.uuid4())
+        display_id = f"PA-{uuid.uuid4().hex[:12].upper()}"
         ext = payload_extension(builder.content_type)
+
+        prefix = f"prior_auth/{claim_id}" if linked_claim_id else "prior_auth/unlinked"
         uri = self.object_store.put_text(
-            f"claims/{form.claim_id}/prior_auth/pa_payloads/{version}/payload.{ext}",
+            f"{prefix}/{display_id}/payload.{ext}",
             payload,
             content_type=builder.content_type,
         )
-        self.repository.insert_pa_payload(
-            form.claim_id,
-            version,
+
+        self.repository.insert_prior_auth_request(
+            linked_claim_id,
             {
+                "request_id": request_id,
+                "display_id": display_id,
                 "standard": standard,
-                "payload_type": builder.content_type,
                 "object_uri": uri,
-                "sha256_hash": sha256_text(payload),
-                "status": "DRAFT_BUILT",
+                "status": "WAITING_FOR_PAYER"
             },
         )
+
         return {
             **state,
             "pa_payload": payload,
             "pa_payload_uri": uri,
             "pa_payload_type": builder.content_type,
-            "pa_payload_version": version,
+            "pa_request_id": request_id,
+            "pa_display_id": display_id,
+            "pa_linked_claim_id": linked_claim_id,
         }
+
+    def link_to_claim(self, request_id: str, claim_id: str) -> None:
+        """Call once a real claim exists for a prior auth request that was built standalone."""
+        if not self.repository.get_claim_detail(claim_id):
+            raise ValueError(f"Cannot link prior auth request: claim not found: {claim_id}")
+        self.repository.link_prior_auth_request_to_claim(request_id=request_id, claim_id=claim_id)

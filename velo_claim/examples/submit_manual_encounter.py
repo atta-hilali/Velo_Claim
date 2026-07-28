@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 
-DEFAULT_API_BASE_URL = "http://127.0.0.1:8000"
+DEFAULT_API_BASE_URL = "http://127.0.0.1:8002"
 DEFAULT_INPUT_PATH = "sample_inputs/dubai_clinic_full_pipeline.json"
 DEFAULT_OUTPUT_PATH = "sample_outputs/manual_encounter_response.json"
 

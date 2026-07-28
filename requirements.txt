@@ -9,6 +9,7 @@ psycopg[binary]==3.3.4
 psycopg-pool==3.3.1
 redis==5.2.1
 boto3==1.43.40
+neo4j
 
 # Security / SMART backend-services key tooling
 cryptography==45.0.6

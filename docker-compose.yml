@@ -1,0 +1,106 @@
+services:
+  backend:
+    build: .
+    container_name: velo-claim-backend
+    # network_mode: "host"
+    volumes:
+      - .:/app
+      - /app/frontend/node_modules
+    environment:
+      - POSTGRES_URL=postgresql://velo_claim:velo_claim_dev_password@postgres:5432/velo_claim
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - MINIO_ENDPOINT=http://minio:9000
+    tty: true
+    stdin_open: true
+    ports:
+      - "8002:8002"
+      - "5174:5173"
+    depends_on:
+      postgres:
+        condition: service_healthy
+  neo4j:
+    image: neo4j:5.12-community
+    container_name: velo-claim-neo4j-containerzed
+    restart: always
+    ports:
+      - "7475:7474"
+      - "7688:7687"
+    environment:
+      NEO4J_AUTH: neo4j/password
+      NEO4J_dbms_memory_heap_initial__size: 512m
+      NEO4J_dbms_memory_heap_max__size: 2G
+      NEO4J_apoc_export_file_enabled: "true"
+      NEO4J_apoc_import_file_enabled: "true"
+      NEO4J_dbms_security_procedures_unrestricted: "apoc.*"
+      NEO4J_PLUGINS: '["apoc"]'
+    volumes:
+      - ./neo4j_data:/data
+      - ./import:/import
+    healthcheck:
+      test: ["CMD-SHELL", "cypher-shell -u neo4j -p password 'RETURN 1' || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 45s
+
+  postgres:
+    image: postgres:17
+    container_name: velo-claim-postgres-containerzed
+    restart: always
+    environment:
+      POSTGRES_USER: velo_claim
+      POSTGRES_PASSWORD: velo_claim_dev_password
+      POSTGRES_DB: velo_claim
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U velo_claim -d velo_claim"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7
+    container_name: velo-claim-redis-containerized
+    restart: always
+    ports:
+      - "6378:6379"
+    volumes:
+      - redis_data:/data
+  minio:
+    image: minio/minio:latest
+    container_name: velo-claim-minio-containerzied
+    restart: always
+    environment:
+      MINIO_ROOT_USER: velo_claim
+      MINIO_ROOT_PASSWORD: velo_claim_dev_password
+    ports:
+      - "9002:9000"
+      - "9003:9001"
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  postgres_data:
+    external: true
+    name: velo_claim_pgdata  # Replace with the exact output from docker volume ls if it differs
+  redis_data:
+    external: true
+    name: velo_claim_redis_data
+
+  minio_data:
+    external: true
+    name: velo_claim_minio_data
+
+# networks:
+#   shared-net:
+#     external: true

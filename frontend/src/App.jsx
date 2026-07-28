@@ -991,21 +991,47 @@ function ClaimDetail({ claim, onBack, onUpdateStatus }) {
 export default function VeloClaim() {
   const [view, setView] = useState("queue");
   const [activeClaim, setActiveClaim] = useState(null);
-  const [data, setData] = useState(fallbackClaims);
+//   const [data, setData] = useState(fallbackClaims);
+  const [data, setData] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  console.log(data)
 
-  React.useEffect(() => {
+//   React.useEffect(() => {
+// 	  let mounted = true;
+// 	  fetchDesignClaims()
+//       .then((result) => {
+// 		  if (mounted && result.source === "backend") {
+// 			  setData(result.claims);
+// 			} else if (mounted && result.claims.length) {
+// 				setData(result.claims);
+// 			}
+// 		})
+// 		.catch((error) => {
+// 			console.warn("Velo Claim API unavailable, using fallback claims.", error);
+// 		});
+
+// 		return () => {
+//       mounted = false;
+//     };
+//   }, []);
+	React.useEffect(() => {
     let mounted = true;
 
     fetchDesignClaims()
       .then((result) => {
-        if (mounted && result.source === "backend") {
+        if (!mounted) return;
+        if (result.source === "backend" || (result.claims && result.claims.length)) {
           setData(result.claims);
-        } else if (mounted && result.claims.length) {
-          setData(result.claims);
+        } else {
+          setData(fallbackClaims);
         }
       })
       .catch((error) => {
         console.warn("Velo Claim API unavailable, using fallback claims.", error);
+        if (mounted) setData(fallbackClaims);
+      })
+      .finally(() => {
+        if (mounted) setIsLoading(false);
       });
 
     return () => {
@@ -1023,12 +1049,26 @@ export default function VeloClaim() {
     });
   };
 
-  return (
+//   return (
+//     <div style={{ fontFamily: "Inter, -apple-system, BlinkMacSystemFont, sans-serif", background: "#F6F7F8", minHeight: "100vh" }}>
+//       <TopBar />
+//       {view === "queue"
+//         ? <ClaimsQueue claims={data} onOpenClaim={handleOpenClaim} />
+//         : <ClaimDetail claim={activeClaim} onBack={handleBack} onUpdateStatus={handleUpdateStatus} />}
+//     </div>
+//   );
+return (
     <div style={{ fontFamily: "Inter, -apple-system, BlinkMacSystemFont, sans-serif", background: "#F6F7F8", minHeight: "100vh" }}>
       <TopBar />
-      {view === "queue"
-        ? <ClaimsQueue claims={data} onOpenClaim={handleOpenClaim} />
-        : <ClaimDetail claim={activeClaim} onBack={handleBack} onUpdateStatus={handleUpdateStatus} />}
+      {isLoading ? (
+        <div style={{ padding: "40px", textAlign: "center", color: "#8A9099" }}>
+          Loading claims...
+        </div>
+      ) : view === "queue" ? (
+        <ClaimsQueue claims={data} onOpenClaim={handleOpenClaim} />
+      ) : (
+        <ClaimDetail claim={activeClaim} onBack={handleBack} onUpdateStatus={handleUpdateStatus} />
+      )}
     </div>
   );
 }

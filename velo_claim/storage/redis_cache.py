@@ -15,7 +15,7 @@ class RedisCacheStore(CacheStoreInterface):
             import redis
         except ImportError as exc:
             raise RuntimeError("Install redis to use RedisCacheStore: pip install redis") from exc
-        self.client = redis.Redis.from_url(url or os.getenv("REDIS_URL", "redis://localhost:6379/0"), decode_responses=True)
+        self.client = redis.Redis.from_url(url or os.getenv("REDIS_URL", "redis://redis:6379/0"), decode_responses=True)
 
     def set(self, key: str, value: Any, ttl_seconds: int | None = None, nx: bool = False) -> bool:
         encoded = json.dumps(value, default=str)

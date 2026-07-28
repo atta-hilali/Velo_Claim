@@ -11,7 +11,7 @@ from velo_claim.core.models import PayerRuleSet
 
 
 def build_canonical_claim(
-    *,
+    *, 
     claim_id: str | None,
     source_context: SourceContext | dict[str, Any],
     routing_context: RoutingContext | dict[str, Any],

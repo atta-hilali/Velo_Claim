@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+from velo_claim.core.enums import PriorAuthStatus,ExternalTransactionStatus
 from typing import Any
 from uuid import uuid4
 
@@ -68,6 +69,99 @@ class PostgresRepository(RepositoryInterface):
                     data.get("patient_id"),
                 ),
             )
+    def update_prior_auth_submitted(self, request_id: str) -> None:
+        with self._connect() as conn:
+            conn.execute(
+                """
+                UPDATE prior_auth_request
+                SET submitted_at = now(), status = %s, updated_at = now()
+                WHERE id = %s
+                """,
+                (str(PriorAuthStatus.WAITING_FOR_PAYER), request_id),
+            )
+
+    def insert_submission_attempt(self, claim_id: str, data: dict[str, Any]) -> str:
+        submission_id = data.get("submission_id") or str(uuid4())
+        with self._connect() as conn:
+            conn.execute(
+                """
+                INSERT INTO submission_attempt (id, claim_id, channel, object_uri, response_status, payer_response)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                ON CONFLICT (id) DO NOTHING
+                """,
+                (
+                    submission_id,
+                    claim_id,
+                    str(data.get("channel") or "SIMULATED"),
+                    data.get("object_uri"),
+                    str(data.get("response_status")) if data.get("response_status") else None,
+                    json.dumps(data.get("payer_response")) if data.get("payer_response") is not None else None,
+                ),
+            )
+        return submission_id
+
+    def update_submission_response(self, submission_id: str, data: dict[str, Any]) -> None:
+        with self._connect() as conn:
+            conn.execute(
+                """
+                UPDATE submission_attempt
+                SET response_status = %s, payer_response = %s
+                WHERE id = %s
+                """,
+                (
+                    str(data.get("response_status")) if data.get("response_status") else None,
+                    json.dumps(data.get("payer_response")) if data.get("payer_response") is not None else None,
+                    submission_id,
+                ),
+            )
+
+    def cancel_latest_submission(self, claim_id: str) -> dict[str, Any] | None:
+        with self._connect() as conn:
+            row = conn.execute(
+                """
+                UPDATE submission_attempt
+                SET response_status = %s, updated_at = now()
+                WHERE id = (
+                    SELECT id FROM submission_attempt
+                    WHERE claim_id = %s
+                    ORDER BY created_at DESC
+                    LIMIT 1
+                )
+                RETURNING *
+                """,
+                (str(ExternalTransactionStatus.CANCELLED), claim_id),
+            ).fetchone()
+            return dict(row) if row else None
+    def insert_prior_auth_response(self, request_id: str, data: dict[str, Any]) -> str:
+        # prior_auth_response.claim_id is NOT NULL, so pull it from the parent
+        # request row rather than requiring the caller to supply it.
+        with self._connect() as conn:
+            parent = conn.execute(
+                "SELECT claim_id FROM prior_auth_request WHERE id = %s",
+                (request_id,),
+            ).fetchone()
+            claim_id = parent["claim_id"] if parent else None
+
+            response_id = data.get("response_id") or str(uuid4())
+            conn.execute(
+                """
+                INSERT INTO prior_auth_response
+                    (id, request_id, claim_id, payer_response, pre_auth_ref, status, received_via, object_uri)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                ON CONFLICT (id) DO NOTHING
+                """,
+                (
+                    response_id,
+                    request_id,
+                    claim_id,
+                    json.dumps(data.get("payer_response")) if data.get("payer_response") is not None else None,
+                    data.get("pre_auth_ref"),
+                    str(data.get("status")) if data.get("status") else None,
+                    str(data.get("received_via")) if data.get("received_via") else None,
+                    data.get("object_uri"),
+                ),
+            )
+        return response_id
 
     def insert_claim_version(self, claim_id: str, version: int, data: dict[str, Any]) -> None:
         with self._connect() as conn:
@@ -158,18 +252,30 @@ class PostgresRepository(RepositoryInterface):
                 ),
             )
 
-    def insert_prior_auth_request(self, claim_id: str, data: dict[str, Any]) -> str:
+    def insert_prior_auth_request(self, claim_id: str | None, data: dict[str, Any]) -> str:
         request_id = data.get("request_id") or str(uuid4())
+        display_id = data.get("display_id") or f"PA-{uuid4().hex[:12].upper()}"
         with self._connect() as conn:
             conn.execute(
                 """
-                INSERT INTO prior_auth_request (id, claim_id, standard, object_uri, submitted_at, status)
-                VALUES (%s, %s, %s, %s, now(), %s)
+                INSERT INTO prior_auth_request (id, claim_id, standard, object_uri, status,display_id)
+                VALUES (%s, %s, %s, %s, %s,%s)
                 ON CONFLICT (id) DO NOTHING
                 """,
-                (request_id, claim_id, str(data.get("standard")), data.get("object_uri"), str(data.get("status"))),
+                (request_id, claim_id, str(data.get("standard")), data.get("object_uri"), str(data.get("status")),display_id),
             )
         return request_id
+
+    def link_prior_auth_request_to_claim(self, request_id: str, claim_id: str) -> None:
+        with self._connect() as conn:
+            conn.execute(
+                """
+                UPDATE prior_auth_request
+                SET claim_id = %s, updated_at = now()
+                WHERE id = %s
+                """,
+                (claim_id, request_id),
+            )
 
     def find_prior_auth_response(self, claim_id: str, payer_id: str, cpt_code: str) -> dict[str, Any] | None:
         with self._connect() as conn:
@@ -372,6 +478,34 @@ class PostgresRepository(RepositoryInterface):
                     "source": "CACHED",
                 }
             return data
+    def get_prior_auth_request(self, request_id_or_display_id: str) -> dict[str, Any] | None:
+        with self._connect() as conn:
+            row = conn.execute(
+                """
+                SELECT id, claim_id, standard, object_uri, submitted_at,
+                       status, payer_transaction_id, created_at, updated_at, display_id
+                FROM prior_auth_request
+                WHERE id::text = %s OR display_id = %s
+                """,
+                (request_id_or_display_id, request_id_or_display_id),
+            ).fetchone()
+        return dict(row) if row else None
+
+
+    def get_latest_prior_auth_response(self, request_id: str) -> dict[str, Any] | None:
+        with self._connect() as conn:
+            row = conn.execute(
+                """
+                SELECT id, request_id, claim_id, payer_response, pre_auth_ref,
+                       status, received_via, object_uri, received_at, created_at
+                FROM prior_auth_response
+                WHERE request_id = %s
+                ORDER BY received_at DESC
+                LIMIT 1
+                """,
+                (request_id,),
+            ).fetchone()
+        return dict(row) if row else None
 
     def list_claim_summaries(self, limit: int = 100) -> list[dict[str, Any]]:
         with self._connect() as conn:

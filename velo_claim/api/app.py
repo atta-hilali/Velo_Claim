@@ -1,17 +1,31 @@
 from __future__ import annotations
+from fastapi import FastAPI, HTTPException, Response
+from fastapi.middleware.cors import CORSMiddleware
 
 from typing import Any
 
 from pydantic import BaseModel, Field
 
 from velo_claim.core.container import ServiceContainer, build_container_from_env
+from velo_claim.builders.prior_auth.builder import PAClaimBuilderModule
+from velo_claim.builders.claim.builder import ClaimBuilderModule
 from velo_claim.core.utils import utc_now
 from velo_claim.fallback.checkpoints import MemoryCheckpointStore
 from velo_claim.pipeline import run_full_pipeline
 
 from .serializers import claim_for_api
 from .webhooks import receive_payer_webhook
+from uuid import uuid4
 
+class BuildPARequest(BaseModel):
+    state: dict[str, Any]
+    required_codes: list[str]
+
+class BuildClaimRequest(BaseModel):
+    state: dict[str, Any]
+
+class LinkPARequest(BaseModel):
+    claim_id: str
 
 class EncounterIngestRequest(BaseModel):
     """Raw encounter/context package.
@@ -49,11 +63,9 @@ def get_services() -> ServiceContainer:
 
 
 def create_app(services: ServiceContainer | None = None):
-    try:
-        from fastapi import FastAPI, HTTPException, Response
-        from fastapi.middleware.cors import CORSMiddleware
-    except ImportError as exc:
-        raise RuntimeError("Install FastAPI to run the API: pip install fastapi uvicorn") from exc
+    # try:
+    # except ImportError as exc:
+    #     raise RuntimeError("Install FastAPI to run the API: pip install fastapi uvicorn") from exc
 
     if services is not None:
         global _services
@@ -112,6 +124,203 @@ def create_app(services: ServiceContainer | None = None):
             "claim": claim_for_api(detail or _state_detail(result_state), services.object_store),
             "state": _state_summary(result_state),
         }
+    def _claim_build_response(result_state: dict[str, Any]) -> dict[str, Any]:
+        claim = result_state.get("claim", {})
+        return {
+            "claim_id": claim.get("claim_id"),
+            "version": claim.get("version"),
+            "claim_format": result_state.get("claim_format"),
+            "payload_status": result_state.get("payload_status"),
+            "claim_payload_uri": result_state.get("claim_payload_uri"),
+            "claim_payload_type": result_state.get("claim_payload_type"),
+            "jurisdiction": result_state.get("jurisdiction"),
+            "next_agent": result_state.get("next_agent"),
+        }
+    def _pa_build_response(result_state: dict[str, Any]) -> dict[str, Any]:
+        return {
+            "ok": True,
+            "claim_id": result_state.get("pa_linked_claim_id"),
+            "pa_request_id": result_state.get("pa_request_id"),
+            "pa_display_id": result_state.get("pa_display_id"),
+            "pa_payload_uri": result_state.get("pa_payload_uri"),
+            "pa_payload_type": result_state.get("pa_payload_type"),
+        }
+
+    @app.post("/prior-auth/build")
+    def build_prior_auth_standalone(body: BuildPARequest) -> dict[str, Any]:
+        services = get_services()
+        module = PAClaimBuilderModule(repository=services.repository, object_store=services.object_store)
+        try:
+            result_state = module.build(body.state, body.required_codes)
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+        return _pa_build_response(result_state)
+
+    @app.post("/claim/build")
+    def build_claim(body: BuildClaimRequest) -> dict[str, Any]:
+        services = get_services()
+        module = ClaimBuilderModule(
+            repository=services.repository,
+            object_store=services.object_store,
+            kg_client=services.kg_client,
+            payer_rule_loader=services.payer_rule_loader,
+        )
+        try:
+            result_state = module.build(body.state)
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+        return _claim_build_response(result_state)
+
+    @app.get("/prior-auth/{request_id}/status")
+    def get_prior_auth_status(request_id: str) -> dict[str, Any]:
+        services = get_services()
+        request = services.repository.get_prior_auth_request(request_id)
+        if not request:
+            raise HTTPException(status_code=404, detail=f"Prior auth request not found: {request_id}")
+
+        response = services.repository.get_latest_prior_auth_response(str(request["id"]))
+        print(request)
+        return {
+            "request_id": request_id,
+            "display_id": request.get("display_id"),
+            "claim_id": request.get("claim_id"),
+            "standard": request.get("standard"),
+            "status": request.get("status"),
+            "submitted_at": request.get("submitted_at"),
+            "decided": response is not None,
+            "response": {
+                "status": response.get("status"),
+                "pre_auth_ref": response.get("pre_auth_ref"),
+                "received_at": response.get("received_at"),
+                "payer_response": response.get("payer_response"),
+            } if response else None,
+        }
+    @app.post("/prior-auth/{request_id}/simulate-submit")
+    def simulate_submit_prior_auth(request_id: str) -> dict[str, Any]:
+        """
+        DEV/TEST ONLY — simulates submitting to a payer and receiving an
+        immediate response. No real payer integration exists; this exists
+        purely to exercise the full PA lifecycle locally.
+        """
+        services = get_services()
+        request = services.repository.get_prior_auth_request(request_id)
+        if not request:
+            raise HTTPException(status_code=404, detail=f"Prior auth request not found: {request_id}")
+
+        # mark as submitted
+        services.repository.update_prior_auth_submitted(str(request["id"]))
+
+        # simulate a payer decision
+        import random
+        approved = random.random() < 0.85
+        fake_response = {
+            "decision": "approved" if approved else "denied",
+            "pre_auth_ref": f"AUTH-{uuid4().hex[:8].upper()}" if approved else None,
+            "message": "Approved by payer" if approved else "Denied: coverage exclusion",
+        }
+
+        services.repository.insert_prior_auth_response(
+            str(request["id"]),
+            {
+                "status": "APPROVED" if approved else "DENIED_NEEDS_REVIEW",
+                "pre_auth_ref": fake_response["pre_auth_ref"],
+                "payer_response": fake_response,
+                "received_via": "MANUAL",
+            },
+        )
+
+        return {"ok": True, "request_id": request_id, "simulated_response": fake_response}
+
+    @app.post("/claims/{claim_id}/cancel-submission")
+    def simulate_cancel_submission(claim_id: str) -> dict[str, Any]:
+        """
+        DEV/TEST ONLY — simulates cancelling the most recent submission for a
+        claim, so it can be rebuilt and resubmitted with updated content.
+        """
+        services = get_services()
+        detail = services.repository.get_claim_detail(claim_id)
+        if not detail:
+            raise HTTPException(status_code=404, detail=f"Claim not found: {claim_id}")
+
+        cancelled = services.repository.cancel_latest_submission(claim_id)
+        services.repository.update_claim_status(claim_id, "DRAFT_BUILDING", {"updated_via": "cancel-submission"})
+
+        return {"ok": True, "claim_id": claim_id, "cancelled": cancelled}
+
+    @app.post("/claims/{claim_id}/submit")
+    def simulate_submit_claim(claim_id: str) -> dict[str, Any]:
+        """
+        DEV/TEST ONLY — simulates submitting a built claim payload to a payer
+        and receiving an immediate response. No real payer integration exists;
+        this exists purely to exercise the full claim lifecycle locally.
+        """
+        services = get_services()
+        detail = services.repository.get_claim_detail(claim_id)
+        if not detail:
+            raise HTTPException(status_code=404, detail=f"Claim not found: {claim_id}")
+
+        payload_row = detail.get("claim_payload") or {}
+        object_uri = payload_row.get("object_uri") or detail.get("claim_payload_uri")
+        if not object_uri:
+            raise HTTPException(status_code=400, detail=f"No built claim payload found for {claim_id}. Build the claim first.")
+
+        payer_id = detail.get("payer_id")
+        fingerprint = payload_row.get("sha256_hash") or detail.get("claim_payload_hash")
+
+        submission_id = services.repository.insert_submission_attempt(
+            claim_id,
+            {
+                "channel": "SIMULATED",
+                "object_uri": object_uri,
+            },
+        )
+
+        import random
+        approved = random.random() < 0.85
+        fake_response = {
+            "decision": "accepted" if approved else "submitted",
+            "message": "Accepted by payer" if approved else "Submitted — no decision yet",
+        }
+        new_status = "ACCEPTED" if approved else "SUBMITTED"
+
+        services.repository.update_submission_response(
+            submission_id,
+            {"response_status": new_status, "payer_response": fake_response},
+        )
+        services.repository.update_claim_status(claim_id, new_status, {"updated_via": "simulate-submit"})
+
+        return {
+            "ok": True,
+            "claim_id": claim_id,
+            "submission_id": submission_id,
+            "status": new_status,
+            "simulated_response": fake_response,
+        }
+
+    @app.post("/prior-auth/{request_id}/link-claim")
+    def link_prior_auth_to_claim(request_id: str, body: LinkPARequest) -> dict[str, Any]:
+        services = get_services()
+
+        request = services.repository.get_prior_auth_request(request_id)
+        if not request:
+            raise HTTPException(status_code=404, detail=f"Prior auth request not found: {request_id}")
+
+        if request.get("claim_id"):
+            raise HTTPException(
+                status_code=409,
+                detail=f"Prior auth request {request_id} is already linked to claim {request['claim_id']}",
+            )
+
+        if not services.repository.get_claim_detail(body.claim_id):
+            raise HTTPException(status_code=404, detail=f"Claim not found: {body.claim_id}")
+
+        services.repository.link_prior_auth_request_to_claim(
+            request_id=str(request["id"]),
+            claim_id=body.claim_id,
+        )
+
+        updated = services.repository.get_prior_auth_request(request_id)
+        return {"ok": True, "request_id": request_id, "claim_id": updated.get("claim_id")}
 
     @app.get("/claims")
     def list_claims(limit: int = 100) -> dict[str, Any]:

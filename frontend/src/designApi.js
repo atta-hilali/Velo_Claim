@@ -2,7 +2,7 @@ const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL;
 const API_DISABLED = configuredApiBaseUrl === "fallback" || configuredApiBaseUrl === "off";
 const API_BASE_URL = API_DISABLED
   ? ""
-  : (configuredApiBaseUrl || "http://127.0.0.1:8000").replace(/\/$/, "");
+  : (configuredApiBaseUrl || "http://127.0.0.1:8002").replace(/\/$/, "");
 
 const statusMap = {
   READY_TO_SUBMIT: "ready",

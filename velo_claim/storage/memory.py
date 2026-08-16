@@ -12,6 +12,7 @@ from velo_claim.storage.interfaces import (
     RepositoryInterface,
 )
 from velo_claim.core.utils import utc_now
+from velo_claim.core.enums import ExternalTransactionStatus, PriorAuthStatus
 
 
 @dataclass(slots=True)
@@ -104,6 +105,65 @@ class InMemoryRepository(RepositoryInterface):
                 "received_at": utc_now(),
             }
         )
+
+    def update_prior_auth_submitted(self, request_id: str) -> None:
+        request = self.prior_auth_requests.get(request_id)
+        if request:
+            request.update(
+                submitted_at=utc_now(),
+                status=str(PriorAuthStatus.WAITING_FOR_PAYER),
+                updated_at=utc_now(),
+            )
+
+    def insert_submission_attempt(self, claim_id: str, data: dict[str, Any]) -> str:
+        submission_id = data.get("submission_id") or str(uuid4())
+        if not any(row.get("id") == submission_id for row in self.submission_attempts):
+            self.submission_attempts.append(
+                {
+                    "id": submission_id,
+                    "claim_id": claim_id,
+                    **data,
+                    "created_at": utc_now(),
+                    "updated_at": utc_now(),
+                }
+            )
+        return submission_id
+
+    def update_submission_response(self, submission_id: str, data: dict[str, Any]) -> None:
+        for attempt in self.submission_attempts:
+            if attempt.get("id") == submission_id:
+                attempt.update(data, updated_at=utc_now())
+                return
+
+    def cancel_latest_submission(self, claim_id: str) -> dict[str, Any] | None:
+        attempts = [row for row in self.submission_attempts if row.get("claim_id") == claim_id]
+        if not attempts:
+            return None
+        latest = max(attempts, key=lambda row: row.get("created_at", datetime.min.replace(tzinfo=UTC)))
+        latest.update(response_status=str(ExternalTransactionStatus.CANCELLED), updated_at=utc_now())
+        return latest
+
+    def link_prior_auth_request_to_claim(self, request_id: str, claim_id: str) -> None:
+        request = self.prior_auth_requests.get(request_id)
+        if request:
+            request.update(claim_id=claim_id, updated_at=utc_now())
+
+    def get_prior_auth_request(self, request_id_or_display_id: str) -> dict[str, Any] | None:
+        request = self.prior_auth_requests.get(request_id_or_display_id)
+        if request:
+            return request
+        return next(
+            (
+                row
+                for row in self.prior_auth_requests.values()
+                if row.get("display_id") == request_id_or_display_id
+            ),
+            None,
+        )
+
+    def get_latest_prior_auth_response(self, request_id: str) -> dict[str, Any] | None:
+        responses = [row for row in self.prior_auth_responses if row.get("request_id") == request_id]
+        return max(responses, key=lambda row: row.get("received_at", datetime.min.replace(tzinfo=UTC))) if responses else None
 
     def insert_validation_report(self, claim_id: str, data: dict[str, Any]) -> str:
         report_id = data.get("report_id") or str(uuid4())

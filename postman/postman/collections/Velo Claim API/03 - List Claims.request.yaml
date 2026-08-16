@@ -1,0 +1,16 @@
+$kind: http-request
+url: "{{base_url}}/claims?limit=20"
+method: GET
+queryParams:
+  limit: "20"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Claims list returns HTTP 200', () => pm.response.to.have.status(200));
+      const data = pm.response.json();
+      pm.test('Claims collection is present', () => pm.expect(data.claims).to.be.an('array'));
+      pm.test('Created claim appears in the queue', () => {
+        pm.expect(data.claims.some(claim => claim.id === pm.collectionVariables.get('claim_id'))).to.eql(true);
+      });
+    language: text/javascript
+order: 3000

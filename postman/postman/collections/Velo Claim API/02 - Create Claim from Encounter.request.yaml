@@ -1,0 +1,93 @@
+$kind: http-request
+description: Runs FHIR context normalization, routing, claim preparation and validation. The pre-request script creates a unique claim_id.
+url: "{{base_url}}/encounters"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "claim_id": "{{claim_id}}",
+      "source_context": {
+        "patient": {
+          "resourceType": "Patient",
+          "id": "PAT-POSTMAN-001",
+          "identifier": [
+            {"system": "velo/member-id", "value": "AUH-M-POSTMAN-001"},
+            {"system": "uae/emirates-id", "value": "784-1988-7654321-2"}
+          ],
+          "name": [{"text": "Postman Test Patient"}],
+          "birthDate": "1988-04-19",
+          "gender": "female"
+        },
+        "coverage": {
+          "resourceType": "Coverage",
+          "id": "COV-POSTMAN-001",
+          "status": "active",
+          "subscriberId": "AUH-M-POSTMAN-001",
+          "voi_verified": true,
+          "payor": [{"identifier": {"value": "A001"}, "display": "DAMAN"}],
+          "class": [{"type": {"text": "plan"}, "value": "TH4QF", "name": "Thiqa"}],
+          "period": {"start": "2026-01-01", "end": "2026-12-31"}
+        },
+        "encounter": {
+          "resourceType": "Encounter",
+          "id": "ENC-POSTMAN-001",
+          "status": "finished",
+          "type": [{"text": "Family medicine consultation"}],
+          "period": {"start": "2026-08-16T09:15:00+04:00", "end": "2026-08-16T09:45:00+04:00"},
+          "subject": {"reference": "Patient/PAT-POSTMAN-001"},
+          "participant": [{"individual": {"reference": "Practitioner/DR-POSTMAN-001"}}],
+          "serviceProvider": {"reference": "Organization/FAC-POSTMAN-001"}
+        },
+        "provider": {
+          "resourceType": "Practitioner",
+          "id": "DR-POSTMAN-001",
+          "identifier": [{"system": "doh/clinician-license", "value": "GD6476"}],
+          "name": [{"text": "Dr. Postman Test"}]
+        },
+        "facility": {
+          "resourceType": "Organization",
+          "id": "FAC-POSTMAN-001",
+          "name": "Velo Clinic Abu Dhabi",
+          "identifier": [{"system": "doh/facility-license", "value": "MF2057"}]
+        },
+        "conditions": [{
+          "resourceType": "Condition",
+          "id": "COND-POSTMAN-001",
+          "code": {"coding": [{"system": "http://hl7.org/fhir/sid/icd-10", "code": "J18.9", "display": "Pneumonia, unspecified organism"}]}
+        }],
+        "procedures": [{
+          "resourceType": "Procedure",
+          "id": "PROC-POSTMAN-001",
+          "code": {"coding": [{"system": "http://www.ama-assn.org/go/cpt", "code": "99213", "display": "Office outpatient visit"}]},
+          "performedDateTime": "2026-08-16T09:20:00+04:00"
+        }],
+        "attachments": [{"type": "SOAP_NOTE", "name": "soap_note.pdf"}],
+        "charge_items": [{
+          "id": "ACT-POSTMAN-001",
+          "code": "99213",
+          "system": "CPT",
+          "description": "Office outpatient visit",
+          "quantity": 1,
+          "gross": 450.0,
+          "patient_share": 0.0,
+          "net": 450.0,
+          "currency": "AED"
+        }]
+      }
+    }
+scripts:
+  - type: beforeRequest
+    code: pm.collectionVariables.set('claim_id', `CLM-POSTMAN-${Date.now()}`);
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test('Pipeline returns HTTP 200', () => pm.response.to.have.status(200));
+      const data = pm.response.json();
+      pm.test('A claim ID was returned', () => pm.expect(data.claim_id).to.be.a('string').and.not.empty);
+      pm.collectionVariables.set('claim_id', data.claim_id);
+      pm.test('Claim payload metadata exists', () => pm.expect(data.claim).to.be.an('object'));
+    language: text/javascript
+order: 2000

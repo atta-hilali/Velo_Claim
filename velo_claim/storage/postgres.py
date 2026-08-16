@@ -233,6 +233,56 @@ class PostgresRepository(RepositoryInterface):
             ).fetchone()
             return dict(row) if row else None
 
+    def insert_eligibility_check(self, claim_id: str, data: dict[str, Any]) -> str:
+        check_id = data.get("id") or str(uuid4())
+        result = data.get("result") or {}
+        result_data = result.get("data") or {}
+        eligibility_input = data.get("input") or {}
+        payer_response = result_data.get("payer_response") or {}
+        outcome = _response_value(payer_response, "outcome", "status", "result", "decision")
+
+        values_by_column: dict[str, Any] = {
+            "id": check_id,
+            "request_id": data.get("request_id"),
+            "claim_id": claim_id,
+            "patient_id": eligibility_input.get("patient_id"),
+            "payer_id": eligibility_input.get("payer_id"),
+            "plan_id": data.get("plan_id"),
+            "service_date": eligibility_input.get("service_date"),
+            "status": str(result.get("status") or "FAIL_HOLD_CRITICAL"),
+            "outcome": outcome,
+            "coverage_ref": data.get("coverage_ref"),
+            "member_id": data.get("member_id"),
+            "eligibility_ref": result_data.get("eligibility_ref"),
+            "voi_ref": data.get("voi_ref"),
+            "benefit_summary": result_data.get("benefit_summary") or {},
+            "payer_response": payer_response,
+            "object_uri": data.get("object_uri"),
+            "ttl_expires_at": data.get("ttl_expires_at"),
+        }
+
+        with self._connect() as conn:
+            table_columns = _table_columns(conn, "eligibility_check")
+            insert_columns = [name for name in values_by_column if name in table_columns]
+            placeholders = [
+                "%s::jsonb" if name in {"benefit_summary", "payer_response"} else "%s"
+                for name in insert_columns
+            ]
+            values = [
+                json.dumps(values_by_column[name], default=str)
+                if name in {"benefit_summary", "payer_response"}
+                else values_by_column[name]
+                for name in insert_columns
+            ]
+            conn.execute(
+                f"""
+                INSERT INTO eligibility_check ({", ".join(insert_columns)})
+                VALUES ({", ".join(placeholders)})
+                """,
+                values,
+            )
+        return check_id
+
     def insert_pa_payload(self, claim_id: str, version: int, data: dict[str, Any]) -> None:
         with self._connect() as conn:
             conn.execute(
@@ -740,3 +790,11 @@ def _table_columns(conn: Any, table_name: str) -> set[str]:
         (table_name,),
     ).fetchall()
     return {row["column_name"] for row in rows}
+
+
+def _response_value(response: dict[str, Any], *keys: str) -> str | None:
+    for key in keys:
+        value = response.get(key)
+        if value is not None:
+            return str(value)
+    return None

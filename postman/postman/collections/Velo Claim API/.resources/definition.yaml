@@ -1,0 +1,6 @@
+$kind: collection
+name: Velo Claim API
+description: End-to-end requests for the Velo Claim FastAPI facade. Run through the local SSH tunnel or update base_url for another environment.
+variables:
+  base_url: http://127.0.0.1:8000
+  claim_id: ""

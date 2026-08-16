@@ -222,14 +222,22 @@ def build_eligibility_subgraph(
         return {**state, "canonical_claim": claim}
 
     def store_eligibility_record(state: dict[str, Any]) -> dict[str, Any]:
-        if hasattr(repository, "eligibility_checks"):
-            repository.eligibility_checks.append(
-                {
-                    "claim_id": state.get("canonical_claim", {}).get("claim_id"),
-                    "input": state.get("eligibility_input", {}),
-                    "result": state.get("eligibility_result", {}),
-                }
-            )
+        claim = state.get("canonical_claim", {})
+        payer = claim.get("payer", {})
+        source_coverage = state.get("source_context", {}).get("coverage", {})
+        repository.insert_eligibility_check(
+            claim.get("claim_id"),
+            {
+                "request_id": state.get("eligibility_request_id"),
+                "input": state.get("eligibility_input", {}),
+                "result": state.get("eligibility_result", {}),
+                "plan_id": payer.get("plan_id"),
+                "coverage_ref": payer.get("coverage_id"),
+                "member_id": claim.get("patient", {}).get("member_id"),
+                "voi_ref": source_coverage.get("voi_ref"),
+                "object_uri": state.get("eligibility_payload_uri"),
+            },
+        )
         return state
 
     def finish(state: dict[str, Any]) -> dict[str, Any]:

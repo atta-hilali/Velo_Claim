@@ -1,0 +1,28 @@
+$kind: http-request
+description: Exercises callback normalization and persistence. It does not currently prove automatic graph resumption.
+url: "{{base_url}}/webhooks/payer/{{claim_id}}"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "event_type": "prior_auth_response",
+      "transaction_ref": "TX-{{claim_id}}",
+      "status": "approved",
+      "decision": "approved",
+      "pre_auth_ref": "PA-POSTMAN-998877",
+      "payer_id": "A001",
+      "cpt_codes": ["70553"],
+      "valid_from": "2026-08-01",
+      "valid_to": "2026-09-01"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Callback returns HTTP 200', () => pm.response.to.have.status(200));
+      const data = pm.response.json();
+      pm.test('Callback is accepted or identified as duplicate', () => pm.expect(['accepted', 'duplicate']).to.include(data.status));
+    language: text/javascript
+order: 8000

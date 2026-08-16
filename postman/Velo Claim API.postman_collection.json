@@ -1,0 +1,283 @@
+{
+  "info": {
+    "_postman_id": "09a94770-beb3-4eb0-b769-e28912451889",
+    "name": "Velo Claim API",
+    "description": "End-to-end requests for the Velo Claim FastAPI facade. Run through the local SSH tunnel or update base_url for another environment.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://127.0.0.1:8000",
+      "type": "string"
+    },
+    {
+      "key": "claim_id",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "01 - Health",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/health",
+          "host": ["{{base_url}}"],
+          "path": ["health"]
+        },
+        "description": "Checks that the FastAPI process can construct its configured service container."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Health returns HTTP 200', () => pm.response.to.have.status(200));",
+              "const data = pm.response.json();",
+              "pm.test('Health status is ok', () => pm.expect(data.status).to.eql('ok'));",
+              "pm.test('Production adapters are visible', () => {",
+              "  pm.expect(data.storage).to.be.a('string');",
+              "  pm.expect(data.object_store).to.be.a('string');",
+              "  pm.expect(data.cache).to.be.a('string');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "response": []
+    },
+    {
+      "name": "02 - Create Claim from Encounter",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.collectionVariables.set('claim_id', `CLM-POSTMAN-${Date.now()}`);"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Pipeline returns HTTP 200', () => pm.response.to.have.status(200));",
+              "const data = pm.response.json();",
+              "pm.test('A claim ID was returned', () => pm.expect(data.claim_id).to.be.a('string').and.not.empty);",
+              "pm.collectionVariables.set('claim_id', data.claim_id);",
+              "pm.test('Claim payload metadata exists', () => pm.expect(data.claim).to.be.an('object'));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"claim_id\": \"{{claim_id}}\",\n  \"source_context\": {\n    \"patient\": {\n      \"resourceType\": \"Patient\",\n      \"id\": \"PAT-POSTMAN-001\",\n      \"identifier\": [\n        {\"system\": \"velo/member-id\", \"value\": \"AUH-M-POSTMAN-001\"},\n        {\"system\": \"uae/emirates-id\", \"value\": \"784-1988-7654321-2\"}\n      ],\n      \"name\": [{\"text\": \"Postman Test Patient\"}],\n      \"birthDate\": \"1988-04-19\",\n      \"gender\": \"female\"\n    },\n    \"coverage\": {\n      \"resourceType\": \"Coverage\",\n      \"id\": \"COV-POSTMAN-001\",\n      \"status\": \"active\",\n      \"subscriberId\": \"AUH-M-POSTMAN-001\",\n      \"voi_verified\": true,\n      \"payor\": [{\"identifier\": {\"value\": \"A001\"}, \"display\": \"DAMAN\"}],\n      \"class\": [{\"type\": {\"text\": \"plan\"}, \"value\": \"TH4QF\", \"name\": \"Thiqa\"}],\n      \"period\": {\"start\": \"2026-01-01\", \"end\": \"2026-12-31\"}\n    },\n    \"encounter\": {\n      \"resourceType\": \"Encounter\",\n      \"id\": \"ENC-POSTMAN-001\",\n      \"status\": \"finished\",\n      \"type\": [{\"text\": \"Family medicine consultation\"}],\n      \"period\": {\"start\": \"2026-08-16T09:15:00+04:00\", \"end\": \"2026-08-16T09:45:00+04:00\"},\n      \"subject\": {\"reference\": \"Patient/PAT-POSTMAN-001\"},\n      \"participant\": [{\"individual\": {\"reference\": \"Practitioner/DR-POSTMAN-001\"}}],\n      \"serviceProvider\": {\"reference\": \"Organization/FAC-POSTMAN-001\"}\n    },\n    \"provider\": {\n      \"resourceType\": \"Practitioner\",\n      \"id\": \"DR-POSTMAN-001\",\n      \"identifier\": [{\"system\": \"doh/clinician-license\", \"value\": \"GD6476\"}],\n      \"name\": [{\"text\": \"Dr. Postman Test\"}]\n    },\n    \"facility\": {\n      \"resourceType\": \"Organization\",\n      \"id\": \"FAC-POSTMAN-001\",\n      \"name\": \"Velo Clinic Abu Dhabi\",\n      \"identifier\": [{\"system\": \"doh/facility-license\", \"value\": \"MF2057\"}]\n    },\n    \"conditions\": [{\n      \"resourceType\": \"Condition\",\n      \"id\": \"COND-POSTMAN-001\",\n      \"code\": {\"coding\": [{\"system\": \"http://hl7.org/fhir/sid/icd-10\", \"code\": \"J18.9\", \"display\": \"Pneumonia, unspecified organism\"}]}\n    }],\n    \"procedures\": [{\n      \"resourceType\": \"Procedure\",\n      \"id\": \"PROC-POSTMAN-001\",\n      \"code\": {\"coding\": [{\"system\": \"http://www.ama-assn.org/go/cpt\", \"code\": \"99213\", \"display\": \"Office outpatient visit\"}]},\n      \"performedDateTime\": \"2026-08-16T09:20:00+04:00\"\n    }],\n    \"attachments\": [{\"type\": \"SOAP_NOTE\", \"name\": \"soap_note.pdf\"}],\n    \"charge_items\": [{\n      \"id\": \"ACT-POSTMAN-001\",\n      \"code\": \"99213\",\n      \"system\": \"CPT\",\n      \"description\": \"Office outpatient visit\",\n      \"quantity\": 1,\n      \"gross\": 450.0,\n      \"patient_share\": 0.0,\n      \"net\": 450.0,\n      \"currency\": \"AED\"\n    }]\n  }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/encounters",
+          "host": ["{{base_url}}"],
+          "path": ["encounters"]
+        },
+        "description": "Runs FHIR context normalization, routing, claim preparation and validation. The pre-request script creates a unique claim_id."
+      },
+      "response": []
+    },
+    {
+      "name": "03 - List Claims",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/claims?limit=20",
+          "host": ["{{base_url}}"],
+          "path": ["claims"],
+          "query": [{"key": "limit", "value": "20"}]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Claims list returns HTTP 200', () => pm.response.to.have.status(200));",
+              "const data = pm.response.json();",
+              "pm.test('Claims collection is present', () => pm.expect(data.claims).to.be.an('array'));",
+              "pm.test('Created claim appears in the queue', () => {",
+              "  pm.expect(data.claims.some(claim => claim.id === pm.collectionVariables.get('claim_id'))).to.eql(true);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "response": []
+    },
+    {
+      "name": "04 - Get Claim Detail",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/claims/{{claim_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["claims", "{{claim_id}}"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Claim detail returns HTTP 200', () => pm.response.to.have.status(200));",
+              "const data = pm.response.json();",
+              "pm.test('Returned the selected claim', () => pm.expect(data.id).to.eql(pm.collectionVariables.get('claim_id')));",
+              "pm.test('Route and canonical claim exist', () => {",
+              "  pm.expect(data.route).to.be.an('object');",
+              "  pm.expect(data.canonical_claim).to.be.an('object');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "response": []
+    },
+    {
+      "name": "05 - Get Raw Claim Payload",
+      "request": {
+        "method": "GET",
+        "header": [{"key": "Accept", "value": "application/xml, application/fhir+json, application/json"}],
+        "url": {
+          "raw": "{{base_url}}/claims/{{claim_id}}/payload",
+          "host": ["{{base_url}}"],
+          "path": ["claims", "{{claim_id}}", "payload"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Raw payload returns HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('Raw payload is not empty', () => pm.expect(pm.response.text().length).to.be.above(20));"
+            ]
+          }
+        }
+      ],
+      "response": []
+    },
+    {
+      "name": "06 - Move Claim to Review",
+      "request": {
+        "method": "PATCH",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"review\",\n  \"reason\": \"Postman lifecycle test\",\n  \"metadata\": {\"test_run\": true}\n}",
+          "options": {"raw": {"language": "json"}}
+        },
+        "url": {
+          "raw": "{{base_url}}/claims/{{claim_id}}/status",
+          "host": ["{{base_url}}"],
+          "path": ["claims", "{{claim_id}}", "status"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status update returns HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('Status update reports success', () => pm.expect(pm.response.json().ok).to.eql(true));"
+            ]
+          }
+        }
+      ],
+      "response": []
+    },
+    {
+      "name": "07 - Escalate Claim",
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"reason\": \"Postman escalation test\",\n  \"metadata\": {\"test_run\": true}\n}",
+          "options": {"raw": {"language": "json"}}
+        },
+        "url": {
+          "raw": "{{base_url}}/claims/{{claim_id}}/actions/escalate",
+          "host": ["{{base_url}}"],
+          "path": ["claims", "{{claim_id}}", "actions", "escalate"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Escalation returns HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('Escalation reports success', () => pm.expect(pm.response.json().ok).to.eql(true));"
+            ]
+          }
+        }
+      ],
+      "response": []
+    },
+    {
+      "name": "08 - Simulate Payer PA Callback",
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"event_type\": \"prior_auth_response\",\n  \"transaction_ref\": \"TX-{{claim_id}}\",\n  \"status\": \"approved\",\n  \"decision\": \"approved\",\n  \"pre_auth_ref\": \"PA-POSTMAN-998877\",\n  \"payer_id\": \"A001\",\n  \"cpt_codes\": [\"70553\"],\n  \"valid_from\": \"2026-08-01\",\n  \"valid_to\": \"2026-09-01\"\n}",
+          "options": {"raw": {"language": "json"}}
+        },
+        "url": {
+          "raw": "{{base_url}}/webhooks/payer/{{claim_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["webhooks", "payer", "{{claim_id}}"]
+        },
+        "description": "Exercises callback normalization and persistence. It does not currently prove automatic graph resumption."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Callback returns HTTP 200', () => pm.response.to.have.status(200));",
+              "const data = pm.response.json();",
+              "pm.test('Callback is accepted or identified as duplicate', () => pm.expect(['accepted', 'duplicate']).to.include(data.status));"
+            ]
+          }
+        }
+      ],
+      "response": []
+    }
+  ]
+}

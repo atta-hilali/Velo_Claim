@@ -13,6 +13,7 @@ neo4j
 
 # Security / SMART backend-services key tooling
 cryptography==45.0.6
+lxml>=5.4,<7
 
 # Local verification
 pytest==9.0.3

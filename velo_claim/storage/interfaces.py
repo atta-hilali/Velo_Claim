@@ -31,6 +31,9 @@ class RepositoryInterface(ABC):
     def latest_claim_payload(self, claim_id: str) -> dict[str, Any] | None: ...
 
     @abstractmethod
+    def insert_eligibility_check(self, claim_id: str, data: dict[str, Any]) -> str: ...
+
+    @abstractmethod
     def insert_pa_payload(self, claim_id: str, version: int, data: dict[str, Any]) -> None: ...
 
     @abstractmethod

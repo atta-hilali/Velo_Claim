@@ -1,0 +1,6 @@
+python -m velo_claim.examples.submit_manual_encounter `
+  --input sample_inputs/Patient1.json `
+  --output sample_outputs/patient1_response.json `
+  --payload-output sample_outputs/patient1_payload.json `
+  --timeout 300 `
+  --payload-timeout 180

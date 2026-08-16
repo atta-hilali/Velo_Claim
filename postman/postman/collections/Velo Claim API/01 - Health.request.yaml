@@ -1,0 +1,17 @@
+$kind: http-request
+description: Checks that the FastAPI process can construct its configured service container.
+url: "{{base_url}}/health"
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Health returns HTTP 200', () => pm.response.to.have.status(200));
+      const data = pm.response.json();
+      pm.test('Health status is ok', () => pm.expect(data.status).to.eql('ok'));
+      pm.test('Production adapters are visible', () => {
+        pm.expect(data.storage).to.be.a('string');
+        pm.expect(data.object_store).to.be.a('string');
+        pm.expect(data.cache).to.be.a('string');
+      });
+    language: text/javascript
+order: 1000

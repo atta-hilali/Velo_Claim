@@ -58,6 +58,19 @@ class InMemoryRepository(RepositoryInterface):
         rows = [row for row in self.claim_payloads if row["claim_id"] == claim_id]
         return max(rows, key=lambda row: row["version"]) if rows else None
 
+    def insert_eligibility_check(self, claim_id: str, data: dict[str, Any]) -> str:
+        check_id = data.get("id") or str(uuid4())
+        self.eligibility_checks.append(
+            {
+                "id": check_id,
+                "claim_id": claim_id,
+                **data,
+                "checked_at": data.get("checked_at") or utc_now(),
+                "created_at": utc_now(),
+            }
+        )
+        return check_id
+
     def insert_pa_payload(self, claim_id: str, version: int, data: dict[str, Any]) -> None:
         self.pa_payloads.append({"claim_id": claim_id, "version": version, **data, "created_at": utc_now()})
 

@@ -1,0 +1,12 @@
+$kind: http-request
+url: "{{base_url}}/claims/{{claim_id}}/payload"
+method: GET
+headers:
+  Accept: application/xml, application/fhir+json, application/json
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Raw payload returns HTTP 200', () => pm.response.to.have.status(200));
+      pm.test('Raw payload is not empty', () => pm.expect(pm.response.text().length).to.be.above(20));
+    language: text/javascript
+order: 5000

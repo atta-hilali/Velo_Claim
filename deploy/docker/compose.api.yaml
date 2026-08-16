@@ -1,0 +1,26 @@
+name: velo-claim-api
+
+services:
+  api:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile.api
+    image: velo-claim-api:local
+    container_name: velo-claim-api
+    network_mode: host
+    restart: unless-stopped
+    init: true
+    read_only: true
+    user: "1001:1001"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    volumes:
+      - type: bind
+        source: ../../.env
+        target: /app/.env
+        read_only: true
+    stop_grace_period: 30s

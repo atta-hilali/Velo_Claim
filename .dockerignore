@@ -1,0 +1,14 @@
+.git
+.gitignore
+.env
+keys/
+frontend/
+sample_inputs/
+sample_outputs/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+env/
+venv/
+.venv/

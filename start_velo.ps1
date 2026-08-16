@@ -1,6 +1,6 @@
-# start_velo.ps1 - run this every time you start working on Velo Claim.
+# start_velo.ps1 - one-click launcher for the DGX-backed Velo Claim environment.
 
-$ErrorActionPreference = "Continue"
+$ErrorActionPreference = "Stop"
 
 $ProjectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $ProjectRoot
@@ -8,96 +8,122 @@ Set-Location $ProjectRoot
 $SshUser = "dev1"
 $SshHost = "2.51.50.72"
 $SshPort = 2222
+$RemoteContainer = "velo-claim-api"
+$ApiUrl = "http://127.0.0.1:8000"
+$FrontendUrl = "http://127.0.0.1:5173"
 
-$PostgresDsn = "postgresql://velo_claim:velo_claim_dev_password@localhost:5433/velo_claim"
-$RedisHost = "localhost"
-$RedisPort = 6379
-$MinioEndpoint = "http://localhost:9000"
-$MinioAccessKey = "velo_claim"
-$MinioSecretKey = "velo_claim_dev_password"
-
-Write-Host "Starting Velo Claim dev environment..." -ForegroundColor Cyan
+Write-Host "Starting Velo Claim..." -ForegroundColor Cyan
 Write-Host "Project root: $ProjectRoot" -ForegroundColor DarkGray
 
-Write-Host "Checking DGX containers..." -ForegroundColor Yellow
-ssh -p $SshPort "$SshUser@$SshHost" "docker ps --format 'table {{.Names}}\t{{.Status}}' | grep velo-claim || true"
+Write-Host "Checking the DGX backend container..." -ForegroundColor Yellow
+$RemoteStatus = ssh -p $SshPort -o BatchMode=yes -o ConnectTimeout=10 `
+    "$SshUser@$SshHost" "docker inspect -f '{{.State.Status}}' $RemoteContainer 2>/dev/null"
 
-Write-Host "Closing old SSH tunnels..." -ForegroundColor Yellow
+if ($LASTEXITCODE -ne 0) {
+    throw "DGX container $RemoteContainer is not installed. Run deploy/docker/deploy_api.sh on DGX first."
+}
+
+if ($RemoteStatus.Trim() -ne "running") {
+    Write-Host "Starting the DGX backend container..." -ForegroundColor Yellow
+    ssh -p $SshPort -o BatchMode=yes -o ConnectTimeout=10 `
+        "$SshUser@$SshHost" "docker start $RemoteContainer" | Out-Null
+
+    if ($LASTEXITCODE -ne 0) {
+        throw "DGX container $RemoteContainer could not be started."
+    }
+}
+Write-Host "  Backend container running" -ForegroundColor Green
+
+Write-Host "Replacing any old API/database tunnel..." -ForegroundColor Yellow
 Get-CimInstance Win32_Process |
     Where-Object {
         $_.Name -eq "ssh.exe" -and
-        $_.CommandLine -match "-L 5433:" -and
+        $_.CommandLine -match "-L 8000:127\.0\.0\.1:8000" -and
         $_.CommandLine -match [regex]::Escape($SshHost)
     } |
     ForEach-Object {
         Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue
-        Write-Host "  stopped tunnel process $($_.ProcessId)" -ForegroundColor DarkGray
     }
 
-Write-Host "Opening SSH tunnel..." -ForegroundColor Yellow
-$TunnelCommand = "ssh -p $SshPort -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -L 5433:127.0.0.1:5433 -L 6379:127.0.0.1:6379 -L 9000:127.0.0.1:9000 -L 9001:127.0.0.1:9001 $SshUser@$SshHost -N"
-Start-Process powershell -ArgumentList "-NoExit", "-Command", $TunnelCommand
+$TunnelArguments = @(
+    "-p", $SshPort,
+    "-o", "BatchMode=yes",
+    "-o", "ExitOnForwardFailure=yes",
+    "-o", "ServerAliveInterval=30",
+    "-o", "ServerAliveCountMax=3",
+    "-L", "8000:127.0.0.1:8000",
+    "-L", "5433:127.0.0.1:5433",
+    "$SshUser@$SshHost",
+    "-N"
+)
 
-Start-Sleep -Seconds 3
+$TunnelProcess = Start-Process `
+    -FilePath "ssh.exe" `
+    -ArgumentList $TunnelArguments `
+    -WindowStyle Hidden `
+    -PassThru
 
-Write-Host "Testing connections..." -ForegroundColor Yellow
-$env:VELO_START_POSTGRES_DSN = $PostgresDsn
-$env:VELO_START_REDIS_HOST = $RedisHost
-$env:VELO_START_REDIS_PORT = [string]$RedisPort
-$env:VELO_START_MINIO_ENDPOINT = $MinioEndpoint
-$env:VELO_START_MINIO_ACCESS_KEY = $MinioAccessKey
-$env:VELO_START_MINIO_SECRET_KEY = $MinioSecretKey
+Write-Host "Waiting for API health..." -ForegroundColor Yellow
+$Health = $null
+for ($Attempt = 1; $Attempt -le 20; $Attempt++) {
+    if ($TunnelProcess.HasExited) {
+        throw "The SSH API tunnel stopped unexpectedly."
+    }
 
-@'
-import os
+    try {
+        $Health = Invoke-RestMethod -Uri "$ApiUrl/health" -TimeoutSec 3
+        break
+    }
+    catch {
+        Start-Sleep -Seconds 1
+    }
+}
 
-import boto3
-import psycopg
-import redis
-from botocore.config import Config
+if ($null -eq $Health -or $Health.status -ne "ok") {
+    Stop-Process -Id $TunnelProcess.Id -Force -ErrorAction SilentlyContinue
+    throw "The backend did not become healthy through the SSH tunnel."
+}
 
-postgres_dsn = os.environ["VELO_START_POSTGRES_DSN"]
-redis_host = os.environ["VELO_START_REDIS_HOST"]
-redis_port = int(os.environ["VELO_START_REDIS_PORT"])
-minio_endpoint = os.environ["VELO_START_MINIO_ENDPOINT"]
-minio_access_key = os.environ["VELO_START_MINIO_ACCESS_KEY"]
-minio_secret_key = os.environ["VELO_START_MINIO_SECRET_KEY"]
+Write-Host "  API healthy: $($Health.storage), $($Health.object_store), $($Health.cache)" -ForegroundColor Green
 
-try:
-    conn = psycopg.connect(postgres_dsn, connect_timeout=10)
-    conn.close()
-    print("  Postgres  OK")
-except Exception as e:
-    print(f"  Postgres  FAIL: {e}")
+$FrontendRunning = $false
+try {
+    Invoke-WebRequest -Uri $FrontendUrl -UseBasicParsing -TimeoutSec 2 | Out-Null
+    $FrontendRunning = $true
+}
+catch {
+    $FrontendRunning = $false
+}
 
-try:
-    r = redis.Redis(host=redis_host, port=redis_port, db=0, socket_connect_timeout=10, socket_timeout=10)
-    r.ping()
-    print("  Redis     OK")
-except Exception as e:
-    print(f"  Redis     FAIL: {e}")
+if (-not $FrontendRunning) {
+    Write-Host "Starting the frontend..." -ForegroundColor Yellow
+    $EscapedProjectRoot = $ProjectRoot.Replace("'", "''")
+    $FrontendCommand = "Set-Location -LiteralPath '$EscapedProjectRoot'; npm run dev"
+    Start-Process `
+        -FilePath "powershell.exe" `
+        -ArgumentList "-NoExit", "-Command", $FrontendCommand
 
-try:
-    s3 = boto3.client(
-        "s3",
-        endpoint_url=minio_endpoint,
-        aws_access_key_id=minio_access_key,
-        aws_secret_access_key=minio_secret_key,
-        config=Config(connect_timeout=10, read_timeout=10, retries={"max_attempts": 0}),
-    )
-    buckets = [bucket["Name"] for bucket in s3.list_buckets()["Buckets"]]
-    print(f"  MinIO     OK: {buckets}")
-except Exception as e:
-    print(f"  MinIO     FAIL: {e}")
+    for ($Attempt = 1; $Attempt -le 30; $Attempt++) {
+        try {
+            Invoke-WebRequest -Uri $FrontendUrl -UseBasicParsing -TimeoutSec 2 | Out-Null
+            $FrontendRunning = $true
+            break
+        }
+        catch {
+            Start-Sleep -Seconds 1
+        }
+    }
+}
 
-print("")
-print("All systems ready. Happy coding!")
-'@ | python -
+if (-not $FrontendRunning) {
+    throw "The frontend did not start at $FrontendUrl."
+}
+
+Write-Host "  Frontend ready" -ForegroundColor Green
+Start-Process $FrontendUrl
 
 Write-Host ""
-Write-Host "Next steps:" -ForegroundColor Cyan
-Write-Host "  1. Keep the SSH tunnel PowerShell window open."
-Write-Host "  2. Start the backend: npm run api"
-Write-Host "  3. Start the frontend: npm run dev"
-Write-Host "  4. Open frontend: http://127.0.0.1:5174"
-Write-Host "  5. API health: http://127.0.0.1:8002/health"
+Write-Host "Velo Claim is ready." -ForegroundColor Cyan
+Write-Host "  Frontend: $FrontendUrl"
+Write-Host "  API:      $ApiUrl"
+Write-Host "  Tunnel PID: $($TunnelProcess.Id)" -ForegroundColor DarkGray

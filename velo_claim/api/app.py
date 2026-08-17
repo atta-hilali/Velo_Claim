@@ -178,8 +178,8 @@ def create_app(services: ServiceContainer | None = None):
         if not request:
             raise HTTPException(status_code=404, detail=f"Prior auth request not found: {request_id}")
 
-        response = services.repository.get_latest_prior_auth_response(str(request["id"]))
-        print(request)
+        stored_request_id = str(request.get("id") or request.get("request_id") or request_id)
+        response = services.repository.get_latest_prior_auth_response(stored_request_id)
         return {
             "request_id": request_id,
             "display_id": request.get("display_id"),
@@ -196,7 +196,7 @@ def create_app(services: ServiceContainer | None = None):
             } if response else None,
         }
     @app.post("/prior-auth/{request_id}/simulate-submit")
-    def simulate_submit_prior_auth(request_id: str) -> dict[str, Any]:
+    def simulate_submit_prior_auth(request_id: str, body: dict[str, Any] | None = None) -> dict[str, Any]:
         """
         DEV/TEST ONLY — simulates submitting to a payer and receiving an
         immediate response. No real payer integration exists; this exists
@@ -206,13 +206,17 @@ def create_app(services: ServiceContainer | None = None):
         request = services.repository.get_prior_auth_request(request_id)
         if not request:
             raise HTTPException(status_code=404, detail=f"Prior auth request not found: {request_id}")
+        stored_request_id = str(request.get("id") or request.get("request_id") or request_id)
 
         # mark as submitted
-        services.repository.update_prior_auth_submitted(str(request["id"]))
+        services.repository.update_prior_auth_submitted(stored_request_id)
 
         # simulate a payer decision
         import random
-        approved = random.random() < 0.85
+        requested_decision = str((body or {}).get("decision") or "").strip().lower()
+        if requested_decision not in {"", "approved", "denied"}:
+            raise HTTPException(status_code=400, detail="decision must be approved or denied")
+        approved = requested_decision == "approved" if requested_decision else random.random() < 0.85
         fake_response = {
             "decision": "approved" if approved else "denied",
             "pre_auth_ref": f"AUTH-{uuid4().hex[:8].upper()}" if approved else None,
@@ -220,7 +224,7 @@ def create_app(services: ServiceContainer | None = None):
         }
 
         services.repository.insert_prior_auth_response(
-            str(request["id"]),
+            stored_request_id,
             {
                 "status": "APPROVED" if approved else "DENIED_NEEDS_REVIEW",
                 "pre_auth_ref": fake_response["pre_auth_ref"],
@@ -229,7 +233,7 @@ def create_app(services: ServiceContainer | None = None):
             },
         )
 
-        return {"ok": True, "request_id": request_id, "simulated_response": fake_response}
+        return {"ok": True, "request_id": stored_request_id, "simulated_response": fake_response}
 
     @app.post("/claims/{claim_id}/cancel-submission")
     def simulate_cancel_submission(claim_id: str) -> dict[str, Any]:
@@ -314,8 +318,9 @@ def create_app(services: ServiceContainer | None = None):
         if not services.repository.get_claim_detail(body.claim_id):
             raise HTTPException(status_code=404, detail=f"Claim not found: {body.claim_id}")
 
+        stored_request_id = str(request.get("id") or request.get("request_id") or request_id)
         services.repository.link_prior_auth_request_to_claim(
-            request_id=str(request["id"]),
+            request_id=stored_request_id,
             claim_id=body.claim_id,
         )
 

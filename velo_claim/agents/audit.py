@@ -6,6 +6,7 @@ from collections.abc import Callable
 from time import perf_counter
 from typing import Any
 
+from velo_claim.core.enums import AuditEventType
 from velo_claim.core.utils import utc_now
 from velo_claim.storage.interfaces import ObjectStoreInterface, RepositoryInterface
 
@@ -26,7 +27,7 @@ def audited_node(
     def wrapped(state: dict[str, Any]) -> dict[str, Any]:
         claim_id = _claim_id(state)
         enter_payload = {"input_snapshot": _snapshot(state)}
-        _write_audit(repository, object_store, claim_id, agent, node, "NODE_ENTER", enter_payload)
+        _write_audit(repository, object_store, claim_id, agent, node, AuditEventType.NODE_ENTER, enter_payload)
         started = perf_counter()
         try:
             result = fn(state)
@@ -40,7 +41,15 @@ def audited_node(
                 "duration_ms": duration_ms,
                 "errors_added": result.get("errors", [])[before_errors:after_errors],
             }
-            _write_audit(repository, object_store, _claim_id(result) or claim_id, agent, node, "NODE_EXIT", exit_payload)
+            _write_audit(
+                repository,
+                object_store,
+                _claim_id(result) or claim_id,
+                agent,
+                node,
+                AuditEventType.NODE_EXIT,
+                exit_payload,
+            )
             return result
         except Exception as exc:
             duration_ms = round((perf_counter() - started) * 1000, 2)
@@ -49,7 +58,7 @@ def audited_node(
                 "duration_ms": duration_ms,
                 "error": str(exc),
             }
-            _write_audit(repository, object_store, claim_id, agent, node, "NODE_ERROR", error_payload)
+            _write_audit(repository, object_store, claim_id, agent, node, AuditEventType.NODE_ERROR, error_payload)
             raise
 
     return wrapped
@@ -61,7 +70,7 @@ def _write_audit(
     claim_id: str | None,
     agent: str,
     node: str,
-    event_type: str,
+    event_type: AuditEventType,
     payload: dict[str, Any],
 ) -> None:
     event = {

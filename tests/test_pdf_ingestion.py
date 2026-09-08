@@ -3,6 +3,7 @@ from __future__ import annotations
 from fastapi.testclient import TestClient
 
 from velo_claim.api.app import create_app
+from velo_claim.api.serializers import claim_for_api
 from velo_claim.core.container import build_default_container
 from velo_claim.examples.demo_inputs import abu_dhabi_pneumonia_encounter
 from velo_claim.ingestion.pdf_encounter import (
@@ -247,6 +248,42 @@ def test_partial_claim_upsert_does_not_erase_known_provider_identity() -> None:
     assert repository.claims["CLM-1"]["provider_id"] == "DHA-P-778812"
 
 
+def test_incomplete_claim_uses_stored_identifiers_in_queue_display() -> None:
+    claim = claim_for_api(
+        {
+            "claim_id": "CLM-PDF-INCOMPLETE",
+            "patient_id": "AE-PAT-0001",
+            "payer_id": "DAMAN-AE-014",
+            "canonical_claim": {},
+        }
+    )
+
+    assert claim["patient"] == "AE-PAT-0001"
+    assert claim["payer"] == "DAMAN-AE-014"
+
+
+def test_final_pdf_audit_failure_does_not_fail_completed_import(monkeypatch) -> None:
+    services = build_default_container()
+    package = extract_encounter_from_text(DAMAN_TABLE_FORM_TEXT)
+    extraction = PdfExtractionResult(package, page_count=2, text_characters=len(DAMAN_TABLE_FORM_TEXT))
+    monkeypatch.setattr(EncounterPdfExtractor, "extract", lambda self, content: extraction)
+    original_insert = services.repository.insert_audit_event
+
+    def fail_only_final_event(claim_id, event):
+        if event.get("payload", {}).get("event_name") == "PDF_ENCOUNTER_INGESTED":
+            raise RuntimeError("audit sink unavailable")
+        return original_insert(claim_id, event)
+
+    monkeypatch.setattr(services.repository, "insert_audit_event", fail_only_final_event)
+    response = TestClient(create_app(services)).post(
+        "/encounters/pdf",
+        files={"file": ("daman-form.pdf", b"%PDF-1.7 audit-failure", "application/pdf")},
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.json()["status"] == "completed"
+
+
 def test_pdf_upload_stores_source_and_runs_existing_pipeline(monkeypatch) -> None:
     services = build_default_container()
     package = abu_dhabi_pneumonia_encounter()["source_context"]
@@ -265,7 +302,8 @@ def test_pdf_upload_stores_source_and_runs_existing_pipeline(monkeypatch) -> Non
     assert body["claim_id"].startswith("CLM-PDF-")
     assert body["claim"]["id"] == body["claim_id"]
     assert any(
-        event.get("event_type") == "PDF_ENCOUNTER_INGESTED"
+        event.get("event_type") == "NODE_EXIT"
+        and event.get("payload", {}).get("event_name") == "PDF_ENCOUNTER_INGESTED"
         for event in services.repository.audit_events
     )
     source_uri = body["extraction"]["source_document_uri"]

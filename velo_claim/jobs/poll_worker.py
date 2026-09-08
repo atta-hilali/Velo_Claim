@@ -4,7 +4,7 @@ import json
 from datetime import UTC, datetime, timedelta
 from typing import Any, Callable, Protocol
 
-from velo_claim.core.enums import CallbackSource, PayloadStatus
+from velo_claim.core.enums import AuditEventType, CallbackSource, PayloadStatus
 from velo_claim.core.models import ClaimError
 from velo_claim.core.enums import Severity
 from velo_claim.core.utils import utc_now
@@ -101,8 +101,12 @@ def _reschedule_or_escalate(
         audit_event = {
             "agent": "PollWorker",
             "node": "process_poll_job",
-            "event_type": "ESCALATED_TIMEOUT",
-            "payload": {"error": error.to_dict(), "payload_status": PayloadStatus.NEEDS_REVIEW},
+            "event_type": AuditEventType.ESCALATED,
+            "payload": {
+                "event_name": "ESCALATED_TIMEOUT",
+                "error": error.to_dict(),
+                "payload_status": PayloadStatus.NEEDS_REVIEW,
+            },
             "ts": utc_now(),
         }
         repository.insert_audit_event(claim_id, audit_event)

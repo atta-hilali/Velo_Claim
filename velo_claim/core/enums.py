@@ -72,6 +72,15 @@ class CallbackSource(StrEnum):
     MANUAL = "MANUAL"
 
 
+class AuditEventType(StrEnum):
+    NODE_ENTER = "NODE_ENTER"
+    NODE_EXIT = "NODE_EXIT"
+    NODE_ERROR = "NODE_ERROR"
+    SUSPENDED = "SUSPENDED"
+    RESUMED = "RESUMED"
+    ESCALATED = "ESCALATED"
+
+
 class ExternalTransactionStatus(StrEnum):
     CREATED = "CREATED"
     SENT = "SENT"

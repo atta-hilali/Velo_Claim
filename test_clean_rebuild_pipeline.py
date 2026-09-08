@@ -1,4 +1,5 @@
 import json
+from datetime import UTC, datetime, timedelta
 
 from velo_claim.builders.eligibility.nphies import NphiesEligibilityBuilder
 from velo_claim.builders.claim.builder import ClaimBuilderModule
@@ -76,6 +77,33 @@ def test_poll_worker_archives_callback_and_injects_checkpoint():
     assert result["callback"]["status"] == "accepted"
     assert resumed_states[0]["callback_results"]["parse_final_response"]["pre_auth_ref"] == "AUTH-1"
     assert any("/callbacks/" in uri for uri in container.object_store.objects)
+
+
+def test_poll_timeout_uses_supported_escalation_audit_type():
+    container = build_default_container()
+
+    class QueuedPayerAdapter:
+        def get_status(self, job):
+            return {"status": "queued"}
+
+    result = process_poll_job(
+        job={
+            "job_id": "job-timeout",
+            "claim_id": "CLM-TIMEOUT-001",
+            "payer_id": "A001",
+            "waiting_since": (datetime.now(UTC) - timedelta(hours=25)).isoformat(),
+        },
+        cache=container.cache,
+        repository=container.repository,
+        payer_adapter=QueuedPayerAdapter(),
+        checkpoint_store=MemoryCheckpointStore(),
+        object_store=container.object_store,
+    )
+
+    assert result["status"] == "escalated_timeout"
+    event = container.repository.audit_events[-1]
+    assert event["event_type"] == "ESCALATED"
+    assert event["payload"]["event_name"] == "ESCALATED_TIMEOUT"
 
 
 def test_eligibility_subgraph_enters_waiting_for_payer():

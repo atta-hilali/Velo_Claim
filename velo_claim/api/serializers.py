@@ -54,10 +54,22 @@ def claim_for_api(detail: dict[str, Any], object_store: ObjectStoreInterface | N
         {
             "id": claim_id,
             "claim_id": claim_id,
-            "patient": patient.get("name") or detail.get("patient_name") or patient.get("id") or "Unknown Patient",
+            "patient": (
+                patient.get("name")
+                or detail.get("patient_name")
+                or patient.get("id")
+                or detail.get("patient_id")
+                or "Unknown Patient"
+            ),
             "patient_name": patient.get("name") or detail.get("patient_name"),
             "mrn": patient.get("id") or detail.get("patient_id") or "-",
-            "payer": payer.get("name") or detail.get("payer_name") or payer.get("id") or "Unknown Payer",
+            "payer": (
+                payer.get("name")
+                or detail.get("payer_name")
+                or payer.get("id")
+                or detail.get("payer_id")
+                or "Unknown Payer"
+            ),
             "payer_name": payer.get("name") or detail.get("payer_name"),
             "payer_id": payer.get("id") or detail.get("payer_id"),
             "plan": payer.get("plan_id") or detail.get("plan_id") or "-",

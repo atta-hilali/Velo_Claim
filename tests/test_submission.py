@@ -347,6 +347,35 @@ def test_api_blocks_legacy_bypasses_and_requires_reviewer(setup, monkeypatch):
     assert b'PTE_SUBMIT' in export.content
 
 
+def test_api_manual_actions_use_supported_audit_event_types(setup, monkeypatch):
+    _, services, _, _ = setup
+    monkeypatch.setenv('VELO_SUBMISSION_REVIEWERS', '{"'+TOKEN+'":"named-reviewer"}')
+    client = TestClient(create_app(services))
+    headers = {'Authorization': 'Bearer ' + TOKEN}
+    claim_id = 'CLM-CLEAN-AUH-001'
+
+    status_response = client.patch(
+        f'/claims/{claim_id}/status',
+        json={'status': 'NEEDS_REVIEW', 'reason': 'Manual review'},
+        headers=headers,
+    )
+    action_response = client.post(
+        f'/claims/{claim_id}/actions/escalate',
+        json={'reason': 'Supervisor review'},
+        headers=headers,
+    )
+
+    assert status_response.status_code == 200, status_response.text
+    assert action_response.status_code == 200, action_response.text
+    manual_events = [
+        event
+        for event in services.repository.audit_events
+        if event.get('payload', {}).get('event_name') in {'STATUS_UPDATED', 'ACTION_REQUESTED'}
+    ]
+    assert len(manual_events) == 2
+    assert {event['event_type'] for event in manual_events} == {'NODE_EXIT'}
+
+
 def test_restart_after_journaled_send_does_not_resend(setup):
     svc, services, _, gw = setup
     approval = approved(svc)

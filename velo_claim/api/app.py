@@ -18,6 +18,7 @@ from pydantic import BaseModel, Field
 from velo_claim.core.container import ServiceContainer, build_container_from_env
 from velo_claim.builders.prior_auth.builder import PAClaimBuilderModule
 from velo_claim.builders.claim.builder import ClaimBuilderModule
+from velo_claim.core.enums import AuditEventType
 from velo_claim.core.utils import utc_now
 from velo_claim.fallback.checkpoints import MemoryCheckpointStore
 from velo_claim.ingestion.pdf_encounter import EncounterPdfExtractor, PdfExtractionError
@@ -242,21 +243,25 @@ def create_app(services: ServiceContainer | None = None):
                     "extraction_uri": extraction_uri,
                 },
             ) from exc
-        services.repository.insert_audit_event(
-            claim_id,
-            {
-                "agent": "EncounterPdfIngestion",
-                "node": "process_pdf",
-                "event_type": "PDF_ENCOUNTER_INGESTED",
-                "payload": {
-                    "source_document_uri": source_uri,
-                    "extraction_uri": extraction_uri,
-                    "sha256": digest,
-                    "warnings": extraction.warnings,
+        try:
+            services.repository.insert_audit_event(
+                claim_id,
+                {
+                    "agent": "EncounterPdfIngestion",
+                    "node": "process_pdf",
+                    "event_type": AuditEventType.NODE_EXIT,
+                    "payload": {
+                        "event_name": "PDF_ENCOUNTER_INGESTED",
+                        "source_document_uri": source_uri,
+                        "extraction_uri": extraction_uri,
+                        "sha256": digest,
+                        "warnings": extraction.warnings,
+                    },
+                    "ts": utc_now(),
                 },
-                "ts": utc_now(),
-            },
-        )
+            )
+        except Exception:
+            logger.exception("Could not write the PDF ingestion audit event for %s", claim_id)
         detail = services.repository.get_claim_detail(claim_id)
         return {
             "status": "completed",
@@ -435,8 +440,12 @@ def create_app(services: ServiceContainer | None = None):
             {
                 "agent": "VeloClaimAPI",
                 "node": "update_status",
-                "event_type": "STATUS_UPDATED",
-                "payload": {"status": body.status, "metadata": metadata},
+                "event_type": AuditEventType.NODE_EXIT,
+                "payload": {
+                    "event_name": "STATUS_UPDATED",
+                    "status": body.status,
+                    "metadata": metadata,
+                },
                 "ts": utc_now(),
             },
         )
@@ -468,8 +477,8 @@ def create_app(services: ServiceContainer | None = None):
             {
                 "agent": "VeloClaimAPI",
                 "node": f"action:{action_key}",
-                "event_type": "ACTION_REQUESTED",
-                "payload": metadata,
+                "event_type": AuditEventType.NODE_EXIT,
+                "payload": {"event_name": "ACTION_REQUESTED", **metadata},
                 "ts": utc_now(),
             },
         )

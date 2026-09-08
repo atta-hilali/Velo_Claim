@@ -1,6 +1,7 @@
 from __future__ import annotations
 import hashlib
 import json
+import logging
 import os
 import re
 
@@ -24,6 +25,8 @@ from velo_claim.pipeline import run_full_pipeline
 
 from .serializers import claim_for_api
 from uuid import uuid4
+
+logger = logging.getLogger(__name__)
 
 class BuildPARequest(BaseModel):
     state: dict[str, Any]
@@ -120,7 +123,16 @@ def create_app(services: ServiceContainer | None = None):
         try:
             result_state = run_full_pipeline(initial_state, container=services)
         except Exception as exc:
-            raise HTTPException(status_code=500, detail=str(exc)) from exc
+            error_id = uuid4().hex
+            logger.exception("Encounter pipeline failed (error_id=%s)", error_id)
+            raise HTTPException(
+                status_code=500,
+                detail={
+                    "code": "ENCOUNTER_PIPELINE_FAILED",
+                    "message": "The encounter could not be processed. Contact support with the error ID.",
+                    "error_id": error_id,
+                },
+            ) from exc
         claim_id = (
             result_state.get("claim", {}).get("claim_id")
             or result_state.get("canonical_claim", {}).get("claim_id")
@@ -150,7 +162,8 @@ def create_app(services: ServiceContainer | None = None):
         digest = hashlib.sha256(content).hexdigest()
         claim_id = f"CLM-PDF-{digest[:12].upper()}"
         existing = services.repository.get_claim_detail(claim_id)
-        if existing:
+        existing_payload = services.repository.latest_claim_payload(claim_id) if existing else None
+        if existing and existing_payload:
             return {
                 "status": "duplicate",
                 "claim_id": claim_id,
@@ -217,11 +230,14 @@ def create_app(services: ServiceContainer | None = None):
         try:
             result_state = run_full_pipeline(initial_state, container=services)
         except Exception as exc:
+            error_id = uuid4().hex
+            logger.exception("PDF encounter pipeline failed for %s (error_id=%s)", claim_id, error_id)
             raise HTTPException(
-                status_code=422,
+                status_code=500,
                 detail={
-                    "code": "PDF_PIPELINE_REJECTED",
-                    "message": str(exc),
+                    "code": "PDF_PIPELINE_FAILED",
+                    "message": "The PDF was extracted, but the claim workflow could not complete. Contact support with the error ID.",
+                    "error_id": error_id,
                     "source_document_uri": source_uri,
                     "extraction_uri": extraction_uri,
                 },

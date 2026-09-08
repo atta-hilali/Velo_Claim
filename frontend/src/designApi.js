@@ -230,7 +230,8 @@ export async function uploadEncounterPdf(file) {
   if (!response.ok) {
     const detail = data.detail || data;
     const missing = Array.isArray(detail.missing_fields) ? ` Missing: ${detail.missing_fields.join(", ")}.` : "";
-    throw new Error(`${detail.message || `API ${response.status}`}${missing}`);
+    const errorId = detail.error_id ? ` Error ID: ${detail.error_id}.` : "";
+    throw new Error(`${detail.message || `API ${response.status}`}${missing}${errorId}`);
   }
   return { ...data, claim: normalizeBackendClaim(data.claim) };
 }

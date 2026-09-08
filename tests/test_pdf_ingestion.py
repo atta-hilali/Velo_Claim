@@ -11,6 +11,7 @@ from velo_claim.ingestion.pdf_encounter import (
     extract_encounter_from_text,
     missing_routing_fields,
 )
+from velo_claim.storage.memory import InMemoryRepository
 
 
 ENCOUNTER_TEXT = """
@@ -154,6 +155,7 @@ def test_table_style_daman_claim_form_is_extracted_without_template_specific_coo
     assert package["encounter"]["period"]["start"] == "2026-05-02T22:15:00"
     assert package["encounter"]["class"]["code"] == "EMER"
     assert package["provider"]["identifier"][0]["value"] == "DHA-P-778812"
+    assert package["provider"]["id"] == "DHA-P-778812"
     assert package["facility"]["name"] == "Dubai Hospital"
     assert package["jurisdiction"] == "DUBAI"
     assert [item["code"]["coding"][0]["code"] for item in package["conditions"]] == ["S27.9"]
@@ -162,6 +164,87 @@ def test_table_style_daman_claim_form_is_extracted_without_template_specific_coo
     assert package["charge_items"][0]["net"] == 855.0
     assert package["charge_items"][0]["patient_share"] == 95.0
     assert len(package["attachments"]) == 2
+
+
+def test_table_form_without_ehr_provider_id_completes_pipeline_using_license(monkeypatch) -> None:
+    services = build_default_container()
+    package = extract_encounter_from_text(DAMAN_TABLE_FORM_TEXT)
+    extraction = PdfExtractionResult(package, page_count=2, text_characters=len(DAMAN_TABLE_FORM_TEXT))
+    monkeypatch.setattr(EncounterPdfExtractor, "extract", lambda self, content: extraction)
+
+    response = TestClient(create_app(services)).post(
+        "/encounters/pdf",
+        files={"file": ("daman-form.pdf", b"%PDF-1.7 daman-form", "application/pdf")},
+    )
+
+    assert response.status_code == 200, response.text
+    claim_id = response.json()["claim_id"]
+    assert services.repository.claims[claim_id]["provider_id"] == "DHA-P-778812"
+
+
+def test_interrupted_pdf_import_without_payload_can_be_retried(monkeypatch) -> None:
+    import hashlib
+
+    services = build_default_container()
+    content = b"%PDF-1.7 interrupted-daman-form"
+    claim_id = f"CLM-PDF-{hashlib.sha256(content).hexdigest()[:12].upper()}"
+    services.repository.upsert_claim(
+        claim_id,
+        {
+            "status": "DRAFT_BUILDING",
+            "jurisdiction": "DUBAI",
+            "payer_id": "DAMAN-AE-014",
+            "provider_id": "DHA-P-778812",
+            "patient_id": "AE-PAT-0001",
+        },
+    )
+    package = extract_encounter_from_text(DAMAN_TABLE_FORM_TEXT)
+    extraction = PdfExtractionResult(package, page_count=2, text_characters=len(DAMAN_TABLE_FORM_TEXT))
+    monkeypatch.setattr(EncounterPdfExtractor, "extract", lambda self, content: extraction)
+
+    response = TestClient(create_app(services)).post(
+        "/encounters/pdf",
+        files={"file": ("daman-form.pdf", content, "application/pdf")},
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.json()["status"] == "completed"
+    assert services.repository.latest_claim_payload(claim_id) is not None
+
+
+def test_pdf_pipeline_error_does_not_expose_database_details(monkeypatch) -> None:
+    import importlib
+
+    app_module = importlib.import_module("velo_claim.api.app")
+
+    services = build_default_container()
+    package = extract_encounter_from_text(DAMAN_TABLE_FORM_TEXT)
+    extraction = PdfExtractionResult(package, page_count=2, text_characters=len(DAMAN_TABLE_FORM_TEXT))
+    monkeypatch.setattr(EncounterPdfExtractor, "extract", lambda self, content: extraction)
+    monkeypatch.setattr(
+        app_module,
+        "run_full_pipeline",
+        lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError("secret SQL constraint detail")),
+    )
+
+    response = TestClient(create_app(services)).post(
+        "/encounters/pdf",
+        files={"file": ("daman-form.pdf", b"%PDF-1.7 failed-pipeline", "application/pdf")},
+    )
+
+    assert response.status_code == 500
+    detail = response.json()["detail"]
+    assert detail["code"] == "PDF_PIPELINE_FAILED"
+    assert detail["error_id"]
+    assert "secret SQL" not in response.text
+
+
+def test_partial_claim_upsert_does_not_erase_known_provider_identity() -> None:
+    repository = InMemoryRepository()
+    repository.upsert_claim("CLM-1", {"status": "DRAFT_BUILDING", "provider_id": "DHA-P-778812"})
+    repository.upsert_claim("CLM-1", {"status": "DRAFT_BUILT", "provider_id": None})
+
+    assert repository.claims["CLM-1"]["provider_id"] == "DHA-P-778812"
 
 
 def test_pdf_upload_stores_source_and_runs_existing_pipeline(monkeypatch) -> None:

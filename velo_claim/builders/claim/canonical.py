@@ -49,7 +49,7 @@ def build_canonical_claim(
             "eligibility_ref": source.coverage.get("eligibility_ref") or source.coverage.get("id_payer"),
         },
         "provider": {
-            "id": source.provider.get("id"),
+            "id": source.provider.get("id") or routing.provider_license,
             "name": first_name(source.provider),
             "license": routing.provider_license,
             "license_system": routing.provider_license_system,

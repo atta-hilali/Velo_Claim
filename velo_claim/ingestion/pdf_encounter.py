@@ -169,6 +169,7 @@ def extract_encounter_from_text(text: str) -> dict[str, Any]:
     provider_id = _identifier(_field(text, "Practitioner ID", "Clinician ID", "Provider ID"))
     provider_name = _field(text, "Practitioner Name", "Clinician Name", "Provider Name", "Doctor Name", "Attending Provider")
     provider_license = _identifier(_field(text, "Practitioner License", "Clinician License", "Provider License", "License No.", "License No"))
+    provider_id = provider_id or provider_license
     facility_id = _identifier(_field(text, "Facility ID", "Organization ID"))
     facility_name = _field(text, "Facility Name", "Clinic Name", "Hospital Name") or _facility_name(text)
     facility_license = _identifier(_field(text, "Facility License", "Facility Code", "Sender ID"))

@@ -1,6 +1,6 @@
 # Pending DGX Migration
 
-Status: `APPLIED´
+Status: `PENDING` - migration 006 must be applied on the legacy DGX database.
 
 Before deploying the latest Shafafiya and controlled-submission changes on DGX,
 apply every migration below that is not already recorded as applied:
@@ -28,6 +28,12 @@ docker exec -i velo-claim-postgres \
   --single-transaction \
   -v ON_ERROR_STOP=1 \
   < velo_claim/migrations/005_payer_submission_journal.sql
+
+docker exec -i velo-claim-postgres \
+  psql -U velo_claim -d velo_claim \
+  --single-transaction \
+  -v ON_ERROR_STOP=1 \
+  < velo_claim/migrations/006_claim_intake_nullable_identifiers.sql
 ```
 
 Verify it afterward:

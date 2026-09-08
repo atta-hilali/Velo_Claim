@@ -63,7 +63,7 @@ class ClaimBuilderModule:
                 "status": PayloadStatus.DRAFT_BUILDING,
                 "jurisdiction": route.get("jurisdiction"),
                 "payer_id": routing_context.payer_id,
-                "provider_id": canonical_claim["provider"].get("id"),
+                "provider_id": canonical_claim["provider"].get("id") or routing_context.provider_license,
                 "patient_id": canonical_claim["patient"].get("id"),
             },
         )

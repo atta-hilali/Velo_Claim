@@ -34,7 +34,8 @@ class InMemoryRepository(RepositoryInterface):
 
     def upsert_claim(self, claim_id: str, data: dict[str, Any]) -> None:
         existing = self.claims.get(claim_id, {})
-        self.claims[claim_id] = {**existing, **data, "updated_at": utc_now()}
+        non_null_data = {key: value for key, value in data.items() if value is not None}
+        self.claims[claim_id] = {**existing, **non_null_data, "updated_at": utc_now()}
         self.claims[claim_id].setdefault("created_at", utc_now())
 
     def insert_claim_version(self, claim_id: str, version: int, data: dict[str, Any]) -> None:

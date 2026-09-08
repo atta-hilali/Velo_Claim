@@ -55,10 +55,10 @@ class PostgresRepository(RepositoryInterface):
                 VALUES (%s, %s, %s, %s, %s, %s)
                 ON CONFLICT (claim_id) DO UPDATE SET
                   status = EXCLUDED.status,
-                  jurisdiction = EXCLUDED.jurisdiction,
-                  payer_id = EXCLUDED.payer_id,
-                  provider_id = EXCLUDED.provider_id,
-                  patient_id = EXCLUDED.patient_id,
+                  jurisdiction = COALESCE(EXCLUDED.jurisdiction, claim.jurisdiction),
+                  payer_id = COALESCE(EXCLUDED.payer_id, claim.payer_id),
+                  provider_id = COALESCE(EXCLUDED.provider_id, claim.provider_id),
+                  patient_id = COALESCE(EXCLUDED.patient_id, claim.patient_id),
                   updated_at = now()
                 """,
                 (

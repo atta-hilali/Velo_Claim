@@ -113,8 +113,12 @@ The backend accepts PDFs up to 10 MB and 100 pages by default. A PDF without a
 usable text layer is rejected with `PDF_OCR_REQUIRED`; configure
 `PDF_OCR_ENDPOINT` for scanned-document OCR. Optional MedGemma extraction is
 disabled by default and can be enabled with `PDF_ENCOUNTER_USE_LLM=true` after
-configuring an internal extraction endpoint. Missing patient, payer, service
-date, or facility facts stop the pipeline and are returned to the RCM user.
+configuring an internal extraction endpoint. The deterministic parser combines
+normal page text, layout-preserved text, AcroForm values, label/value blocks,
+claim-form tables, code-system suffixes, and charge-summary rows. This supports
+different searchable templates without relying on fixed PDF coordinates. Missing
+patient, payer, service date, or facility facts stop the pipeline and are returned
+to the RCM user instead of being inferred.
 
 After changing `requirements.txt`, rebuild the DGX API image:
 

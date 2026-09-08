@@ -1,9 +1,9 @@
 {
   "status": "completed",
-  "claim_id": "CLM-2ACE4CBF1CD6",
+  "claim_id": "CLM-F696AAB99018",
   "claim": {
-    "id": "CLM-2ACE4CBF1CD6",
-    "claim_id": "CLM-2ACE4CBF1CD6",
+    "id": "CLM-F696AAB99018",
+    "claim_id": "CLM-F696AAB99018",
     "patient": "Abdullah Al-Qahtani",
     "patient_name": "Abdullah Al-Qahtani",
     "mrn": "SA-PAT-0001",
@@ -17,7 +17,7 @@
     "service_date": "2026-06-15",
     "score": 85,
     "status": "ready",
-    "updated": "2026-08-16T17:01:49+00:00",
+    "updated": "2026-09-08T15:39:35+00:00",
     "amount": "SAR 344.00",
     "canonical_claim": {
       "payer": {
@@ -29,7 +29,8 @@
           "end": "2026-12-31",
           "start": "2026-01-01"
         },
-        "coverage_status": "active"
+        "coverage_status": "active",
+        "eligibility_ref": null
       },
       "amount": {
         "net": 344.0,
@@ -43,9 +44,11 @@
         "gender": "male",
         "member_id": "MEM-445566",
         "birth_date": "1985-04-12",
-        "emirates_id": "1023456789"
+        "emirates_id": "1023456789",
+        "national_identifier": "1023456789",
+        "national_identifier_type": "national_id"
       },
-      "claim_id": "CLM-2ACE4CBF1CD6",
+      "claim_id": "CLM-F696AAB99018",
       "provider": {
         "id": "SA-PROV-0001",
         "name": "Dr. Sara Al-Harbi",
@@ -77,31 +80,43 @@
           "end": "2026-06-15T11:00:00+03:00",
           "start": "2026-06-15T09:30:00+03:00"
         },
+        "end_type": null,
+        "class_code": "ambulatory",
         "patient_id": "SA-PAT-0001",
-        "service_date": "2026-06-15"
+        "start_type": null,
+        "service_date": "2026-06-15",
+        "shafafiya_type": null
       },
       "line_items": [
         {
           "id": "CHG-0001",
           "net": 200.0,
+          "vat": 0.0,
           "code": "99213",
           "gross": 250.0,
           "system": "CPT",
           "currency": "SAR",
           "quantity": 1,
           "description": "Physician consultation - follow-up",
+          "vat_percent": null,
+          "date_ordered": null,
+          "service_date": "2026-06-15",
           "patient_share": 50.0,
           "missing_financial_fields": []
         },
         {
           "id": "CHG-0002",
           "net": 144.0,
+          "vat": 0.0,
           "code": "80053",
           "gross": 180.0,
           "system": "CPT",
           "currency": "SAR",
           "quantity": 1,
           "description": "Comprehensive metabolic panel (lab test)",
+          "vat_percent": null,
+          "date_ordered": null,
+          "service_date": "2026-06-15",
           "patient_share": 36.0,
           "missing_financial_fields": []
         }
@@ -112,10 +127,7 @@
           "system": "CPT",
           "quantity": 1,
           "description": "Office visit, established patient, low complexity",
-          "bundled_with": [
-            "99211",
-            "99212"
-          ],
+          "bundled_with": [],
           "service_date": "2026-06-15"
         },
         {
@@ -452,9 +464,9 @@
     "payload": {
       "version": 1,
       "format": "fhir_bundle_json",
-      "hash": "5df7bbf0bccbffa31ef983c0a52b8c677c3a65654a04fa0454a829a81b061578",
-      "generated": "2026-08-16T17:01:49.411090+00:00",
-      "raw": "{\n  \"resourceType\": \"Bundle\",\n  \"id\": \"ff5f6775-038c-4ef3-8748-7e004ac805f4\",\n  \"meta\": {\n    \"profile\": [\n      \"http://nphies.sa/fhir/ksa/nphies-fs/StructureDefinition/bundle|1.0.0\"\n    ]\n  },\n  \"type\": \"message\",\n  \"entry\": [\n    {\n      \"fullUrl\": \"urn:uuid:0db74070-175e-4d4b-9483-ca4fe487f5a2\",\n      \"resource\": {\n        \"resourceType\": \"MessageHeader\",\n        \"eventCoding\": {\n          \"system\": \"http://nphies.sa/terminology/CodeSystem/ksa-message-events\",\n          \"code\": \"claim-request\"\n        },\n        \"source\": {\n          \"endpoint\": \"https://veloclaim.local/fhir\"\n        },\n        \"destination\": [\n          {\n            \"name\": \"Bupa Arabia\",\n            \"receiver\": {\n              \"identifier\": {\n                \"system\": \"http://nphies.sa/license/payer-license\",\n                \"value\": \"BUPA-SA-001\"\n              }\n            }\n          }\n        ],\n        \"focus\": [\n          {\n            \"reference\": \"Claim/CLM-2ACE4CBF1CD6\"\n          }\n        ]\n      }\n    },\n    {\n      \"fullUrl\": \"Claim/CLM-2ACE4CBF1CD6\",\n      \"resource\": {\n        \"resourceType\": \"Claim\",\n        \"id\": \"CLM-2ACE4CBF1CD6\",\n        \"meta\": {\n          \"profile\": [\n            \"http://nphies.sa/fhir/ksa/nphies-fs/StructureDefinition/claim|1.0.0\"\n          ]\n        },\n        \"status\": \"active\",\n        \"type\": {\n          \"coding\": [\n            {\n              \"system\": \"http://terminology.hl7.org/CodeSystem/claim-type\",\n              \"code\": \"professional\"\n            }\n          ]\n        },\n        \"use\": \"claim\",\n        \"patient\": {\n          \"reference\": \"Patient/SA-PAT-0001\"\n        },\n        \"created\": \"2026-06-15\",\n        \"provider\": {\n          \"identifier\": {\n            \"value\": \"NPHIES-FAC-5567\"\n          }\n        },\n        \"insurer\": {\n          \"identifier\": {\n            \"value\": \"BUPA-SA-001\"\n          }\n        },\n        \"priority\": {\n          \"coding\": [\n            {\n              \"system\": \"http://terminology.hl7.org/CodeSystem/processpriority\",\n              \"code\": \"normal\"\n            }\n          ]\n        },\n        \"insurance\": [\n          {\n            \"sequence\": 1,\n            \"focal\": true,\n            \"coverage\": {\n              \"reference\": \"Coverage/SA-COV-0001\"\n            }\n          }\n        ],\n        \"diagnosis\": [\n          {\n            \"sequence\": 1,\n            \"diagnosisCodeableConcept\": {\n              \"coding\": [\n                {\n                  \"system\": \"http://hl7.org/fhir/sid/icd-10\",\n                  \"code\": \"I10\",\n                  \"display\": \"Essential (primary) hypertension\"\n                }\n              ]\n            },\n            \"type\": [\n              {\n                \"coding\": [\n                  {\n                    \"system\": \"http://terminology.hl7.org/CodeSystem/ex-diagnosistype\",\n                    \"code\": \"principal\"\n                  }\n                ]\n              }\n            ]\n          },\n          {\n            \"sequence\": 2,\n            \"diagnosisCodeableConcept\": {\n              \"coding\": [\n                {\n                  \"system\": \"http://hl7.org/fhir/sid/icd-10\",\n                  \"code\": \"E11.9\",\n                  \"display\": \"Type 2 diabetes mellitus without complications\"\n                }\n              ]\n            },\n            \"type\": [\n              {\n                \"coding\": [\n                  {\n                    \"system\": \"http://terminology.hl7.org/CodeSystem/ex-diagnosistype\",\n                    \"code\": \"secondary\"\n                  }\n                ]\n              }\n            ]\n          }\n        ],\n        \"item\": [\n          {\n            \"sequence\": 1,\n            \"productOrService\": {\n              \"coding\": [\n                {\n                  \"system\": \"http://www.ama-assn.org/go/cpt\",\n                  \"code\": \"99213\",\n                  \"display\": \"Physician consultation - follow-up\"\n                }\n              ]\n            },\n            \"quantity\": {\n              \"value\": 1\n            },\n            \"net\": {\n              \"value\": 200.0,\n              \"currency\": \"SAR\"\n            }\n          },\n          {\n            \"sequence\": 2,\n            \"productOrService\": {\n              \"coding\": [\n                {\n                  \"system\": \"http://www.ama-assn.org/go/cpt\",\n                  \"code\": \"80053\",\n                  \"display\": \"Comprehensive metabolic panel (lab test)\"\n                }\n              ]\n            },\n            \"quantity\": {\n              \"value\": 1\n            },\n            \"net\": {\n              \"value\": 144.0,\n              \"currency\": \"SAR\"\n            }\n          }\n        ],\n        \"total\": {\n          \"value\": 344.0,\n          \"currency\": \"SAR\"\n        }\n      }\n    }\n  ]\n}",
+      "hash": "c9adacf980af1a43d79a06c77a4cfd53ce6650cd01ff92fc61b21d91eb3fbf1d",
+      "generated": "2026-09-08T15:39:34.809434+00:00",
+      "raw": "{\n  \"resourceType\": \"Bundle\",\n  \"id\": \"7a8cd582-07cb-4ab6-9c66-5b934621048f\",\n  \"meta\": {\n    \"profile\": [\n      \"http://nphies.sa/fhir/ksa/nphies-fs/StructureDefinition/bundle|1.0.0\"\n    ]\n  },\n  \"type\": \"message\",\n  \"timestamp\": \"2026-09-08T15:39:34+00:00\",\n  \"entry\": [\n    {\n      \"fullUrl\": \"MessageHeader/afbca458-705a-4f5b-871a-7a5c174e7777\",\n      \"resource\": {\n        \"resourceType\": \"MessageHeader\",\n        \"id\": \"afbca458-705a-4f5b-871a-7a5c174e7777\",\n        \"meta\": {\n          \"profile\": [\n            \"http://nphies.sa/fhir/ksa/nphies-fs/StructureDefinition/message-header|1.0.0\"\n          ]\n        },\n        \"eventCoding\": {\n          \"system\": \"http://nphies.sa/terminology/CodeSystem/ksa-message-events\",\n          \"code\": \"claim-request\"\n        },\n        \"source\": {\n          \"endpoint\": \"https://velodoc.ai/fhir\"\n        },\n        \"destination\": [\n          {\n            \"endpoint\": \"https://nphies.sa/fhir/$process-message\",\n            \"receiver\": {\n              \"type\": \"Organization\",\n              \"identifier\": {\n                \"system\": \"http://nphies.sa/license/payer-license\",\n                \"use\": \"official\",\n                \"value\": \"BUPA-SA-001\"\n              }\n            }\n          }\n        ],\n        \"sender\": {\n          \"type\": \"Organization\",\n          \"identifier\": {\n            \"system\": \"http://nphies.sa/license/provider-license\",\n            \"use\": \"official\",\n            \"value\": \"NPHIES-FAC-5567\"\n          }\n        },\n        \"focus\": [\n          {\n            \"reference\": \"Claim/CLM-F696AAB99018\"\n          }\n        ]\n      }\n    },\n    {\n      \"fullUrl\": \"Organization/SA-FAC-0001\",\n      \"resource\": {\n        \"resourceType\": \"Organization\",\n        \"id\": \"SA-FAC-0001\",\n        \"meta\": {\n          \"profile\": [\n            \"http://nphies.sa/fhir/ksa/nphies-fs/StructureDefinition/provider-organization|1.0.0\"\n          ]\n        },\n        \"identifier\": [\n          {\n            \"system\": \"http://nphies.sa/license/provider-license\",\n            \"use\": \"official\",\n            \"value\": \"NPHIES-FAC-5567\"\n          }\n        ],\n        \"type\": [\n          {\n            \"coding\": [\n              {\n                \"system\": \"http://nphies.sa/terminology/CodeSystem/organization-type\",\n                \"code\": \"prov\",\n                \"display\": \"Provider\"\n              }\n            ]\n          }\n        ],\n        \"name\": \"King Faisal Specialist Hospital\"\n      }\n    },\n    {\n      \"fullUrl\": \"Organization/BUPA-SA-001\",\n      \"resource\": {\n        \"resourceType\": \"Organization\",\n        \"id\": \"BUPA-SA-001\",\n        \"meta\": {\n          \"profile\": [\n            \"http://nphies.sa/fhir/ksa/nphies-fs/StructureDefinition/insurer-organization|1.0.0\"\n          ]\n        },\n        \"identifier\": [\n          {\n            \"system\": \"http://nphies.sa/license/payer-license\",\n            \"use\": \"official\",\n            \"value\": \"BUPA-SA-001\"\n          }\n        ],\n        \"type\": [\n          {\n            \"coding\": [\n              {\n                \"system\": \"http://nphies.sa/terminology/CodeSystem/organization-type\",\n                \"code\": \"ins\",\n                \"display\": \"Insurer\"\n              }\n            ]\n          }\n        ],\n        \"name\": \"Bupa Arabia\"\n      }\n    },\n    {\n      \"fullUrl\": \"Practitioner/SA-PROV-0001\",\n      \"resource\": {\n        \"resourceType\": \"Practitioner\",\n        \"id\": \"SA-PROV-0001\",\n        \"meta\": {\n          \"profile\": [\n            \"http://nphies.sa/fhir/ksa/nphies-fs/StructureDefinition/practitioner|1.0.0\"\n          ]\n        },\n        \"identifier\": [\n          {\n            \"system\": \"http://nphies.sa/license/practitioner-license\",\n            \"use\": \"official\",\n            \"value\": \"NPHIES-PRV-1029\"\n          }\n        ],\n        \"name\": [\n          {\n            \"text\": \"Dr. Sara Al-Harbi\",\n            \"given\": [\n              \"Dr.\",\n              \"Sara\"\n            ],\n            \"family\": \"Al-Harbi\"\n          }\n        ]\n      }\n    },\n    {\n      \"fullUrl\": \"Patient/SA-PAT-0001\",\n      \"resource\": {\n        \"resourceType\": \"Patient\",\n        \"id\": \"SA-PAT-0001\",\n        \"meta\": {\n          \"profile\": [\n            \"http://nphies.sa/fhir/ksa/nphies-fs/StructureDefinition/patient|1.0.0\"\n          ]\n        },\n        \"identifier\": [\n          {\n            \"system\": \"http://nphies.sa/identifier/patient\",\n            \"use\": \"official\",\n            \"value\": \"1023456789\"\n          }\n        ],\n        \"name\": [\n          {\n            \"text\": \"Abdullah Al-Qahtani\",\n            \"given\": [\n              \"Abdullah\"\n            ],\n            \"family\": \"Al-Qahtani\"\n          }\n        ],\n        \"birthDate\": \"1985-04-12\",\n        \"gender\": \"male\"\n      }\n    },\n    {\n      \"fullUrl\": \"Coverage/SA-COV-0001\",\n      \"resource\": {\n        \"resourceType\": \"Coverage\",\n        \"id\": \"SA-COV-0001\",\n        \"meta\": {\n          \"profile\": [\n            \"http://nphies.sa/fhir/ksa/nphies-fs/StructureDefinition/coverage|1.0.0\"\n          ]\n        },\n        \"status\": \"active\",\n        \"subscriberId\": \"MEM-445566\",\n        \"subscriber\": {\n          \"reference\": \"Patient/SA-PAT-0001\"\n        },\n        \"beneficiary\": {\n          \"reference\": \"Patient/SA-PAT-0001\"\n        },\n        \"relationship\": {\n          \"coding\": [\n            {\n              \"system\": \"http://terminology.hl7.org/CodeSystem/subscriber-relationship\",\n              \"code\": \"self\"\n            }\n          ]\n        },\n        \"payor\": [\n          {\n            \"reference\": \"Organization/BUPA-SA-001\"\n          }\n        ],\n        \"class\": [\n          {\n            \"type\": {\n              \"text\": \"plan\"\n            },\n            \"value\": \"comprehensive\"\n          }\n        ],\n        \"period\": {\n          \"start\": \"2026-01-01\",\n          \"end\": \"2026-12-31\"\n        }\n      }\n    },\n    {\n      \"fullUrl\": \"Encounter/SA-ENC-0001\",\n      \"resource\": {\n        \"resourceType\": \"Encounter\",\n        \"id\": \"SA-ENC-0001\",\n        \"meta\": {\n          \"profile\": [\n            \"http://nphies.sa/fhir/ksa/nphies-fs/StructureDefinition/encounter-claim-amb|1.0.0\"\n          ]\n        },\n        \"status\": \"finished\",\n        \"class\": {\n          \"system\": \"http://terminology.hl7.org/CodeSystem/v3-ActCode\",\n          \"code\": \"AMB\"\n        },\n        \"subject\": {\n          \"reference\": \"Patient/SA-PAT-0001\"\n        },\n        \"participant\": [\n          {\n            \"individual\": {\n              \"reference\": \"Practitioner/SA-PROV-0001\"\n            }\n          }\n        ],\n        \"serviceProvider\": {\n          \"reference\": \"Organization/SA-FAC-0001\"\n        },\n        \"period\": {\n          \"start\": \"2026-06-15T09:30:00+03:00\",\n          \"end\": \"2026-06-15T11:00:00+03:00\"\n        }\n      }\n    },\n    {\n      \"fullUrl\": \"Claim/CLM-F696AAB99018\",\n      \"resource\": {\n        \"resourceType\": \"Claim\",\n        \"id\": \"CLM-F696AAB99018\",\n        \"meta\": {\n          \"profile\": [\n            \"http://nphies.sa/fhir/ksa/nphies-fs/StructureDefinition/professional-claim|1.0.0\"\n          ]\n        },\n        \"extension\": [\n          {\n            \"url\": \"http://nphies.sa/fhir/ksa/nphies-fs/StructureDefinition/extension-encounter|1.0.0\",\n            \"valueReference\": {\n              \"reference\": \"Encounter/SA-ENC-0001\"\n            }\n          }\n        ],\n        \"status\": \"active\",\n        \"type\": {\n          \"coding\": [\n            {\n              \"system\": \"http://terminology.hl7.org/CodeSystem/claim-type\",\n              \"code\": \"professional\"\n            }\n          ]\n        },\n        \"use\": \"claim\",\n        \"patient\": {\n          \"reference\": \"Patient/SA-PAT-0001\"\n        },\n        \"created\": \"2026-09-08T15:39:34+00:00\",\n        \"provider\": {\n          \"reference\": \"Organization/SA-FAC-0001\"\n        },\n        \"insurer\": {\n          \"reference\": \"Organization/BUPA-SA-001\"\n        },\n        \"priority\": {\n          \"coding\": [\n            {\n              \"system\": \"http://terminology.hl7.org/CodeSystem/processpriority\",\n              \"code\": \"normal\"\n            }\n          ]\n        },\n        \"careTeam\": [\n          {\n            \"sequence\": 1,\n            \"provider\": {\n              \"reference\": \"Practitioner/SA-PROV-0001\"\n            }\n          }\n        ],\n        \"insurance\": [\n          {\n            \"sequence\": 1,\n            \"focal\": true,\n            \"coverage\": {\n              \"reference\": \"Coverage/SA-COV-0001\"\n            }\n          }\n        ],\n        \"diagnosis\": [\n          {\n            \"sequence\": 1,\n            \"diagnosisCodeableConcept\": {\n              \"coding\": [\n                {\n                  \"system\": \"http://hl7.org/fhir/sid/icd-10\",\n                  \"code\": \"I10\",\n                  \"display\": \"Essential (primary) hypertension\"\n                }\n              ]\n            },\n            \"type\": [\n              {\n                \"coding\": [\n                  {\n                    \"system\": \"http://nphies.sa/terminology/CodeSystem/diagnosis-type\",\n                    \"code\": \"principal\"\n                  }\n                ]\n              }\n            ]\n          },\n          {\n            \"sequence\": 2,\n            \"diagnosisCodeableConcept\": {\n              \"coding\": [\n                {\n                  \"system\": \"http://hl7.org/fhir/sid/icd-10\",\n                  \"code\": \"E11.9\",\n                  \"display\": \"Type 2 diabetes mellitus without complications\"\n                }\n              ]\n            },\n            \"type\": [\n              {\n                \"coding\": [\n                  {\n                    \"system\": \"http://nphies.sa/terminology/CodeSystem/diagnosis-type\",\n                    \"code\": \"secondary\"\n                  }\n                ]\n              }\n            ]\n          }\n        ],\n        \"item\": [\n          {\n            \"sequence\": 1,\n            \"careTeamSequence\": [\n              1\n            ],\n            \"productOrService\": {\n              \"coding\": [\n                {\n                  \"system\": \"http://www.ama-assn.org/go/cpt\",\n                  \"code\": \"99213\",\n                  \"display\": \"Physician consultation - follow-up\"\n                }\n              ]\n            },\n            \"servicedDate\": \"2026-06-15\",\n            \"quantity\": {\n              \"value\": 1\n            },\n            \"net\": {\n              \"value\": 200.0,\n              \"currency\": \"SAR\"\n            }\n          },\n          {\n            \"sequence\": 2,\n            \"careTeamSequence\": [\n              1\n            ],\n            \"productOrService\": {\n              \"coding\": [\n                {\n                  \"system\": \"http://www.ama-assn.org/go/cpt\",\n                  \"code\": \"80053\",\n                  \"display\": \"Comprehensive metabolic panel (lab test)\"\n                }\n              ]\n            },\n            \"servicedDate\": \"2026-06-15\",\n            \"quantity\": {\n              \"value\": 1\n            },\n            \"net\": {\n              \"value\": 144.0,\n              \"currency\": \"SAR\"\n            }\n          }\n        ],\n        \"total\": {\n          \"value\": 344.0,\n          \"currency\": \"SAR\"\n        }\n      }\n    }\n  ]\n}",
       "lineItems": [
         {
           "code": "99213",
@@ -477,28 +489,28 @@
         "patient": 86.0
       }
     },
-    "claim_payload": "{\n  \"resourceType\": \"Bundle\",\n  \"id\": \"ff5f6775-038c-4ef3-8748-7e004ac805f4\",\n  \"meta\": {\n    \"profile\": [\n      \"http://nphies.sa/fhir/ksa/nphies-fs/StructureDefinition/bundle|1.0.0\"\n    ]\n  },\n  \"type\": \"message\",\n  \"entry\": [\n    {\n      \"fullUrl\": \"urn:uuid:0db74070-175e-4d4b-9483-ca4fe487f5a2\",\n      \"resource\": {\n        \"resourceType\": \"MessageHeader\",\n        \"eventCoding\": {\n          \"system\": \"http://nphies.sa/terminology/CodeSystem/ksa-message-events\",\n          \"code\": \"claim-request\"\n        },\n        \"source\": {\n          \"endpoint\": \"https://veloclaim.local/fhir\"\n        },\n        \"destination\": [\n          {\n            \"name\": \"Bupa Arabia\",\n            \"receiver\": {\n              \"identifier\": {\n                \"system\": \"http://nphies.sa/license/payer-license\",\n                \"value\": \"BUPA-SA-001\"\n              }\n            }\n          }\n        ],\n        \"focus\": [\n          {\n            \"reference\": \"Claim/CLM-2ACE4CBF1CD6\"\n          }\n        ]\n      }\n    },\n    {\n      \"fullUrl\": \"Claim/CLM-2ACE4CBF1CD6\",\n      \"resource\": {\n        \"resourceType\": \"Claim\",\n        \"id\": \"CLM-2ACE4CBF1CD6\",\n        \"meta\": {\n          \"profile\": [\n            \"http://nphies.sa/fhir/ksa/nphies-fs/StructureDefinition/claim|1.0.0\"\n          ]\n        },\n        \"status\": \"active\",\n        \"type\": {\n          \"coding\": [\n            {\n              \"system\": \"http://terminology.hl7.org/CodeSystem/claim-type\",\n              \"code\": \"professional\"\n            }\n          ]\n        },\n        \"use\": \"claim\",\n        \"patient\": {\n          \"reference\": \"Patient/SA-PAT-0001\"\n        },\n        \"created\": \"2026-06-15\",\n        \"provider\": {\n          \"identifier\": {\n            \"value\": \"NPHIES-FAC-5567\"\n          }\n        },\n        \"insurer\": {\n          \"identifier\": {\n            \"value\": \"BUPA-SA-001\"\n          }\n        },\n        \"priority\": {\n          \"coding\": [\n            {\n              \"system\": \"http://terminology.hl7.org/CodeSystem/processpriority\",\n              \"code\": \"normal\"\n            }\n          ]\n        },\n        \"insurance\": [\n          {\n            \"sequence\": 1,\n            \"focal\": true,\n            \"coverage\": {\n              \"reference\": \"Coverage/SA-COV-0001\"\n            }\n          }\n        ],\n        \"diagnosis\": [\n          {\n            \"sequence\": 1,\n            \"diagnosisCodeableConcept\": {\n              \"coding\": [\n                {\n                  \"system\": \"http://hl7.org/fhir/sid/icd-10\",\n                  \"code\": \"I10\",\n                  \"display\": \"Essential (primary) hypertension\"\n                }\n              ]\n            },\n            \"type\": [\n              {\n                \"coding\": [\n                  {\n                    \"system\": \"http://terminology.hl7.org/CodeSystem/ex-diagnosistype\",\n                    \"code\": \"principal\"\n                  }\n                ]\n              }\n            ]\n          },\n          {\n            \"sequence\": 2,\n            \"diagnosisCodeableConcept\": {\n              \"coding\": [\n                {\n                  \"system\": \"http://hl7.org/fhir/sid/icd-10\",\n                  \"code\": \"E11.9\",\n                  \"display\": \"Type 2 diabetes mellitus without complications\"\n                }\n              ]\n            },\n            \"type\": [\n              {\n                \"coding\": [\n                  {\n                    \"system\": \"http://terminology.hl7.org/CodeSystem/ex-diagnosistype\",\n                    \"code\": \"secondary\"\n                  }\n                ]\n              }\n            ]\n          }\n        ],\n        \"item\": [\n          {\n            \"sequence\": 1,\n            \"productOrService\": {\n              \"coding\": [\n                {\n                  \"system\": \"http://www.ama-assn.org/go/cpt\",\n                  \"code\": \"99213\",\n                  \"display\": \"Physician consultation - follow-up\"\n                }\n              ]\n            },\n            \"quantity\": {\n              \"value\": 1\n            },\n            \"net\": {\n              \"value\": 200.0,\n              \"currency\": \"SAR\"\n            }\n          },\n          {\n            \"sequence\": 2,\n            \"productOrService\": {\n              \"coding\": [\n                {\n                  \"system\": \"http://www.ama-assn.org/go/cpt\",\n                  \"code\": \"80053\",\n                  \"display\": \"Comprehensive metabolic panel (lab test)\"\n                }\n              ]\n            },\n            \"quantity\": {\n              \"value\": 1\n            },\n            \"net\": {\n              \"value\": 144.0,\n              \"currency\": \"SAR\"\n            }\n          }\n        ],\n        \"total\": {\n          \"value\": 344.0,\n          \"currency\": \"SAR\"\n        }\n      }\n    }\n  ]\n}",
+    "claim_payload": "{\n  \"resourceType\": \"Bundle\",\n  \"id\": \"7a8cd582-07cb-4ab6-9c66-5b934621048f\",\n  \"meta\": {\n    \"profile\": [\n      \"http://nphies.sa/fhir/ksa/nphies-fs/StructureDefinition/bundle|1.0.0\"\n    ]\n  },\n  \"type\": \"message\",\n  \"timestamp\": \"2026-09-08T15:39:34+00:00\",\n  \"entry\": [\n    {\n      \"fullUrl\": \"MessageHeader/afbca458-705a-4f5b-871a-7a5c174e7777\",\n      \"resource\": {\n        \"resourceType\": \"MessageHeader\",\n        \"id\": \"afbca458-705a-4f5b-871a-7a5c174e7777\",\n        \"meta\": {\n          \"profile\": [\n            \"http://nphies.sa/fhir/ksa/nphies-fs/StructureDefinition/message-header|1.0.0\"\n          ]\n        },\n        \"eventCoding\": {\n          \"system\": \"http://nphies.sa/terminology/CodeSystem/ksa-message-events\",\n          \"code\": \"claim-request\"\n        },\n        \"source\": {\n          \"endpoint\": \"https://velodoc.ai/fhir\"\n        },\n        \"destination\": [\n          {\n            \"endpoint\": \"https://nphies.sa/fhir/$process-message\",\n            \"receiver\": {\n              \"type\": \"Organization\",\n              \"identifier\": {\n                \"system\": \"http://nphies.sa/license/payer-license\",\n                \"use\": \"official\",\n                \"value\": \"BUPA-SA-001\"\n              }\n            }\n          }\n        ],\n        \"sender\": {\n          \"type\": \"Organization\",\n          \"identifier\": {\n            \"system\": \"http://nphies.sa/license/provider-license\",\n            \"use\": \"official\",\n            \"value\": \"NPHIES-FAC-5567\"\n          }\n        },\n        \"focus\": [\n          {\n            \"reference\": \"Claim/CLM-F696AAB99018\"\n          }\n        ]\n      }\n    },\n    {\n      \"fullUrl\": \"Organization/SA-FAC-0001\",\n      \"resource\": {\n        \"resourceType\": \"Organization\",\n        \"id\": \"SA-FAC-0001\",\n        \"meta\": {\n          \"profile\": [\n            \"http://nphies.sa/fhir/ksa/nphies-fs/StructureDefinition/provider-organization|1.0.0\"\n          ]\n        },\n        \"identifier\": [\n          {\n            \"system\": \"http://nphies.sa/license/provider-license\",\n            \"use\": \"official\",\n            \"value\": \"NPHIES-FAC-5567\"\n          }\n        ],\n        \"type\": [\n          {\n            \"coding\": [\n              {\n                \"system\": \"http://nphies.sa/terminology/CodeSystem/organization-type\",\n                \"code\": \"prov\",\n                \"display\": \"Provider\"\n              }\n            ]\n          }\n        ],\n        \"name\": \"King Faisal Specialist Hospital\"\n      }\n    },\n    {\n      \"fullUrl\": \"Organization/BUPA-SA-001\",\n      \"resource\": {\n        \"resourceType\": \"Organization\",\n        \"id\": \"BUPA-SA-001\",\n        \"meta\": {\n          \"profile\": [\n            \"http://nphies.sa/fhir/ksa/nphies-fs/StructureDefinition/insurer-organization|1.0.0\"\n          ]\n        },\n        \"identifier\": [\n          {\n            \"system\": \"http://nphies.sa/license/payer-license\",\n            \"use\": \"official\",\n            \"value\": \"BUPA-SA-001\"\n          }\n        ],\n        \"type\": [\n          {\n            \"coding\": [\n              {\n                \"system\": \"http://nphies.sa/terminology/CodeSystem/organization-type\",\n                \"code\": \"ins\",\n                \"display\": \"Insurer\"\n              }\n            ]\n          }\n        ],\n        \"name\": \"Bupa Arabia\"\n      }\n    },\n    {\n      \"fullUrl\": \"Practitioner/SA-PROV-0001\",\n      \"resource\": {\n        \"resourceType\": \"Practitioner\",\n        \"id\": \"SA-PROV-0001\",\n        \"meta\": {\n          \"profile\": [\n            \"http://nphies.sa/fhir/ksa/nphies-fs/StructureDefinition/practitioner|1.0.0\"\n          ]\n        },\n        \"identifier\": [\n          {\n            \"system\": \"http://nphies.sa/license/practitioner-license\",\n            \"use\": \"official\",\n            \"value\": \"NPHIES-PRV-1029\"\n          }\n        ],\n        \"name\": [\n          {\n            \"text\": \"Dr. Sara Al-Harbi\",\n            \"given\": [\n              \"Dr.\",\n              \"Sara\"\n            ],\n            \"family\": \"Al-Harbi\"\n          }\n        ]\n      }\n    },\n    {\n      \"fullUrl\": \"Patient/SA-PAT-0001\",\n      \"resource\": {\n        \"resourceType\": \"Patient\",\n        \"id\": \"SA-PAT-0001\",\n        \"meta\": {\n          \"profile\": [\n            \"http://nphies.sa/fhir/ksa/nphies-fs/StructureDefinition/patient|1.0.0\"\n          ]\n        },\n        \"identifier\": [\n          {\n            \"system\": \"http://nphies.sa/identifier/patient\",\n            \"use\": \"official\",\n            \"value\": \"1023456789\"\n          }\n        ],\n        \"name\": [\n          {\n            \"text\": \"Abdullah Al-Qahtani\",\n            \"given\": [\n              \"Abdullah\"\n            ],\n            \"family\": \"Al-Qahtani\"\n          }\n        ],\n        \"birthDate\": \"1985-04-12\",\n        \"gender\": \"male\"\n      }\n    },\n    {\n      \"fullUrl\": \"Coverage/SA-COV-0001\",\n      \"resource\": {\n        \"resourceType\": \"Coverage\",\n        \"id\": \"SA-COV-0001\",\n        \"meta\": {\n          \"profile\": [\n            \"http://nphies.sa/fhir/ksa/nphies-fs/StructureDefinition/coverage|1.0.0\"\n          ]\n        },\n        \"status\": \"active\",\n        \"subscriberId\": \"MEM-445566\",\n        \"subscriber\": {\n          \"reference\": \"Patient/SA-PAT-0001\"\n        },\n        \"beneficiary\": {\n          \"reference\": \"Patient/SA-PAT-0001\"\n        },\n        \"relationship\": {\n          \"coding\": [\n            {\n              \"system\": \"http://terminology.hl7.org/CodeSystem/subscriber-relationship\",\n              \"code\": \"self\"\n            }\n          ]\n        },\n        \"payor\": [\n          {\n            \"reference\": \"Organization/BUPA-SA-001\"\n          }\n        ],\n        \"class\": [\n          {\n            \"type\": {\n              \"text\": \"plan\"\n            },\n            \"value\": \"comprehensive\"\n          }\n        ],\n        \"period\": {\n          \"start\": \"2026-01-01\",\n          \"end\": \"2026-12-31\"\n        }\n      }\n    },\n    {\n      \"fullUrl\": \"Encounter/SA-ENC-0001\",\n      \"resource\": {\n        \"resourceType\": \"Encounter\",\n        \"id\": \"SA-ENC-0001\",\n        \"meta\": {\n          \"profile\": [\n            \"http://nphies.sa/fhir/ksa/nphies-fs/StructureDefinition/encounter-claim-amb|1.0.0\"\n          ]\n        },\n        \"status\": \"finished\",\n        \"class\": {\n          \"system\": \"http://terminology.hl7.org/CodeSystem/v3-ActCode\",\n          \"code\": \"AMB\"\n        },\n        \"subject\": {\n          \"reference\": \"Patient/SA-PAT-0001\"\n        },\n        \"participant\": [\n          {\n            \"individual\": {\n              \"reference\": \"Practitioner/SA-PROV-0001\"\n            }\n          }\n        ],\n        \"serviceProvider\": {\n          \"reference\": \"Organization/SA-FAC-0001\"\n        },\n        \"period\": {\n          \"start\": \"2026-06-15T09:30:00+03:00\",\n          \"end\": \"2026-06-15T11:00:00+03:00\"\n        }\n      }\n    },\n    {\n      \"fullUrl\": \"Claim/CLM-F696AAB99018\",\n      \"resource\": {\n        \"resourceType\": \"Claim\",\n        \"id\": \"CLM-F696AAB99018\",\n        \"meta\": {\n          \"profile\": [\n            \"http://nphies.sa/fhir/ksa/nphies-fs/StructureDefinition/professional-claim|1.0.0\"\n          ]\n        },\n        \"extension\": [\n          {\n            \"url\": \"http://nphies.sa/fhir/ksa/nphies-fs/StructureDefinition/extension-encounter|1.0.0\",\n            \"valueReference\": {\n              \"reference\": \"Encounter/SA-ENC-0001\"\n            }\n          }\n        ],\n        \"status\": \"active\",\n        \"type\": {\n          \"coding\": [\n            {\n              \"system\": \"http://terminology.hl7.org/CodeSystem/claim-type\",\n              \"code\": \"professional\"\n            }\n          ]\n        },\n        \"use\": \"claim\",\n        \"patient\": {\n          \"reference\": \"Patient/SA-PAT-0001\"\n        },\n        \"created\": \"2026-09-08T15:39:34+00:00\",\n        \"provider\": {\n          \"reference\": \"Organization/SA-FAC-0001\"\n        },\n        \"insurer\": {\n          \"reference\": \"Organization/BUPA-SA-001\"\n        },\n        \"priority\": {\n          \"coding\": [\n            {\n              \"system\": \"http://terminology.hl7.org/CodeSystem/processpriority\",\n              \"code\": \"normal\"\n            }\n          ]\n        },\n        \"careTeam\": [\n          {\n            \"sequence\": 1,\n            \"provider\": {\n              \"reference\": \"Practitioner/SA-PROV-0001\"\n            }\n          }\n        ],\n        \"insurance\": [\n          {\n            \"sequence\": 1,\n            \"focal\": true,\n            \"coverage\": {\n              \"reference\": \"Coverage/SA-COV-0001\"\n            }\n          }\n        ],\n        \"diagnosis\": [\n          {\n            \"sequence\": 1,\n            \"diagnosisCodeableConcept\": {\n              \"coding\": [\n                {\n                  \"system\": \"http://hl7.org/fhir/sid/icd-10\",\n                  \"code\": \"I10\",\n                  \"display\": \"Essential (primary) hypertension\"\n                }\n              ]\n            },\n            \"type\": [\n              {\n                \"coding\": [\n                  {\n                    \"system\": \"http://nphies.sa/terminology/CodeSystem/diagnosis-type\",\n                    \"code\": \"principal\"\n                  }\n                ]\n              }\n            ]\n          },\n          {\n            \"sequence\": 2,\n            \"diagnosisCodeableConcept\": {\n              \"coding\": [\n                {\n                  \"system\": \"http://hl7.org/fhir/sid/icd-10\",\n                  \"code\": \"E11.9\",\n                  \"display\": \"Type 2 diabetes mellitus without complications\"\n                }\n              ]\n            },\n            \"type\": [\n              {\n                \"coding\": [\n                  {\n                    \"system\": \"http://nphies.sa/terminology/CodeSystem/diagnosis-type\",\n                    \"code\": \"secondary\"\n                  }\n                ]\n              }\n            ]\n          }\n        ],\n        \"item\": [\n          {\n            \"sequence\": 1,\n            \"careTeamSequence\": [\n              1\n            ],\n            \"productOrService\": {\n              \"coding\": [\n                {\n                  \"system\": \"http://www.ama-assn.org/go/cpt\",\n                  \"code\": \"99213\",\n                  \"display\": \"Physician consultation - follow-up\"\n                }\n              ]\n            },\n            \"servicedDate\": \"2026-06-15\",\n            \"quantity\": {\n              \"value\": 1\n            },\n            \"net\": {\n              \"value\": 200.0,\n              \"currency\": \"SAR\"\n            }\n          },\n          {\n            \"sequence\": 2,\n            \"careTeamSequence\": [\n              1\n            ],\n            \"productOrService\": {\n              \"coding\": [\n                {\n                  \"system\": \"http://www.ama-assn.org/go/cpt\",\n                  \"code\": \"80053\",\n                  \"display\": \"Comprehensive metabolic panel (lab test)\"\n                }\n              ]\n            },\n            \"servicedDate\": \"2026-06-15\",\n            \"quantity\": {\n              \"value\": 1\n            },\n            \"net\": {\n              \"value\": 144.0,\n              \"currency\": \"SAR\"\n            }\n          }\n        ],\n        \"total\": {\n          \"value\": 344.0,\n          \"currency\": \"SAR\"\n        }\n      }\n    }\n  ]\n}",
     "claim_payload_row": {
-      "id": "3cbe2f33-c500-484d-a2ca-691f7d167732",
-      "claim_id": "CLM-2ACE4CBF1CD6",
+      "id": "0ec806d2-707e-42c0-a4bf-3ac0911703f4",
+      "claim_id": "CLM-F696AAB99018",
       "version": 1,
       "standard": "NPHIES",
       "payload_type": "fhir_bundle_json",
-      "object_uri": "s3://velo-claim/claims/CLM-2ACE4CBF1CD6/versions/1/payload.json",
-      "sha256_hash": "5df7bbf0bccbffa31ef983c0a52b8c677c3a65654a04fa0454a829a81b061578",
+      "object_uri": "s3://velo-claim/claims/CLM-F696AAB99018/versions/1/payload.json",
+      "sha256_hash": "c9adacf980af1a43d79a06c77a4cfd53ce6650cd01ff92fc61b21d91eb3fbf1d",
       "payload_status": "DRAFT_BUILT",
-      "generated_at": "2026-08-16T17:01:49.411090+00:00",
-      "created_at": "2026-08-16T17:01:49.411090+00:00"
+      "generated_at": "2026-09-08T15:39:34.809434+00:00",
+      "created_at": "2026-09-08T15:39:34.809434+00:00"
     },
     "validation_report": {},
     "validation_report_row": {
-      "id": "f0d8576f-0835-4a14-b503-ba674312a7e2",
-      "claim_id": "CLM-2ACE4CBF1CD6",
+      "id": "2c6ec888-d620-426d-8070-22ec0071eb2d",
+      "claim_id": "CLM-F696AAB99018",
       "version": 1,
       "score": 85,
       "final_status": "READY_TO_SUBMIT",
       "object_uri": null,
-      "created_at": "2026-08-16T17:01:49.726801+00:00"
+      "created_at": "2026-09-08T15:39:35.096232+00:00"
     },
     "issues": {
       "structural": [],
@@ -515,34 +527,34 @@
           "code": "ICD_CPT_COMPATIBILITY_REVIEW",
           "severity": "WARNING",
           "layer": "CODING",
-          "field": "canonical_claim.procedures.80053",
-          "msg": "No KG compatibility edge found for CPT 80053 and current diagnoses.",
+          "field": "canonical_claim.procedures.99213",
+          "msg": "No KG compatibility edge found for CPT 99213 and current diagnoses.",
           "suggestion": "Route to coding review or use LLM-assisted coding enrichment."
         },
         {
-          "code": "PAYER_RULE_SOURCE_NOT_LIVE",
+          "code": "ICD_CPT_COMPATIBILITY_REVIEW",
           "severity": "WARNING",
-          "layer": "PAYER_RULES",
-          "field": "payer_rule_set.source",
-          "msg": "Payer rules came from MOCK, not a live payer portal.",
-          "suggestion": "Use live payer rules or confirm cached rule freshness before production submission."
+          "layer": "CODING",
+          "field": "canonical_claim.procedures.80053",
+          "msg": "No KG compatibility edge found for CPT 80053 and current diagnoses.",
+          "suggestion": "Route to coding review or use LLM-assisted coding enrichment."
         }
       ]
     },
     "eligibility": {
-      "status": "Unknown",
-      "memberId": "-",
-      "coverageRef": "-",
-      "checkedAgo": "just now",
+      "status": "Active",
+      "memberId": "MEM-445566",
+      "coverageRef": "SA-COV-0001",
+      "checkedAgo": "2026-09-08T15:39:34+00:00",
       "validUntil": "",
       "voiFlag": null,
       "benefits": []
     },
     "eligibility_result": {
-      "status": "Unknown",
-      "memberId": "-",
-      "coverageRef": "-",
-      "checkedAgo": "just now",
+      "status": "Active",
+      "memberId": "MEM-445566",
+      "coverageRef": "SA-COV-0001",
+      "checkedAgo": "2026-09-08T15:39:34+00:00",
       "validUntil": "",
       "voiFlag": null,
       "benefits": []
@@ -555,490 +567,490 @@
     },
     "audit": [
       {
-        "ts": "2026-08-16T17:01:49+00:00",
+        "ts": "2026-09-08T15:39:34+00:00",
         "agent": "FHIRContextAgent",
         "node": "normalize_input",
         "type": "NODE_ENTER",
         "color": "#1864AB"
       },
       {
-        "ts": "2026-08-16T17:01:49+00:00",
+        "ts": "2026-09-08T15:39:34+00:00",
         "agent": "FHIRContextAgent",
         "node": "normalize_input",
         "type": "NODE_EXIT",
         "color": "#15883E"
       },
       {
-        "ts": "2026-08-16T17:01:49+00:00",
+        "ts": "2026-09-08T15:39:34+00:00",
         "agent": "FHIRContextAgent",
         "node": "load_context",
         "type": "NODE_ENTER",
         "color": "#1864AB"
       },
       {
-        "ts": "2026-08-16T17:01:49+00:00",
+        "ts": "2026-09-08T15:39:34+00:00",
         "agent": "FHIRContextAgent",
         "node": "load_context",
         "type": "NODE_EXIT",
         "color": "#15883E"
       },
       {
-        "ts": "2026-08-16T17:01:49+00:00",
+        "ts": "2026-09-08T15:39:34+00:00",
         "agent": "FHIRContextAgent",
         "node": "route_context",
         "type": "NODE_ENTER",
         "color": "#1864AB"
       },
       {
-        "ts": "2026-08-16T17:01:49+00:00",
+        "ts": "2026-09-08T15:39:34+00:00",
         "agent": "FHIRContextAgent",
         "node": "route_context",
         "type": "NODE_EXIT",
         "color": "#15883E"
       },
       {
-        "ts": "2026-08-16T17:01:49+00:00",
+        "ts": "2026-09-08T15:39:34+00:00",
         "agent": "ClaimPreparationAgent",
         "node": "supervisor",
         "type": "NODE_ENTER",
         "color": "#1864AB"
       },
       {
-        "ts": "2026-08-16T17:01:49+00:00",
+        "ts": "2026-09-08T15:39:34+00:00",
         "agent": "ClaimPreparationAgent",
         "node": "supervisor",
         "type": "NODE_EXIT",
         "color": "#15883E"
       },
       {
-        "ts": "2026-08-16T17:01:49+00:00",
+        "ts": "2026-09-08T15:39:34+00:00",
         "agent": "ClaimPreparationAgent",
         "node": "prepare_claim",
         "type": "NODE_ENTER",
         "color": "#1864AB"
       },
       {
-        "ts": "2026-08-16T17:01:49+00:00",
+        "ts": "2026-09-08T15:39:34+00:00",
         "agent": "ClaimPreparationAgent",
         "node": "prepare_claim",
         "type": "NODE_EXIT",
         "color": "#15883E"
       },
       {
-        "ts": "2026-08-16T17:01:49+00:00",
+        "ts": "2026-09-08T15:39:34+00:00",
         "agent": "ClaimPreparationAgent",
         "node": "validate_claim",
         "type": "NODE_ENTER",
         "color": "#1864AB"
       },
       {
-        "ts": "2026-08-16T17:01:49+00:00",
+        "ts": "2026-09-08T15:39:34+00:00",
         "agent": "ClaimPreparationAgent",
         "node": "validate_claim",
         "type": "NODE_EXIT",
         "color": "#15883E"
       },
       {
-        "ts": "2026-08-16T17:01:49+00:00",
+        "ts": "2026-09-08T15:39:34+00:00",
         "agent": "ClaimValidationAgent",
         "node": "normalize_validation_input",
         "type": "NODE_ENTER",
         "color": "#1864AB"
       },
       {
-        "ts": "2026-08-16T17:01:49+00:00",
+        "ts": "2026-09-08T15:39:34+00:00",
         "agent": "ClaimValidationAgent",
         "node": "normalize_validation_input",
         "type": "NODE_EXIT",
         "color": "#15883E"
       },
       {
-        "ts": "2026-08-16T17:01:49+00:00",
+        "ts": "2026-09-08T15:39:34+00:00",
         "agent": "ClaimValidationAgent",
         "node": "load_route_and_context",
         "type": "NODE_ENTER",
         "color": "#1864AB"
       },
       {
-        "ts": "2026-08-16T17:01:49+00:00",
+        "ts": "2026-09-08T15:39:34+00:00",
         "agent": "ClaimValidationAgent",
         "node": "load_route_and_context",
         "type": "NODE_EXIT",
         "color": "#15883E"
       },
       {
-        "ts": "2026-08-16T17:01:49+00:00",
+        "ts": "2026-09-08T15:39:34+00:00",
         "agent": "ClaimValidationAgent",
         "node": "load_payer_rule",
         "type": "NODE_ENTER",
         "color": "#1864AB"
       },
       {
-        "ts": "2026-08-16T17:01:49+00:00",
+        "ts": "2026-09-08T15:39:34+00:00",
         "agent": "ClaimValidationAgent",
         "node": "load_payer_rule",
         "type": "NODE_EXIT",
         "color": "#15883E"
       },
       {
-        "ts": "2026-08-16T17:01:49+00:00",
+        "ts": "2026-09-08T15:39:34+00:00",
         "agent": "ClaimValidationAgent",
         "node": "parse_payload",
         "type": "NODE_ENTER",
         "color": "#1864AB"
       },
       {
-        "ts": "2026-08-16T17:01:49+00:00",
+        "ts": "2026-09-08T15:39:34+00:00",
         "agent": "ClaimValidationAgent",
         "node": "parse_payload",
         "type": "NODE_EXIT",
         "color": "#15883E"
       },
       {
-        "ts": "2026-08-16T17:01:49+00:00",
+        "ts": "2026-09-08T15:39:34+00:00",
         "agent": "ClaimValidationAgent",
         "node": "validation_node",
         "type": "NODE_ENTER",
         "color": "#1864AB"
       },
       {
-        "ts": "2026-08-16T17:01:49+00:00",
+        "ts": "2026-09-08T15:39:34+00:00",
         "agent": "EligibilityCheckSubgraph",
         "node": "normalize_eligibility_input",
         "type": "NODE_ENTER",
         "color": "#1864AB"
       },
       {
-        "ts": "2026-08-16T17:01:49+00:00",
+        "ts": "2026-09-08T15:39:34+00:00",
         "agent": "EligibilityCheckSubgraph",
         "node": "normalize_eligibility_input",
         "type": "NODE_EXIT",
         "color": "#15883E"
       },
       {
-        "ts": "2026-08-16T17:01:49+00:00",
+        "ts": "2026-09-08T15:39:34+00:00",
         "agent": "EligibilityCheckSubgraph",
         "node": "check_cached_eligibility",
         "type": "NODE_ENTER",
         "color": "#1864AB"
       },
       {
-        "ts": "2026-08-16T17:01:49+00:00",
+        "ts": "2026-09-08T15:39:34+00:00",
         "agent": "EligibilityCheckSubgraph",
         "node": "check_cached_eligibility",
         "type": "NODE_EXIT",
         "color": "#15883E"
       },
       {
-        "ts": "2026-08-16T17:01:49+00:00",
+        "ts": "2026-09-08T15:39:34+00:00",
         "agent": "EligibilityCheckSubgraph",
         "node": "determine_eligibility_requirement",
         "type": "NODE_ENTER",
         "color": "#1864AB"
       },
       {
-        "ts": "2026-08-16T17:01:49+00:00",
+        "ts": "2026-09-08T15:39:34+00:00",
         "agent": "EligibilityCheckSubgraph",
         "node": "determine_eligibility_requirement",
         "type": "NODE_EXIT",
         "color": "#15883E"
       },
       {
-        "ts": "2026-08-16T17:01:49+00:00",
+        "ts": "2026-09-08T15:39:34+00:00",
         "agent": "EligibilityCheckSubgraph",
         "node": "route_to_platform",
         "type": "NODE_ENTER",
         "color": "#1864AB"
       },
       {
-        "ts": "2026-08-16T17:01:49+00:00",
+        "ts": "2026-09-08T15:39:34+00:00",
         "agent": "EligibilityCheckSubgraph",
         "node": "route_to_platform",
         "type": "NODE_EXIT",
         "color": "#15883E"
       },
       {
-        "ts": "2026-08-16T17:01:49+00:00",
+        "ts": "2026-09-08T15:39:34+00:00",
         "agent": "EligibilityCheckSubgraph",
         "node": "build_eligibility_payload",
         "type": "NODE_ENTER",
         "color": "#1864AB"
       },
       {
-        "ts": "2026-08-16T17:01:49+00:00",
+        "ts": "2026-09-08T15:39:34+00:00",
         "agent": "EligibilityCheckSubgraph",
         "node": "build_eligibility_payload",
         "type": "NODE_EXIT",
         "color": "#15883E"
       },
       {
-        "ts": "2026-08-16T17:01:49+00:00",
+        "ts": "2026-09-08T15:39:34+00:00",
         "agent": "EligibilityCheckSubgraph",
         "node": "submit_eligibility_request",
         "type": "NODE_ENTER",
         "color": "#1864AB"
       },
       {
-        "ts": "2026-08-16T17:01:49+00:00",
+        "ts": "2026-09-08T15:39:34+00:00",
         "agent": "EligibilityCheckSubgraph",
         "node": "submit_eligibility_request",
         "type": "NODE_EXIT",
         "color": "#15883E"
       },
       {
-        "ts": "2026-08-16T17:01:49+00:00",
+        "ts": "2026-09-08T15:39:34+00:00",
         "agent": "EligibilityCheckSubgraph",
         "node": "poll_if_async",
         "type": "NODE_ENTER",
         "color": "#1864AB"
       },
       {
-        "ts": "2026-08-16T17:01:49+00:00",
+        "ts": "2026-09-08T15:39:34+00:00",
         "agent": "EligibilityCheckSubgraph",
         "node": "poll_if_async",
         "type": "NODE_EXIT",
         "color": "#15883E"
       },
       {
-        "ts": "2026-08-16T17:01:49+00:00",
+        "ts": "2026-09-08T15:39:34+00:00",
         "agent": "EligibilityCheckSubgraph",
         "node": "parse_eligibility_response",
         "type": "NODE_ENTER",
         "color": "#1864AB"
       },
       {
-        "ts": "2026-08-16T17:01:49+00:00",
+        "ts": "2026-09-08T15:39:34+00:00",
         "agent": "EligibilityCheckSubgraph",
         "node": "parse_eligibility_response",
         "type": "NODE_EXIT",
         "color": "#15883E"
       },
       {
-        "ts": "2026-08-16T17:01:49+00:00",
+        "ts": "2026-09-08T15:39:34+00:00",
         "agent": "EligibilityCheckSubgraph",
         "node": "validate_coverage_details",
         "type": "NODE_ENTER",
         "color": "#1864AB"
       },
       {
-        "ts": "2026-08-16T17:01:49+00:00",
+        "ts": "2026-09-08T15:39:34+00:00",
         "agent": "EligibilityCheckSubgraph",
         "node": "validate_coverage_details",
         "type": "NODE_EXIT",
         "color": "#15883E"
       },
       {
-        "ts": "2026-08-16T17:01:49+00:00",
+        "ts": "2026-09-08T15:39:34+00:00",
         "agent": "EligibilityCheckSubgraph",
         "node": "patch_claim_with_coverage",
         "type": "NODE_ENTER",
         "color": "#1864AB"
       },
       {
-        "ts": "2026-08-16T17:01:49+00:00",
+        "ts": "2026-09-08T15:39:34+00:00",
         "agent": "EligibilityCheckSubgraph",
         "node": "patch_claim_with_coverage",
         "type": "NODE_EXIT",
         "color": "#15883E"
       },
       {
-        "ts": "2026-08-16T17:01:49+00:00",
+        "ts": "2026-09-08T15:39:34+00:00",
         "agent": "EligibilityCheckSubgraph",
         "node": "store_eligibility_record",
         "type": "NODE_ENTER",
         "color": "#1864AB"
       },
       {
-        "ts": "2026-08-16T17:01:49+00:00",
+        "ts": "2026-09-08T15:39:34+00:00",
         "agent": "EligibilityCheckSubgraph",
         "node": "store_eligibility_record",
         "type": "NODE_EXIT",
         "color": "#15883E"
       },
       {
-        "ts": "2026-08-16T17:01:49+00:00",
+        "ts": "2026-09-08T15:39:34+00:00",
         "agent": "EligibilityCheckSubgraph",
         "node": "finish",
         "type": "NODE_ENTER",
         "color": "#1864AB"
       },
       {
-        "ts": "2026-08-16T17:01:49+00:00",
+        "ts": "2026-09-08T15:39:34+00:00",
         "agent": "EligibilityCheckSubgraph",
         "node": "finish",
         "type": "NODE_EXIT",
         "color": "#15883E"
       },
       {
-        "ts": "2026-08-16T17:01:49+00:00",
+        "ts": "2026-09-08T15:39:35+00:00",
         "agent": "PriorAuthCheckSubgraph",
         "node": "normalize_prior_auth_input",
         "type": "NODE_ENTER",
         "color": "#1864AB"
       },
       {
-        "ts": "2026-08-16T17:01:49+00:00",
+        "ts": "2026-09-08T15:39:35+00:00",
         "agent": "PriorAuthCheckSubgraph",
         "node": "normalize_prior_auth_input",
         "type": "NODE_EXIT",
         "color": "#15883E"
       },
       {
-        "ts": "2026-08-16T17:01:49+00:00",
+        "ts": "2026-09-08T15:39:35+00:00",
         "agent": "PriorAuthCheckSubgraph",
         "node": "determine_requirement",
         "type": "NODE_ENTER",
         "color": "#1864AB"
       },
       {
-        "ts": "2026-08-16T17:01:49+00:00",
+        "ts": "2026-09-08T15:39:35+00:00",
         "agent": "PriorAuthCheckSubgraph",
         "node": "determine_requirement",
         "type": "NODE_EXIT",
         "color": "#15883E"
       },
       {
-        "ts": "2026-08-16T17:01:49+00:00",
+        "ts": "2026-09-08T15:39:35+00:00",
         "agent": "PriorAuthCheckSubgraph",
         "node": "validate_existing_auth",
         "type": "NODE_ENTER",
         "color": "#1864AB"
       },
       {
-        "ts": "2026-08-16T17:01:49+00:00",
+        "ts": "2026-09-08T15:39:35+00:00",
         "agent": "PriorAuthCheckSubgraph",
         "node": "validate_existing_auth",
         "type": "NODE_EXIT",
         "color": "#15883E"
       },
       {
-        "ts": "2026-08-16T17:01:49+00:00",
+        "ts": "2026-09-08T15:39:35+00:00",
         "agent": "PriorAuthCheckSubgraph",
         "node": "pa_route_decision",
         "type": "NODE_ENTER",
         "color": "#1864AB"
       },
       {
-        "ts": "2026-08-16T17:01:49+00:00",
+        "ts": "2026-09-08T15:39:35+00:00",
         "agent": "PriorAuthCheckSubgraph",
         "node": "pa_route_decision",
         "type": "NODE_EXIT",
         "color": "#15883E"
       },
       {
-        "ts": "2026-08-16T17:01:49+00:00",
+        "ts": "2026-09-08T15:39:35+00:00",
         "agent": "PriorAuthCheckSubgraph",
         "node": "pa_claim_builder",
         "type": "NODE_ENTER",
         "color": "#1864AB"
       },
       {
-        "ts": "2026-08-16T17:01:49+00:00",
+        "ts": "2026-09-08T15:39:35+00:00",
         "agent": "PriorAuthCheckSubgraph",
         "node": "pa_claim_builder",
         "type": "NODE_EXIT",
         "color": "#15883E"
       },
       {
-        "ts": "2026-08-16T17:01:49+00:00",
+        "ts": "2026-09-08T15:39:35+00:00",
         "agent": "PriorAuthCheckSubgraph",
         "node": "submit_or_create_task",
         "type": "NODE_ENTER",
         "color": "#1864AB"
       },
       {
-        "ts": "2026-08-16T17:01:49+00:00",
+        "ts": "2026-09-08T15:39:35+00:00",
         "agent": "PriorAuthCheckSubgraph",
         "node": "submit_or_create_task",
         "type": "NODE_EXIT",
         "color": "#15883E"
       },
       {
-        "ts": "2026-08-16T17:01:49+00:00",
+        "ts": "2026-09-08T15:39:35+00:00",
         "agent": "PriorAuthCheckSubgraph",
         "node": "poll_if_needed",
         "type": "NODE_ENTER",
         "color": "#1864AB"
       },
       {
-        "ts": "2026-08-16T17:01:49+00:00",
+        "ts": "2026-09-08T15:39:35+00:00",
         "agent": "PriorAuthCheckSubgraph",
         "node": "poll_if_needed",
         "type": "NODE_EXIT",
         "color": "#15883E"
       },
       {
-        "ts": "2026-08-16T17:01:49+00:00",
+        "ts": "2026-09-08T15:39:35+00:00",
         "agent": "PriorAuthCheckSubgraph",
         "node": "parse_final_response",
         "type": "NODE_ENTER",
         "color": "#1864AB"
       },
       {
-        "ts": "2026-08-16T17:01:49+00:00",
+        "ts": "2026-09-08T15:39:35+00:00",
         "agent": "PriorAuthCheckSubgraph",
         "node": "parse_final_response",
         "type": "NODE_EXIT",
         "color": "#15883E"
       },
       {
-        "ts": "2026-08-16T17:01:49+00:00",
+        "ts": "2026-09-08T15:39:35+00:00",
         "agent": "PriorAuthCheckSubgraph",
         "node": "patch_claim",
         "type": "NODE_ENTER",
         "color": "#1864AB"
       },
       {
-        "ts": "2026-08-16T17:01:49+00:00",
+        "ts": "2026-09-08T15:39:35+00:00",
         "agent": "PriorAuthCheckSubgraph",
         "node": "patch_claim",
         "type": "NODE_EXIT",
         "color": "#15883E"
       },
       {
-        "ts": "2026-08-16T17:01:49+00:00",
+        "ts": "2026-09-08T15:39:35+00:00",
         "agent": "PriorAuthCheckSubgraph",
         "node": "finish",
         "type": "NODE_ENTER",
         "color": "#1864AB"
       },
       {
-        "ts": "2026-08-16T17:01:49+00:00",
+        "ts": "2026-09-08T15:39:35+00:00",
         "agent": "PriorAuthCheckSubgraph",
         "node": "finish",
         "type": "NODE_EXIT",
         "color": "#15883E"
       },
       {
-        "ts": "2026-08-16T17:01:49+00:00",
+        "ts": "2026-09-08T15:39:35+00:00",
         "agent": "ClaimValidationAgent",
         "node": "validation_node",
         "type": "NODE_EXIT",
         "color": "#15883E"
       },
       {
-        "ts": "2026-08-16T17:01:49+00:00",
+        "ts": "2026-09-08T15:39:35+00:00",
         "agent": "ClaimValidationAgent",
         "node": "calculate_score",
         "type": "NODE_ENTER",
         "color": "#1864AB"
       },
       {
-        "ts": "2026-08-16T17:01:49+00:00",
+        "ts": "2026-09-08T15:39:35+00:00",
         "agent": "ClaimValidationAgent",
         "node": "calculate_score",
         "type": "NODE_EXIT",
         "color": "#15883E"
       },
       {
-        "ts": "2026-08-16T17:01:49+00:00",
+        "ts": "2026-09-08T15:39:35+00:00",
         "agent": "ClaimValidationAgent",
         "node": "decision_router",
         "type": "NODE_ENTER",
         "color": "#1864AB"
       },
       {
-        "ts": "2026-08-16T17:01:49+00:00",
+        "ts": "2026-09-08T15:39:35+00:00",
         "agent": "ClaimValidationAgent",
         "node": "decision_router",
         "type": "NODE_EXIT",
@@ -1047,15 +1059,15 @@
     ],
     "audit_events": [
       {
-        "id": "54f448c8-1296-4782-8a87-600d480bc77f",
-        "claim_id": "CLM-2ACE4CBF1CD6",
+        "id": "9ac79d81-0e2c-41e6-ba8c-10e4a8b9c58c",
+        "claim_id": "CLM-F696AAB99018",
         "agent": "FHIRContextAgent",
         "node": "normalize_input",
         "event_type": "NODE_ENTER",
         "payload": {
           "input_snapshot": {
             "route": {},
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": null,
             "jurisdiction": "SAUDI_ARABIA",
@@ -1065,20 +1077,20 @@
             "pa_payload_version": null
           }
         },
-        "ts": "2026-08-16T17:01:49+00:00"
+        "ts": "2026-09-08T15:39:34+00:00"
       },
       {
-        "id": "8a49610c-17b1-4044-b306-0194e67d8fb2",
-        "claim_id": "CLM-2ACE4CBF1CD6",
+        "id": "7d192c42-bfa7-49ee-a541-3e4e2309ccfe",
+        "claim_id": "CLM-F696AAB99018",
         "agent": "FHIRContextAgent",
         "node": "normalize_input",
         "event_type": "NODE_EXIT",
         "payload": {
-          "duration_ms": 0.09,
+          "duration_ms": 0.08,
           "errors_added": [],
           "input_snapshot": {
             "route": {},
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": null,
             "jurisdiction": "SAUDI_ARABIA",
@@ -1089,7 +1101,7 @@
           },
           "output_snapshot": {
             "route": {},
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": null,
             "jurisdiction": "SAUDI_ARABIA",
@@ -1099,18 +1111,18 @@
             "pa_payload_version": 0
           }
         },
-        "ts": "2026-08-16T17:01:49+00:00"
+        "ts": "2026-09-08T15:39:34+00:00"
       },
       {
-        "id": "16be3738-4fdd-4862-b9ff-03c2e9bdd0a6",
-        "claim_id": "CLM-2ACE4CBF1CD6",
+        "id": "7425804d-da42-47ea-94f9-c17176bef8aa",
+        "claim_id": "CLM-F696AAB99018",
         "agent": "FHIRContextAgent",
         "node": "load_context",
         "event_type": "NODE_ENTER",
         "payload": {
           "input_snapshot": {
             "route": {},
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": null,
             "jurisdiction": "SAUDI_ARABIA",
@@ -1120,20 +1132,20 @@
             "pa_payload_version": 0
           }
         },
-        "ts": "2026-08-16T17:01:49+00:00"
+        "ts": "2026-09-08T15:39:34+00:00"
       },
       {
-        "id": "7869ebb2-02b2-49b1-931a-d2f21b304f48",
-        "claim_id": "CLM-2ACE4CBF1CD6",
+        "id": "1a091a84-2f0d-443b-8f78-0c2acaccdb6f",
+        "claim_id": "CLM-F696AAB99018",
         "agent": "FHIRContextAgent",
         "node": "load_context",
         "event_type": "NODE_EXIT",
         "payload": {
-          "duration_ms": 0.2,
+          "duration_ms": 0.26,
           "errors_added": [],
           "input_snapshot": {
             "route": {},
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": null,
             "jurisdiction": "SAUDI_ARABIA",
@@ -1144,7 +1156,7 @@
           },
           "output_snapshot": {
             "route": {},
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": null,
             "jurisdiction": "SAUDI_ARABIA",
@@ -1154,18 +1166,18 @@
             "pa_payload_version": 0
           }
         },
-        "ts": "2026-08-16T17:01:49+00:00"
+        "ts": "2026-09-08T15:39:34+00:00"
       },
       {
-        "id": "705e2f2d-66e8-441c-b0c6-cc04790f5d40",
-        "claim_id": "CLM-2ACE4CBF1CD6",
+        "id": "c84f2584-f66a-4838-9e6c-2be14d0f61e7",
+        "claim_id": "CLM-F696AAB99018",
         "agent": "FHIRContextAgent",
         "node": "route_context",
         "event_type": "NODE_ENTER",
         "payload": {
           "input_snapshot": {
             "route": {},
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": null,
             "jurisdiction": "SAUDI_ARABIA",
@@ -1175,20 +1187,20 @@
             "pa_payload_version": 0
           }
         },
-        "ts": "2026-08-16T17:01:49+00:00"
+        "ts": "2026-09-08T15:39:34+00:00"
       },
       {
-        "id": "8764a24c-fc1c-48f8-8c6e-133d741790e3",
-        "claim_id": "CLM-2ACE4CBF1CD6",
+        "id": "be601f30-e53b-4b17-a2c3-5d2aa2c6f827",
+        "claim_id": "CLM-F696AAB99018",
         "agent": "FHIRContextAgent",
         "node": "route_context",
         "event_type": "NODE_EXIT",
         "payload": {
-          "duration_ms": 5.58,
+          "duration_ms": 3.51,
           "errors_added": [],
           "input_snapshot": {
             "route": {},
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": null,
             "jurisdiction": "SAUDI_ARABIA",
@@ -1237,7 +1249,7 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
@@ -1247,11 +1259,11 @@
             "pa_payload_version": 0
           }
         },
-        "ts": "2026-08-16T17:01:49+00:00"
+        "ts": "2026-09-08T15:39:34+00:00"
       },
       {
-        "id": "4acc40bb-9ffc-4771-b8d6-d3c3084e3378",
-        "claim_id": "CLM-2ACE4CBF1CD6",
+        "id": "dd248af1-832e-40d3-8319-b78eb08a2d72",
+        "claim_id": "CLM-F696AAB99018",
         "agent": "ClaimPreparationAgent",
         "node": "supervisor",
         "event_type": "NODE_ENTER",
@@ -1296,7 +1308,7 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
@@ -1306,16 +1318,16 @@
             "pa_payload_version": 0
           }
         },
-        "ts": "2026-08-16T17:01:49+00:00"
+        "ts": "2026-09-08T15:39:34+00:00"
       },
       {
-        "id": "620c9748-dece-4298-9829-248a08a9aad8",
-        "claim_id": "CLM-2ACE4CBF1CD6",
+        "id": "288db00c-3823-4aa4-8e7b-9ca3b29058bc",
+        "claim_id": "CLM-F696AAB99018",
         "agent": "ClaimPreparationAgent",
         "node": "supervisor",
         "event_type": "NODE_EXIT",
         "payload": {
-          "duration_ms": 3.55,
+          "duration_ms": 3.92,
           "errors_added": [],
           "input_snapshot": {
             "route": {
@@ -1357,7 +1369,7 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
@@ -1406,7 +1418,7 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
@@ -1416,11 +1428,11 @@
             "pa_payload_version": 0
           }
         },
-        "ts": "2026-08-16T17:01:49+00:00"
+        "ts": "2026-09-08T15:39:34+00:00"
       },
       {
-        "id": "67b56aa2-5543-439d-aa25-8ad36ecd6d2a",
-        "claim_id": "CLM-2ACE4CBF1CD6",
+        "id": "4f74963d-a769-4723-acf4-da48f3f58e11",
+        "claim_id": "CLM-F696AAB99018",
         "agent": "ClaimPreparationAgent",
         "node": "prepare_claim",
         "event_type": "NODE_ENTER",
@@ -1465,7 +1477,7 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
@@ -1475,16 +1487,16 @@
             "pa_payload_version": 0
           }
         },
-        "ts": "2026-08-16T17:01:49+00:00"
+        "ts": "2026-09-08T15:39:34+00:00"
       },
       {
-        "id": "d615f617-8339-417e-a4fb-61961dbd7d5f",
-        "claim_id": "CLM-2ACE4CBF1CD6",
+        "id": "ab0cf39a-4b84-46ab-9f5a-d760650a59db",
+        "claim_id": "CLM-F696AAB99018",
         "agent": "ClaimPreparationAgent",
         "node": "prepare_claim",
         "event_type": "NODE_EXIT",
         "payload": {
-          "duration_ms": 28.39,
+          "duration_ms": 26.75,
           "errors_added": [],
           "input_snapshot": {
             "route": {
@@ -1526,7 +1538,7 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
@@ -1575,7 +1587,7 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
@@ -1585,11 +1597,11 @@
             "pa_payload_version": 0
           }
         },
-        "ts": "2026-08-16T17:01:49+00:00"
+        "ts": "2026-09-08T15:39:34+00:00"
       },
       {
-        "id": "005aecbf-c82f-424c-91c5-6e3a68cbc801",
-        "claim_id": "CLM-2ACE4CBF1CD6",
+        "id": "7e2b11e8-c29e-4d76-a3f7-3d756a46ca41",
+        "claim_id": "CLM-F696AAB99018",
         "agent": "ClaimPreparationAgent",
         "node": "validate_claim",
         "event_type": "NODE_ENTER",
@@ -1634,7 +1646,7 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
@@ -1644,11 +1656,11 @@
             "pa_payload_version": 0
           }
         },
-        "ts": "2026-08-16T17:01:49+00:00"
+        "ts": "2026-09-08T15:39:34+00:00"
       },
       {
-        "id": "035eaed6-3444-4aba-9ae3-dc4865abe148",
-        "claim_id": "CLM-2ACE4CBF1CD6",
+        "id": "e4d30638-d66a-4e22-ab6a-1f494153ce3f",
+        "claim_id": "CLM-F696AAB99018",
         "agent": "ClaimPreparationAgent",
         "node": "validate_claim",
         "event_type": "NODE_EXIT",
@@ -1695,7 +1707,7 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
@@ -1744,7 +1756,7 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
@@ -1754,11 +1766,11 @@
             "pa_payload_version": 0
           }
         },
-        "ts": "2026-08-16T17:01:49+00:00"
+        "ts": "2026-09-08T15:39:34+00:00"
       },
       {
-        "id": "5e82082d-cb03-4705-9353-ad6e53ae2825",
-        "claim_id": "CLM-2ACE4CBF1CD6",
+        "id": "2688fbc6-6988-4af7-a4ac-1d9e7192f378",
+        "claim_id": "CLM-F696AAB99018",
         "agent": "ClaimValidationAgent",
         "node": "normalize_validation_input",
         "event_type": "NODE_ENTER",
@@ -1803,7 +1815,7 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
@@ -1813,16 +1825,16 @@
             "pa_payload_version": 0
           }
         },
-        "ts": "2026-08-16T17:01:49+00:00"
+        "ts": "2026-09-08T15:39:34+00:00"
       },
       {
-        "id": "e5bd6874-2913-4218-b12c-3b8af4a1f373",
-        "claim_id": "CLM-2ACE4CBF1CD6",
+        "id": "2e6b59f6-608b-4b5e-b299-1c63119bb9e4",
+        "claim_id": "CLM-F696AAB99018",
         "agent": "ClaimValidationAgent",
         "node": "normalize_validation_input",
         "event_type": "NODE_EXIT",
         "payload": {
-          "duration_ms": 3.06,
+          "duration_ms": 2.93,
           "errors_added": [],
           "input_snapshot": {
             "route": {
@@ -1864,7 +1876,7 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
@@ -1913,7 +1925,7 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
@@ -1923,11 +1935,11 @@
             "pa_payload_version": 0
           }
         },
-        "ts": "2026-08-16T17:01:49+00:00"
+        "ts": "2026-09-08T15:39:34+00:00"
       },
       {
-        "id": "e7a6350f-264c-4025-a13f-873cd6fdf0c5",
-        "claim_id": "CLM-2ACE4CBF1CD6",
+        "id": "87ee1398-a2ec-407d-8fae-b81f00c01aad",
+        "claim_id": "CLM-F696AAB99018",
         "agent": "ClaimValidationAgent",
         "node": "load_route_and_context",
         "event_type": "NODE_ENTER",
@@ -1972,7 +1984,7 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
@@ -1982,11 +1994,11 @@
             "pa_payload_version": 0
           }
         },
-        "ts": "2026-08-16T17:01:49+00:00"
+        "ts": "2026-09-08T15:39:34+00:00"
       },
       {
-        "id": "fd49f7c4-aafa-4e42-ad7d-8bed267b9099",
-        "claim_id": "CLM-2ACE4CBF1CD6",
+        "id": "36dd9971-ebec-4952-b1f0-e0fd85c5930f",
+        "claim_id": "CLM-F696AAB99018",
         "agent": "ClaimValidationAgent",
         "node": "load_route_and_context",
         "event_type": "NODE_EXIT",
@@ -2033,7 +2045,7 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
@@ -2082,7 +2094,7 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
@@ -2092,11 +2104,11 @@
             "pa_payload_version": 0
           }
         },
-        "ts": "2026-08-16T17:01:49+00:00"
+        "ts": "2026-09-08T15:39:34+00:00"
       },
       {
-        "id": "11bf0713-799e-407f-90c8-8135552114c7",
-        "claim_id": "CLM-2ACE4CBF1CD6",
+        "id": "be0e8d27-e8d6-4e1c-9547-6c32275f01fd",
+        "claim_id": "CLM-F696AAB99018",
         "agent": "ClaimValidationAgent",
         "node": "load_payer_rule",
         "event_type": "NODE_ENTER",
@@ -2141,7 +2153,7 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
@@ -2151,16 +2163,16 @@
             "pa_payload_version": 0
           }
         },
-        "ts": "2026-08-16T17:01:49+00:00"
+        "ts": "2026-09-08T15:39:34+00:00"
       },
       {
-        "id": "5d2de54b-e234-40db-ac26-b57476580754",
-        "claim_id": "CLM-2ACE4CBF1CD6",
+        "id": "7fee6851-e180-4c9f-b0db-45ad98e56f90",
+        "claim_id": "CLM-F696AAB99018",
         "agent": "ClaimValidationAgent",
         "node": "load_payer_rule",
         "event_type": "NODE_EXIT",
         "payload": {
-          "duration_ms": 2.74,
+          "duration_ms": 5.04,
           "errors_added": [],
           "input_snapshot": {
             "route": {
@@ -2202,7 +2214,7 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
@@ -2251,21 +2263,21 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
           }
         },
-        "ts": "2026-08-16T17:01:49+00:00"
+        "ts": "2026-09-08T15:39:34+00:00"
       },
       {
-        "id": "00f93685-cdde-48c7-880e-f208199ea642",
-        "claim_id": "CLM-2ACE4CBF1CD6",
+        "id": "c3b3f645-cd92-47fd-b6a7-2f6ef70546d6",
+        "claim_id": "CLM-F696AAB99018",
         "agent": "ClaimValidationAgent",
         "node": "parse_payload",
         "event_type": "NODE_ENTER",
@@ -2310,26 +2322,26 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
           }
         },
-        "ts": "2026-08-16T17:01:49+00:00"
+        "ts": "2026-09-08T15:39:34+00:00"
       },
       {
-        "id": "d7b53e19-a280-41f0-b6fd-7e699e02bad5",
-        "claim_id": "CLM-2ACE4CBF1CD6",
+        "id": "357b3063-9bef-491a-a4d4-616b1ec1ddd2",
+        "claim_id": "CLM-F696AAB99018",
         "agent": "ClaimValidationAgent",
         "node": "parse_payload",
         "event_type": "NODE_EXIT",
         "payload": {
-          "duration_ms": 0.09,
+          "duration_ms": 0.17,
           "errors_added": [],
           "input_snapshot": {
             "route": {
@@ -2371,11 +2383,11 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
@@ -2420,21 +2432,21 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
           }
         },
-        "ts": "2026-08-16T17:01:49+00:00"
+        "ts": "2026-09-08T15:39:34+00:00"
       },
       {
-        "id": "4233f709-12dc-4cb8-9855-2ccf93e352ff",
-        "claim_id": "CLM-2ACE4CBF1CD6",
+        "id": "f8eadc8f-17ed-4395-ac6e-85c24ce2d047",
+        "claim_id": "CLM-F696AAB99018",
         "agent": "ClaimValidationAgent",
         "node": "validation_node",
         "event_type": "NODE_ENTER",
@@ -2479,21 +2491,21 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
           }
         },
-        "ts": "2026-08-16T17:01:49+00:00"
+        "ts": "2026-09-08T15:39:34+00:00"
       },
       {
-        "id": "0e128a58-e87b-4da9-a25f-f7f155637ee6",
-        "claim_id": "CLM-2ACE4CBF1CD6",
+        "id": "a9fcc5d0-5196-447d-82d1-69c68cc7d400",
+        "claim_id": "CLM-F696AAB99018",
         "agent": "EligibilityCheckSubgraph",
         "node": "normalize_eligibility_input",
         "event_type": "NODE_ENTER",
@@ -2538,21 +2550,21 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
           }
         },
-        "ts": "2026-08-16T17:01:49+00:00"
+        "ts": "2026-09-08T15:39:34+00:00"
       },
       {
-        "id": "b08a7f6a-ccaa-4c1d-b75e-131385124f09",
-        "claim_id": "CLM-2ACE4CBF1CD6",
+        "id": "fcc582be-6b9e-4c1a-b1b6-84fc8ab9dbfd",
+        "claim_id": "CLM-F696AAB99018",
         "agent": "EligibilityCheckSubgraph",
         "node": "normalize_eligibility_input",
         "event_type": "NODE_EXIT",
@@ -2599,11 +2611,11 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
@@ -2648,21 +2660,21 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
           }
         },
-        "ts": "2026-08-16T17:01:49+00:00"
+        "ts": "2026-09-08T15:39:34+00:00"
       },
       {
-        "id": "d3f58257-8e7c-4741-b1c3-6ede5aee66da",
-        "claim_id": "CLM-2ACE4CBF1CD6",
+        "id": "8bcd2c8f-b246-47c9-9be9-274a9ea61528",
+        "claim_id": "CLM-F696AAB99018",
         "agent": "EligibilityCheckSubgraph",
         "node": "check_cached_eligibility",
         "event_type": "NODE_ENTER",
@@ -2707,26 +2719,26 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
           }
         },
-        "ts": "2026-08-16T17:01:49+00:00"
+        "ts": "2026-09-08T15:39:34+00:00"
       },
       {
-        "id": "ae38ce75-f8f2-48c1-879e-01c51f8b4d30",
-        "claim_id": "CLM-2ACE4CBF1CD6",
+        "id": "c486dd59-ac96-4424-a849-b2ed77349b04",
+        "claim_id": "CLM-F696AAB99018",
         "agent": "EligibilityCheckSubgraph",
         "node": "check_cached_eligibility",
         "event_type": "NODE_EXIT",
         "payload": {
-          "duration_ms": 0.85,
+          "duration_ms": 1.03,
           "errors_added": [],
           "input_snapshot": {
             "route": {
@@ -2768,11 +2780,11 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
@@ -2817,21 +2829,21 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
           }
         },
-        "ts": "2026-08-16T17:01:49+00:00"
+        "ts": "2026-09-08T15:39:34+00:00"
       },
       {
-        "id": "6223757f-5ad2-460e-a870-6500bec64299",
-        "claim_id": "CLM-2ACE4CBF1CD6",
+        "id": "98f0c202-0f9a-4f70-ab7f-463d8c3f22d6",
+        "claim_id": "CLM-F696AAB99018",
         "agent": "EligibilityCheckSubgraph",
         "node": "determine_eligibility_requirement",
         "event_type": "NODE_ENTER",
@@ -2876,21 +2888,21 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
           }
         },
-        "ts": "2026-08-16T17:01:49+00:00"
+        "ts": "2026-09-08T15:39:34+00:00"
       },
       {
-        "id": "590803d9-61d2-44c8-9403-262b5cec1f24",
-        "claim_id": "CLM-2ACE4CBF1CD6",
+        "id": "d6718ad2-d03c-46f1-8b9d-6c56e87424ae",
+        "claim_id": "CLM-F696AAB99018",
         "agent": "EligibilityCheckSubgraph",
         "node": "determine_eligibility_requirement",
         "event_type": "NODE_EXIT",
@@ -2937,11 +2949,11 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
@@ -2986,21 +2998,21 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
           }
         },
-        "ts": "2026-08-16T17:01:49+00:00"
+        "ts": "2026-09-08T15:39:34+00:00"
       },
       {
-        "id": "ced0aa09-fd76-4fa9-93a5-17e50d5018f1",
-        "claim_id": "CLM-2ACE4CBF1CD6",
+        "id": "d721277d-c110-42e2-8989-143969bfacab",
+        "claim_id": "CLM-F696AAB99018",
         "agent": "EligibilityCheckSubgraph",
         "node": "route_to_platform",
         "event_type": "NODE_ENTER",
@@ -3045,26 +3057,26 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
           }
         },
-        "ts": "2026-08-16T17:01:49+00:00"
+        "ts": "2026-09-08T15:39:34+00:00"
       },
       {
-        "id": "1d0c357b-3c90-4abf-a267-36555bdf393d",
-        "claim_id": "CLM-2ACE4CBF1CD6",
+        "id": "21ef6a96-a907-4575-8384-641d6fd588a9",
+        "claim_id": "CLM-F696AAB99018",
         "agent": "EligibilityCheckSubgraph",
         "node": "route_to_platform",
         "event_type": "NODE_EXIT",
         "payload": {
-          "duration_ms": 0.01,
+          "duration_ms": 0.0,
           "errors_added": [],
           "input_snapshot": {
             "route": {
@@ -3106,11 +3118,11 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
@@ -3155,21 +3167,21 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
           }
         },
-        "ts": "2026-08-16T17:01:49+00:00"
+        "ts": "2026-09-08T15:39:34+00:00"
       },
       {
-        "id": "7314dfaf-1758-4935-bd85-d6944ecb49e7",
-        "claim_id": "CLM-2ACE4CBF1CD6",
+        "id": "5a0123d7-5467-4d96-9afb-f956717f8d59",
+        "claim_id": "CLM-F696AAB99018",
         "agent": "EligibilityCheckSubgraph",
         "node": "build_eligibility_payload",
         "event_type": "NODE_ENTER",
@@ -3214,26 +3226,26 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
           }
         },
-        "ts": "2026-08-16T17:01:49+00:00"
+        "ts": "2026-09-08T15:39:34+00:00"
       },
       {
-        "id": "661ebb34-b8b0-4542-ae3f-1ca964ea675d",
-        "claim_id": "CLM-2ACE4CBF1CD6",
+        "id": "0a4f0a37-f0b1-484c-87f9-3bdceae614be",
+        "claim_id": "CLM-F696AAB99018",
         "agent": "EligibilityCheckSubgraph",
         "node": "build_eligibility_payload",
         "event_type": "NODE_EXIT",
         "payload": {
-          "duration_ms": 8.54,
+          "duration_ms": 7.95,
           "errors_added": [],
           "input_snapshot": {
             "route": {
@@ -3275,11 +3287,11 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
@@ -3324,21 +3336,21 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
           }
         },
-        "ts": "2026-08-16T17:01:49+00:00"
+        "ts": "2026-09-08T15:39:34+00:00"
       },
       {
-        "id": "b666235f-6497-4079-b772-059578c3e37c",
-        "claim_id": "CLM-2ACE4CBF1CD6",
+        "id": "4584e9a4-00ed-4204-a896-14a32f7852c9",
+        "claim_id": "CLM-F696AAB99018",
         "agent": "EligibilityCheckSubgraph",
         "node": "submit_eligibility_request",
         "event_type": "NODE_ENTER",
@@ -3383,21 +3395,21 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
           }
         },
-        "ts": "2026-08-16T17:01:49+00:00"
+        "ts": "2026-09-08T15:39:34+00:00"
       },
       {
-        "id": "bfe14dbc-7011-45bc-b6f9-c201e1af8922",
-        "claim_id": "CLM-2ACE4CBF1CD6",
+        "id": "8eb9c1a6-8cc9-414d-9638-968a30348a46",
+        "claim_id": "CLM-F696AAB99018",
         "agent": "EligibilityCheckSubgraph",
         "node": "submit_eligibility_request",
         "event_type": "NODE_EXIT",
@@ -3444,11 +3456,11 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
@@ -3493,21 +3505,21 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
           }
         },
-        "ts": "2026-08-16T17:01:49+00:00"
+        "ts": "2026-09-08T15:39:34+00:00"
       },
       {
-        "id": "f4f1012f-99de-467b-aacb-8baf0cb5f5b7",
-        "claim_id": "CLM-2ACE4CBF1CD6",
+        "id": "c940413a-434c-4f97-9b3c-e6a49b403a8d",
+        "claim_id": "CLM-F696AAB99018",
         "agent": "EligibilityCheckSubgraph",
         "node": "poll_if_async",
         "event_type": "NODE_ENTER",
@@ -3552,21 +3564,21 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
           }
         },
-        "ts": "2026-08-16T17:01:49+00:00"
+        "ts": "2026-09-08T15:39:34+00:00"
       },
       {
-        "id": "b20ad872-bfc8-4a21-aaf2-2fd975043c64",
-        "claim_id": "CLM-2ACE4CBF1CD6",
+        "id": "5e22e075-c806-43d5-8ec8-0f4f7ee054e7",
+        "claim_id": "CLM-F696AAB99018",
         "agent": "EligibilityCheckSubgraph",
         "node": "poll_if_async",
         "event_type": "NODE_EXIT",
@@ -3613,11 +3625,11 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
@@ -3662,21 +3674,21 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
           }
         },
-        "ts": "2026-08-16T17:01:49+00:00"
+        "ts": "2026-09-08T15:39:34+00:00"
       },
       {
-        "id": "21a1b31e-b2b6-4f71-af1b-d55a3fba778d",
-        "claim_id": "CLM-2ACE4CBF1CD6",
+        "id": "02793f0c-c107-4d74-8fee-8a546b54b9c3",
+        "claim_id": "CLM-F696AAB99018",
         "agent": "EligibilityCheckSubgraph",
         "node": "parse_eligibility_response",
         "event_type": "NODE_ENTER",
@@ -3721,21 +3733,21 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
           }
         },
-        "ts": "2026-08-16T17:01:49+00:00"
+        "ts": "2026-09-08T15:39:34+00:00"
       },
       {
-        "id": "2b8c415a-df45-4d3a-a401-9fd88278a092",
-        "claim_id": "CLM-2ACE4CBF1CD6",
+        "id": "f9b298b0-c337-4516-a520-19282c2dc662",
+        "claim_id": "CLM-F696AAB99018",
         "agent": "EligibilityCheckSubgraph",
         "node": "parse_eligibility_response",
         "event_type": "NODE_EXIT",
@@ -3782,11 +3794,11 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
@@ -3831,21 +3843,21 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
           }
         },
-        "ts": "2026-08-16T17:01:49+00:00"
+        "ts": "2026-09-08T15:39:34+00:00"
       },
       {
-        "id": "16d41549-cbf9-42f1-8b0a-ea545a2df6e0",
-        "claim_id": "CLM-2ACE4CBF1CD6",
+        "id": "e08c8023-45bc-4631-9a66-eb27d1242bfe",
+        "claim_id": "CLM-F696AAB99018",
         "agent": "EligibilityCheckSubgraph",
         "node": "validate_coverage_details",
         "event_type": "NODE_ENTER",
@@ -3890,26 +3902,26 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
           }
         },
-        "ts": "2026-08-16T17:01:49+00:00"
+        "ts": "2026-09-08T15:39:34+00:00"
       },
       {
-        "id": "87bdaef4-d026-42d5-9e92-d10e5b475e88",
-        "claim_id": "CLM-2ACE4CBF1CD6",
+        "id": "265ba143-aa8a-47c0-bcd4-4e0cf7e4f0f6",
+        "claim_id": "CLM-F696AAB99018",
         "agent": "EligibilityCheckSubgraph",
         "node": "validate_coverage_details",
         "event_type": "NODE_EXIT",
         "payload": {
-          "duration_ms": 1.48,
+          "duration_ms": 2.15,
           "errors_added": [],
           "input_snapshot": {
             "route": {
@@ -3951,11 +3963,11 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
@@ -4000,21 +4012,21 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
           }
         },
-        "ts": "2026-08-16T17:01:49+00:00"
+        "ts": "2026-09-08T15:39:34+00:00"
       },
       {
-        "id": "e185b288-9e9b-4db4-bb62-4955f967b0a6",
-        "claim_id": "CLM-2ACE4CBF1CD6",
+        "id": "d6c23c7e-9041-4e77-8830-aad61f2ddd56",
+        "claim_id": "CLM-F696AAB99018",
         "agent": "EligibilityCheckSubgraph",
         "node": "patch_claim_with_coverage",
         "event_type": "NODE_ENTER",
@@ -4059,26 +4071,26 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
           }
         },
-        "ts": "2026-08-16T17:01:49+00:00"
+        "ts": "2026-09-08T15:39:34+00:00"
       },
       {
-        "id": "a0d0a76c-81b4-4852-8db7-1ec16766dd88",
-        "claim_id": "CLM-2ACE4CBF1CD6",
+        "id": "e264b88e-235c-4164-af71-03e718c8d0bf",
+        "claim_id": "CLM-F696AAB99018",
         "agent": "EligibilityCheckSubgraph",
         "node": "patch_claim_with_coverage",
         "event_type": "NODE_EXIT",
         "payload": {
-          "duration_ms": 0.01,
+          "duration_ms": 1.6,
           "errors_added": [],
           "input_snapshot": {
             "route": {
@@ -4120,11 +4132,11 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
@@ -4169,21 +4181,21 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
           }
         },
-        "ts": "2026-08-16T17:01:49+00:00"
+        "ts": "2026-09-08T15:39:34+00:00"
       },
       {
-        "id": "99f0baa3-339a-41cd-bb43-28cb3dbfdca2",
-        "claim_id": "CLM-2ACE4CBF1CD6",
+        "id": "b51b3853-5e8d-4b3a-ab7a-ff2bb332d146",
+        "claim_id": "CLM-F696AAB99018",
         "agent": "EligibilityCheckSubgraph",
         "node": "store_eligibility_record",
         "event_type": "NODE_ENTER",
@@ -4228,26 +4240,26 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
           }
         },
-        "ts": "2026-08-16T17:01:49+00:00"
+        "ts": "2026-09-08T15:39:34+00:00"
       },
       {
-        "id": "18bad0d3-7925-4e2d-a837-a6d42d942a72",
-        "claim_id": "CLM-2ACE4CBF1CD6",
+        "id": "e726e959-1ba3-49d0-8b5c-6e431fc2bbe3",
+        "claim_id": "CLM-F696AAB99018",
         "agent": "EligibilityCheckSubgraph",
         "node": "store_eligibility_record",
         "event_type": "NODE_EXIT",
         "payload": {
-          "duration_ms": 0.0,
+          "duration_ms": 5.88,
           "errors_added": [],
           "input_snapshot": {
             "route": {
@@ -4289,11 +4301,11 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
@@ -4338,21 +4350,21 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
           }
         },
-        "ts": "2026-08-16T17:01:49+00:00"
+        "ts": "2026-09-08T15:39:34+00:00"
       },
       {
-        "id": "92226603-f232-47ed-a125-0de9a064ba9a",
-        "claim_id": "CLM-2ACE4CBF1CD6",
+        "id": "d1fb390b-bb54-45bc-8915-253426b8cc9d",
+        "claim_id": "CLM-F696AAB99018",
         "agent": "EligibilityCheckSubgraph",
         "node": "finish",
         "event_type": "NODE_ENTER",
@@ -4397,21 +4409,21 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
           }
         },
-        "ts": "2026-08-16T17:01:49+00:00"
+        "ts": "2026-09-08T15:39:34+00:00"
       },
       {
-        "id": "1cca2658-010e-41ce-b57b-293618d2eb09",
-        "claim_id": "CLM-2ACE4CBF1CD6",
+        "id": "66bc0660-a59d-4e66-a3e8-091fafb06361",
+        "claim_id": "CLM-F696AAB99018",
         "agent": "EligibilityCheckSubgraph",
         "node": "finish",
         "event_type": "NODE_EXIT",
@@ -4458,11 +4470,11 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
@@ -4507,21 +4519,21 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
           }
         },
-        "ts": "2026-08-16T17:01:49+00:00"
+        "ts": "2026-09-08T15:39:34+00:00"
       },
       {
-        "id": "21da4435-dc7e-4a40-9216-2cfda94b5e31",
-        "claim_id": "CLM-2ACE4CBF1CD6",
+        "id": "e0bbcf23-bc49-4ce4-a44e-5cc167120399",
+        "claim_id": "CLM-F696AAB99018",
         "agent": "PriorAuthCheckSubgraph",
         "node": "normalize_prior_auth_input",
         "event_type": "NODE_ENTER",
@@ -4566,26 +4578,26 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
           }
         },
-        "ts": "2026-08-16T17:01:49+00:00"
+        "ts": "2026-09-08T15:39:35+00:00"
       },
       {
-        "id": "82b04c4e-4d72-4e78-a99d-477ed695a352",
-        "claim_id": "CLM-2ACE4CBF1CD6",
+        "id": "20ece695-04a3-46bd-a39f-ff3b25f3064c",
+        "claim_id": "CLM-F696AAB99018",
         "agent": "PriorAuthCheckSubgraph",
         "node": "normalize_prior_auth_input",
         "event_type": "NODE_EXIT",
         "payload": {
-          "duration_ms": 0.01,
+          "duration_ms": 0.0,
           "errors_added": [],
           "input_snapshot": {
             "route": {
@@ -4627,11 +4639,11 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
@@ -4676,21 +4688,21 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
           }
         },
-        "ts": "2026-08-16T17:01:49+00:00"
+        "ts": "2026-09-08T15:39:35+00:00"
       },
       {
-        "id": "4689de34-82fe-4400-8103-5078000797d5",
-        "claim_id": "CLM-2ACE4CBF1CD6",
+        "id": "397aeda6-66f4-4000-aa4a-e453a7dc9595",
+        "claim_id": "CLM-F696AAB99018",
         "agent": "PriorAuthCheckSubgraph",
         "node": "determine_requirement",
         "event_type": "NODE_ENTER",
@@ -4735,21 +4747,21 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
           }
         },
-        "ts": "2026-08-16T17:01:49+00:00"
+        "ts": "2026-09-08T15:39:35+00:00"
       },
       {
-        "id": "99da8776-c582-49b9-ba62-9c383fdc3700",
-        "claim_id": "CLM-2ACE4CBF1CD6",
+        "id": "291a0988-a78b-4b03-ab56-9555d7c076be",
+        "claim_id": "CLM-F696AAB99018",
         "agent": "PriorAuthCheckSubgraph",
         "node": "determine_requirement",
         "event_type": "NODE_EXIT",
@@ -4796,11 +4808,11 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
@@ -4845,21 +4857,21 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
           }
         },
-        "ts": "2026-08-16T17:01:49+00:00"
+        "ts": "2026-09-08T15:39:35+00:00"
       },
       {
-        "id": "bec89ff4-8a3b-499c-b2dd-78aabf7bef18",
-        "claim_id": "CLM-2ACE4CBF1CD6",
+        "id": "cecafc7e-4f3c-43ac-ac6e-8b7b59cc8a28",
+        "claim_id": "CLM-F696AAB99018",
         "agent": "PriorAuthCheckSubgraph",
         "node": "validate_existing_auth",
         "event_type": "NODE_ENTER",
@@ -4904,21 +4916,21 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
           }
         },
-        "ts": "2026-08-16T17:01:49+00:00"
+        "ts": "2026-09-08T15:39:35+00:00"
       },
       {
-        "id": "a90c9dae-e989-49dc-97c5-45f12ff169ea",
-        "claim_id": "CLM-2ACE4CBF1CD6",
+        "id": "13a12f20-7bb3-4e30-8da0-7cf8203b2bb9",
+        "claim_id": "CLM-F696AAB99018",
         "agent": "PriorAuthCheckSubgraph",
         "node": "validate_existing_auth",
         "event_type": "NODE_EXIT",
@@ -4965,11 +4977,11 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
@@ -5014,21 +5026,21 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
           }
         },
-        "ts": "2026-08-16T17:01:49+00:00"
+        "ts": "2026-09-08T15:39:35+00:00"
       },
       {
-        "id": "0d739c39-96b4-41e6-b6dd-6b00cbda43e8",
-        "claim_id": "CLM-2ACE4CBF1CD6",
+        "id": "c9112f50-27e4-403d-95c5-0dab2ca23134",
+        "claim_id": "CLM-F696AAB99018",
         "agent": "PriorAuthCheckSubgraph",
         "node": "pa_route_decision",
         "event_type": "NODE_ENTER",
@@ -5073,21 +5085,21 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
           }
         },
-        "ts": "2026-08-16T17:01:49+00:00"
+        "ts": "2026-09-08T15:39:35+00:00"
       },
       {
-        "id": "d95e6277-ab8d-4732-955e-fa8c7f19fa20",
-        "claim_id": "CLM-2ACE4CBF1CD6",
+        "id": "b0e75fb5-ba4b-43c3-8076-e42d0998c17b",
+        "claim_id": "CLM-F696AAB99018",
         "agent": "PriorAuthCheckSubgraph",
         "node": "pa_route_decision",
         "event_type": "NODE_EXIT",
@@ -5134,11 +5146,11 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
@@ -5183,21 +5195,21 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
           }
         },
-        "ts": "2026-08-16T17:01:49+00:00"
+        "ts": "2026-09-08T15:39:35+00:00"
       },
       {
-        "id": "1cabde5e-673f-4512-8193-29d8dd8e7fba",
-        "claim_id": "CLM-2ACE4CBF1CD6",
+        "id": "11b0a26a-3de7-4304-9f33-196c23b43aa7",
+        "claim_id": "CLM-F696AAB99018",
         "agent": "PriorAuthCheckSubgraph",
         "node": "pa_claim_builder",
         "event_type": "NODE_ENTER",
@@ -5242,21 +5254,21 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
           }
         },
-        "ts": "2026-08-16T17:01:49+00:00"
+        "ts": "2026-09-08T15:39:35+00:00"
       },
       {
-        "id": "eefaf028-998a-403d-b739-08948b8e7763",
-        "claim_id": "CLM-2ACE4CBF1CD6",
+        "id": "ac7bba64-b54c-4c7f-907e-fc3bdf9cb430",
+        "claim_id": "CLM-F696AAB99018",
         "agent": "PriorAuthCheckSubgraph",
         "node": "pa_claim_builder",
         "event_type": "NODE_EXIT",
@@ -5303,11 +5315,11 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
@@ -5352,21 +5364,21 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
           }
         },
-        "ts": "2026-08-16T17:01:49+00:00"
+        "ts": "2026-09-08T15:39:35+00:00"
       },
       {
-        "id": "ca612ee2-f5c2-43b9-8b6b-3093612b13c4",
-        "claim_id": "CLM-2ACE4CBF1CD6",
+        "id": "baaa7816-5488-42cb-bf18-b38e5a8b8b4a",
+        "claim_id": "CLM-F696AAB99018",
         "agent": "PriorAuthCheckSubgraph",
         "node": "submit_or_create_task",
         "event_type": "NODE_ENTER",
@@ -5411,21 +5423,21 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
           }
         },
-        "ts": "2026-08-16T17:01:49+00:00"
+        "ts": "2026-09-08T15:39:35+00:00"
       },
       {
-        "id": "43c5ddd0-aea9-4993-b658-09cfc44317b4",
-        "claim_id": "CLM-2ACE4CBF1CD6",
+        "id": "7be2937a-5628-4041-bb5b-975bb5608799",
+        "claim_id": "CLM-F696AAB99018",
         "agent": "PriorAuthCheckSubgraph",
         "node": "submit_or_create_task",
         "event_type": "NODE_EXIT",
@@ -5472,11 +5484,11 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
@@ -5521,21 +5533,21 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
           }
         },
-        "ts": "2026-08-16T17:01:49+00:00"
+        "ts": "2026-09-08T15:39:35+00:00"
       },
       {
-        "id": "3591d34b-5ab3-4396-a053-f0080e7fd50c",
-        "claim_id": "CLM-2ACE4CBF1CD6",
+        "id": "40115624-7541-4a17-aaa5-a4820a1d9a7b",
+        "claim_id": "CLM-F696AAB99018",
         "agent": "PriorAuthCheckSubgraph",
         "node": "poll_if_needed",
         "event_type": "NODE_ENTER",
@@ -5580,21 +5592,21 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
           }
         },
-        "ts": "2026-08-16T17:01:49+00:00"
+        "ts": "2026-09-08T15:39:35+00:00"
       },
       {
-        "id": "fbd2fb0c-265a-4ed5-9c3a-f34701e4399e",
-        "claim_id": "CLM-2ACE4CBF1CD6",
+        "id": "d011f3ef-f392-44dd-964e-6e9a3e81cdce",
+        "claim_id": "CLM-F696AAB99018",
         "agent": "PriorAuthCheckSubgraph",
         "node": "poll_if_needed",
         "event_type": "NODE_EXIT",
@@ -5641,11 +5653,11 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
@@ -5690,21 +5702,21 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
           }
         },
-        "ts": "2026-08-16T17:01:49+00:00"
+        "ts": "2026-09-08T15:39:35+00:00"
       },
       {
-        "id": "ce47d855-d7c8-464f-8131-d360aa1908ff",
-        "claim_id": "CLM-2ACE4CBF1CD6",
+        "id": "afe1eff7-d5bd-4cd3-af33-65522006036e",
+        "claim_id": "CLM-F696AAB99018",
         "agent": "PriorAuthCheckSubgraph",
         "node": "parse_final_response",
         "event_type": "NODE_ENTER",
@@ -5749,21 +5761,21 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
           }
         },
-        "ts": "2026-08-16T17:01:49+00:00"
+        "ts": "2026-09-08T15:39:35+00:00"
       },
       {
-        "id": "d92f3ddd-1827-4552-8a8b-e1b7ebb66647",
-        "claim_id": "CLM-2ACE4CBF1CD6",
+        "id": "7762cc23-accc-45ea-b044-60d40bc41188",
+        "claim_id": "CLM-F696AAB99018",
         "agent": "PriorAuthCheckSubgraph",
         "node": "parse_final_response",
         "event_type": "NODE_EXIT",
@@ -5810,11 +5822,11 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
@@ -5859,21 +5871,21 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
           }
         },
-        "ts": "2026-08-16T17:01:49+00:00"
+        "ts": "2026-09-08T15:39:35+00:00"
       },
       {
-        "id": "0789daf4-e3e5-4a48-afe3-71c0ad9374fc",
-        "claim_id": "CLM-2ACE4CBF1CD6",
+        "id": "61cc0bdd-270f-43e6-9896-55754f640e12",
+        "claim_id": "CLM-F696AAB99018",
         "agent": "PriorAuthCheckSubgraph",
         "node": "patch_claim",
         "event_type": "NODE_ENTER",
@@ -5918,21 +5930,21 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
           }
         },
-        "ts": "2026-08-16T17:01:49+00:00"
+        "ts": "2026-09-08T15:39:35+00:00"
       },
       {
-        "id": "78f33068-4b37-4bb8-8682-db464fcf776f",
-        "claim_id": "CLM-2ACE4CBF1CD6",
+        "id": "8704aebc-44b7-4934-8d31-51fb3cf69004",
+        "claim_id": "CLM-F696AAB99018",
         "agent": "PriorAuthCheckSubgraph",
         "node": "patch_claim",
         "event_type": "NODE_EXIT",
@@ -5979,11 +5991,11 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
@@ -6028,21 +6040,21 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
           }
         },
-        "ts": "2026-08-16T17:01:49+00:00"
+        "ts": "2026-09-08T15:39:35+00:00"
       },
       {
-        "id": "60db160a-4ab7-43a6-bae2-9f9e7582bbb5",
-        "claim_id": "CLM-2ACE4CBF1CD6",
+        "id": "da573576-06b2-42f5-97a7-7e6d792f309f",
+        "claim_id": "CLM-F696AAB99018",
         "agent": "PriorAuthCheckSubgraph",
         "node": "finish",
         "event_type": "NODE_ENTER",
@@ -6087,21 +6099,21 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
           }
         },
-        "ts": "2026-08-16T17:01:49+00:00"
+        "ts": "2026-09-08T15:39:35+00:00"
       },
       {
-        "id": "7657227c-869a-4329-86d9-47668b863635",
-        "claim_id": "CLM-2ACE4CBF1CD6",
+        "id": "4b0adbb6-8603-4b0b-ab75-ce9a28510c7b",
+        "claim_id": "CLM-F696AAB99018",
         "agent": "PriorAuthCheckSubgraph",
         "node": "finish",
         "event_type": "NODE_EXIT",
@@ -6148,11 +6160,11 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
@@ -6197,26 +6209,26 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
           }
         },
-        "ts": "2026-08-16T17:01:49+00:00"
+        "ts": "2026-09-08T15:39:35+00:00"
       },
       {
-        "id": "28a1a13e-2f85-407d-b903-47e349ed4aac",
-        "claim_id": "CLM-2ACE4CBF1CD6",
+        "id": "e0003a77-e244-4d71-9734-7982c9755cd6",
+        "claim_id": "CLM-F696AAB99018",
         "agent": "ClaimValidationAgent",
         "node": "validation_node",
         "event_type": "NODE_EXIT",
         "payload": {
-          "duration_ms": 212.92,
+          "duration_ms": 207.2,
           "errors_added": [],
           "input_snapshot": {
             "route": {
@@ -6258,11 +6270,11 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
@@ -6307,21 +6319,21 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
           }
         },
-        "ts": "2026-08-16T17:01:49+00:00"
+        "ts": "2026-09-08T15:39:35+00:00"
       },
       {
-        "id": "10ff58a4-ad1a-4034-9db9-290b52ab3121",
-        "claim_id": "CLM-2ACE4CBF1CD6",
+        "id": "4e06d730-b3a1-4bb4-8160-222ec15d200d",
+        "claim_id": "CLM-F696AAB99018",
         "agent": "ClaimValidationAgent",
         "node": "calculate_score",
         "event_type": "NODE_ENTER",
@@ -6366,26 +6378,26 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
           }
         },
-        "ts": "2026-08-16T17:01:49+00:00"
+        "ts": "2026-09-08T15:39:35+00:00"
       },
       {
-        "id": "fb6e94b6-aa8e-489d-872d-053abc944f3f",
-        "claim_id": "CLM-2ACE4CBF1CD6",
+        "id": "636611d5-708a-48c0-ba92-6a73b4e94899",
+        "claim_id": "CLM-F696AAB99018",
         "agent": "ClaimValidationAgent",
         "node": "calculate_score",
         "event_type": "NODE_EXIT",
         "payload": {
-          "duration_ms": 31.24,
+          "duration_ms": 32.04,
           "errors_added": [],
           "input_snapshot": {
             "route": {
@@ -6427,11 +6439,11 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 1,
+            "warning_count": 0,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
@@ -6476,21 +6488,21 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 4,
+            "warning_count": 3,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
           }
         },
-        "ts": "2026-08-16T17:01:49+00:00"
+        "ts": "2026-09-08T15:39:35+00:00"
       },
       {
-        "id": "3e7d9539-c54e-4b3d-b380-3dc62df137f7",
-        "claim_id": "CLM-2ACE4CBF1CD6",
+        "id": "34f127a8-ed62-4440-bb06-de002135fdc2",
+        "claim_id": "CLM-F696AAB99018",
         "agent": "ClaimValidationAgent",
         "node": "decision_router",
         "event_type": "NODE_ENTER",
@@ -6535,26 +6547,26 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 4,
+            "warning_count": 3,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
           }
         },
-        "ts": "2026-08-16T17:01:49+00:00"
+        "ts": "2026-09-08T15:39:35+00:00"
       },
       {
-        "id": "42a5fc5d-875c-4a43-89d2-53462d020cd6",
-        "claim_id": "CLM-2ACE4CBF1CD6",
+        "id": "d937a55a-7d60-4dc4-9cd1-3e02b8d43539",
+        "claim_id": "CLM-F696AAB99018",
         "agent": "ClaimValidationAgent",
         "node": "decision_router",
         "event_type": "NODE_EXIT",
         "payload": {
-          "duration_ms": 4.11,
+          "duration_ms": 6.1,
           "errors_added": [],
           "input_snapshot": {
             "route": {
@@ -6596,11 +6608,11 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 4,
+            "warning_count": 3,
             "payload_status": "DRAFT_BUILT",
             "payload_version": 1,
             "pa_payload_version": 0
@@ -6645,17 +6657,17 @@
               "eligibility_profile": "KSA_STANDARD",
               "prior_auth_standard": "NPHIES"
             },
-            "claim_id": "CLM-2ACE4CBF1CD6",
+            "claim_id": "CLM-F696AAB99018",
             "error_count": 0,
             "claim_format": "NPHIES",
             "jurisdiction": "KSA",
-            "warning_count": 4,
+            "warning_count": 3,
             "payload_status": "READY_TO_SUBMIT",
             "payload_version": 1,
             "pa_payload_version": 0
           }
         },
-        "ts": "2026-08-16T17:01:49+00:00"
+        "ts": "2026-09-08T15:39:35+00:00"
       }
     ],
     "provider": {
@@ -6671,7 +6683,7 @@
   },
   "state": {
     "claim": {
-      "claim_id": "CLM-2ACE4CBF1CD6",
+      "claim_id": "CLM-F696AAB99018",
       "version": 1
     },
     "claim_format": "NPHIES",
@@ -6679,17 +6691,11 @@
     "payload_status": "READY_TO_SUBMIT",
     "final_status": "READY_TO_SUBMIT",
     "score": 85,
-    "claim_payload_uri": "s3://velo-claim/claims/CLM-2ACE4CBF1CD6/versions/1/payload.json",
+    "claim_payload_uri": "s3://velo-claim/claims/CLM-F696AAB99018/versions/1/payload.json",
     "claim_payload_type": "fhir_bundle_json",
-    "validation_report_uri": "s3://velo-claim/claims/CLM-2ACE4CBF1CD6/validation_reports/f0d8576f-0835-4a14-b503-ba674312a7e2.json",
+    "validation_report_uri": "s3://velo-claim/claims/CLM-F696AAB99018/validation_reports/2c6ec888-d620-426d-8070-22ec0071eb2d.json",
     "errors": [],
     "warnings": [
-      {
-        "code": "PAYER_RULE_SOURCE_NOT_LIVE",
-        "message": "Payer rules came from MOCK.",
-        "payer_id": "BUPA-SA-001",
-        "plan_id": "comprehensive"
-      },
       {
         "code": "FHIR_VALIDATOR_NOT_CONFIGURED",
         "severity": "WARNING",
@@ -6699,7 +6705,18 @@
         "suggestion": "Set NPHIES_FHIR_VALIDATOR_COMMAND with a {payload} placeholder for the payload file.",
         "agent": "ClaimValidationAgent",
         "node": "validation_node",
-        "ts": "2026-08-16T17:01:49+00:00"
+        "ts": "2026-09-08T15:39:35+00:00"
+      },
+      {
+        "code": "ICD_CPT_COMPATIBILITY_REVIEW",
+        "severity": "WARNING",
+        "check_type": "CODING",
+        "field": "canonical_claim.procedures.99213",
+        "message": "No KG compatibility edge found for CPT 99213 and current diagnoses.",
+        "suggestion": "Route to coding review or use LLM-assisted coding enrichment.",
+        "agent": "ClaimValidationAgent",
+        "node": "validation_node",
+        "ts": "2026-09-08T15:39:35+00:00"
       },
       {
         "code": "ICD_CPT_COMPATIBILITY_REVIEW",
@@ -6710,18 +6727,7 @@
         "suggestion": "Route to coding review or use LLM-assisted coding enrichment.",
         "agent": "ClaimValidationAgent",
         "node": "validation_node",
-        "ts": "2026-08-16T17:01:49+00:00"
-      },
-      {
-        "code": "PAYER_RULE_SOURCE_NOT_LIVE",
-        "severity": "WARNING",
-        "check_type": "PAYER_RULES",
-        "field": "payer_rule_set.source",
-        "message": "Payer rules came from MOCK, not a live payer portal.",
-        "suggestion": "Use live payer rules or confirm cached rule freshness before production submission.",
-        "agent": "ClaimValidationAgent",
-        "node": "validation_node",
-        "ts": "2026-08-16T17:01:49+00:00"
+        "ts": "2026-09-08T15:39:35+00:00"
       }
     ]
   }

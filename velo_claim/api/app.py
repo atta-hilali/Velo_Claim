@@ -204,6 +204,7 @@ def create_app(services: ServiceContainer | None = None):
         initial_state = {
             "claim_id": claim_id,
             "encounter_package": package,
+            "jurisdiction": package.get("jurisdiction"),
             "ingestion": {
                 "source": "RCM_PDF_UPLOAD",
                 "source_document_uri": source_uri,

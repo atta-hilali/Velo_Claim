@@ -11,6 +11,29 @@ from datetime import datetime
 from typing import Any
 
 
+FIELD_LABELS = (
+    "Patient ID", "MRN", "Medical Record Number", "Patient Name", "Full Name",
+    "Date of Birth", "DOB", "Birth Date", "Gender", "Sex", "Nationality",
+    "National ID", "National Identifier", "Iqama", "Emirates ID", "EmiratesIDNumber",
+    "Phone", "Address", "Member ID", "Membership ID", "Subscriber ID",
+    "Payer", "Payer ID", "Payer Name", "Insurer ID", "Insurer Name", "Receiver ID",
+    "Insurance Company", "Policy Number", "Plan / Class", "Plan ID", "Policy ID",
+    "Plan Code", "Network Status", "Coverage Status", "Eligibility Status",
+    "Coverage Period", "Coverage Start", "Policy Start", "Coverage End", "Policy End",
+    "Policy Expiry", "Encounter ID", "Visit ID", "Episode ID", "Service Date",
+    "Date of Service", "Encounter Date", "Visit Date", "Encounter Start", "Visit Start",
+    "Admission", "Admission Date", "Encounter End", "Visit End", "Discharge",
+    "Discharge Date", "Encounter Type", "Visit Type", "Encounter Class", "Class Code",
+    "Encounter Status", "Reason for Visit", "Attending Provider", "Practitioner ID",
+    "Clinician ID", "Provider ID", "Practitioner Name", "Clinician Name", "Provider Name",
+    "Doctor Name", "Practitioner License", "Clinician License", "Provider License",
+    "License No.", "License No", "Role", "Specialty", "Facility ID", "Organization ID",
+    "Facility Name", "Clinic Name", "Hospital Name", "Facility License", "Facility Code",
+    "Sender ID", "Jurisdiction", "Emirate", "Country",
+)
+FIELD_LABEL_KEYS = {re.sub(r"[^a-z0-9]", "", label.lower()) for label in FIELD_LABELS}
+
+
 class PdfExtractionError(ValueError):
     def __init__(self, code: str, message: str) -> None:
         super().__init__(message)
@@ -77,7 +100,7 @@ def extract_pdf_text(content: bytes, *, max_pages: int = 100) -> tuple[str, int]
     except ImportError as exc:
         raise RuntimeError("Install pypdf to extract encounter PDFs.") from exc
     try:
-        reader = PdfReader(io.BytesIO(content), strict=True)
+        reader = PdfReader(io.BytesIO(content), strict=False)
     except Exception as exc:
         raise PdfExtractionError("INVALID_PDF", "The PDF could not be parsed safely.") from exc
     if reader.is_encrypted:
@@ -85,7 +108,25 @@ def extract_pdf_text(content: bytes, *, max_pages: int = 100) -> tuple[str, int]
     page_count = len(reader.pages)
     if page_count == 0 or page_count > max_pages:
         raise PdfExtractionError("PDF_PAGE_LIMIT", f"PDF must contain between 1 and {max_pages} pages.")
-    text = "\n".join((page.extract_text() or "") for page in reader.pages).strip()
+    normal_text = "\n".join((page.extract_text() or "") for page in reader.pages).strip()
+    layout_pages = []
+    for page in reader.pages:
+        try:
+            layout_pages.append(page.extract_text(extraction_mode="layout") or "")
+        except (TypeError, ValueError):
+            layout_pages.append("")
+    layout_text = "\n".join(layout_pages).strip()
+    form_lines = []
+    for name, field in (reader.get_fields() or {}).items():
+        value = field.get("/V") if isinstance(field, dict) else None
+        if value not in (None, "", "/Off"):
+            form_lines.append(f"{name}: {value}")
+    variants = [normal_text]
+    if form_lines:
+        variants.append("\n".join(form_lines))
+    if layout_text and layout_text != normal_text:
+        variants.append(layout_text)
+    text = "\n\n".join(item for item in variants if item).strip()
     if len(re.sub(r"\s", "", text)) < 30:
         ocr_text = _extract_with_ocr(content)
         if not ocr_text:
@@ -98,35 +139,39 @@ def extract_pdf_text(content: bytes, *, max_pages: int = 100) -> tuple[str, int]
 
 
 def extract_encounter_from_text(text: str) -> dict[str, Any]:
-    patient_id = _field(text, "Patient ID", "MRN", "Medical Record Number")
+    patient_id = _identifier(_field(text, "Patient ID", "MRN", "Medical Record Number"))
     patient_name = _field(text, "Patient Name", "Full Name")
-    member_id = _field(text, "Member ID", "Membership ID", "Subscriber ID")
+    member_id = _identifier(_field(text, "Member ID", "Membership ID", "Subscriber ID"))
     national_id = _field(text, "National ID", "National Identifier", "Iqama")
-    emirates_id = _field(text, "Emirates ID", "EmiratesIDNumber")
+    emirates_id = _emirates_id(text) or _identifier(_field(text, "Emirates ID", "EmiratesIDNumber"))
     birth_date = _date(_field(text, "Date of Birth", "DOB", "Birth Date"))
     gender = _gender(_field(text, "Gender", "Sex"))
 
-    payer_id = _field(text, "Payer ID", "Insurer ID", "Receiver ID")
-    payer_name = _field(text, "Payer Name", "Insurer Name", "Insurance Company")
-    plan_id = _field(text, "Plan ID", "Policy ID", "Plan Code")
+    payer_id = _identifier(_field(text, "Payer ID", "Insurer ID", "Receiver ID"))
+    payer_name = _field(text, "Payer Name", "Insurer Name", "Payer", "Insurance Company")
+    plan_id = _field(text, "Plan ID", "Policy ID", "Plan Code", "Plan / Class")
     coverage_status = (_field(text, "Coverage Status", "Eligibility Status") or "active").lower()
     coverage_start = _date(_field(text, "Coverage Start", "Policy Start"))
     coverage_end = _date(_field(text, "Coverage End", "Policy End", "Policy Expiry"))
+    if not coverage_start and not coverage_end:
+        coverage_start, coverage_end = _coverage_period(_field(text, "Coverage Period"))
 
-    encounter_id = _field(text, "Encounter ID", "Visit ID", "Episode ID")
-    service_date = _date(_field(text, "Service Date", "Date of Service", "Encounter Date", "Visit Date"))
-    encounter_start = _datetime(_field(text, "Encounter Start", "Visit Start", "Admission Date")) or service_date
-    encounter_end = _datetime(_field(text, "Encounter End", "Visit End", "Discharge Date")) or encounter_start
+    encounter_id = _identifier(_field(text, "Encounter ID", "Visit ID", "Episode ID"))
+    admission = _field(text, "Encounter Start", "Visit Start", "Admission", "Admission Date")
+    discharge = _field(text, "Encounter End", "Visit End", "Discharge", "Discharge Date")
+    service_date = _date(_field(text, "Service Date", "Date of Service", "Encounter Date", "Visit Date") or admission)
+    encounter_start = _datetime(admission) or service_date
+    encounter_end = _datetime(discharge) or encounter_start
     encounter_type = _field(text, "Encounter Type", "Visit Type") or "Ambulatory"
-    class_code = (_field(text, "Encounter Class", "Class Code") or "AMB").upper()
-    jurisdiction = _jurisdiction(_field(text, "Jurisdiction", "Emirate", "Country"))
+    class_code = _encounter_class(_field(text, "Encounter Class", "Class Code"), encounter_type)
+    jurisdiction = _infer_jurisdiction(text, _field(text, "Jurisdiction", "Emirate", "Country"))
 
-    provider_id = _field(text, "Practitioner ID", "Clinician ID", "Provider ID")
-    provider_name = _field(text, "Practitioner Name", "Clinician Name", "Provider Name", "Doctor Name")
-    provider_license = _field(text, "Practitioner License", "Clinician License", "Provider License")
-    facility_id = _field(text, "Facility ID", "Organization ID")
-    facility_name = _field(text, "Facility Name", "Clinic Name", "Hospital Name")
-    facility_license = _field(text, "Facility License", "Facility Code", "Sender ID")
+    provider_id = _identifier(_field(text, "Practitioner ID", "Clinician ID", "Provider ID"))
+    provider_name = _field(text, "Practitioner Name", "Clinician Name", "Provider Name", "Doctor Name", "Attending Provider")
+    provider_license = _identifier(_field(text, "Practitioner License", "Clinician License", "Provider License", "License No.", "License No"))
+    facility_id = _identifier(_field(text, "Facility ID", "Organization ID"))
+    facility_name = _field(text, "Facility Name", "Clinic Name", "Hospital Name") or _facility_name(text)
+    facility_license = _identifier(_field(text, "Facility License", "Facility Code", "Sender ID"))
 
     diagnoses = _diagnoses(text)
     procedures = _procedures(text, service_date)
@@ -136,9 +181,12 @@ def extract_encounter_from_text(text: str) -> dict[str, Any]:
         patient_identifiers.append({"system": "velo/member-id", "value": member_id})
     if emirates_id:
         patient_identifiers.append({"system": "uae/emirates-id", "value": emirates_id})
-    if national_id:
-        patient_identifiers.append({"system": "ksa/national-id", "value": national_id})
+    if national_id and _identifier(national_id) != emirates_id:
+        patient_identifiers.append(
+            {"system": "ksa/national-id" if jurisdiction == "KSA" else "national-id", "value": _identifier(national_id)}
+        )
 
+    reason_for_visit = _field(text, "Reason for Visit")
     package: dict[str, Any] = {
         "patient": {
             "resourceType": "Patient",
@@ -163,6 +211,7 @@ def extract_encounter_from_text(text: str) -> dict[str, Any]:
             "type": [{"text": encounter_type}],
             "class": {"code": class_code},
             "period": {key: value for key, value in {"start": encounter_start, "end": encounter_end}.items() if value},
+            "reason": [{"text": reason_for_visit}] if reason_for_visit else [],
         },
         "provider": {
             "resourceType": "Practitioner",
@@ -179,7 +228,8 @@ def extract_encounter_from_text(text: str) -> dict[str, Any]:
         "conditions": diagnoses,
         "procedures": procedures,
         "charge_items": charges,
-        "attachments": [],
+        "attachments": _attachments(text),
+        "jurisdiction": jurisdiction,
     }
     return _remove_none(package)
 
@@ -204,8 +254,182 @@ def missing_routing_fields(package: dict[str, Any]) -> list[str]:
 
 def _field(text: str, *labels: str) -> str | None:
     alternatives = "|".join(re.escape(label) for label in labels)
-    match = re.search(rf"(?im)^\s*(?:{alternatives})\s*[:#\-]\s*(.+?)\s*$", text)
-    return match.group(1).strip() if match else None
+    match = re.search(rf"(?im)^\s*(?:{alternatives})\s*(?:[:#]|\s+-\s+)\s*(.+?)\s*$", text)
+    if match:
+        return match.group(1).strip()
+
+    wanted = {_label_key(label) for label in labels}
+    lines = [line.strip() for line in text.splitlines()]
+    for index, line in enumerate(lines):
+        if _label_key(line) not in wanted:
+            continue
+        values = []
+        for candidate in lines[index + 1:index + 6]:
+            if not candidate:
+                continue
+            if _is_field_boundary(candidate):
+                break
+            values.append(candidate)
+        if values:
+            return " ".join(values)
+    return None
+
+
+def _label_key(value: str) -> str:
+    return re.sub(r"[^a-z0-9]", "", value.lower())
+
+
+def _is_field_boundary(value: str) -> bool:
+    stripped = value.strip()
+    if _label_key(stripped) in FIELD_LABEL_KEYS:
+        return True
+    return bool(re.match(r"^\d+\.\s+[A-Z][A-Z /&-]+$", stripped))
+
+
+def _identifier(value: str | None) -> str | None:
+    if not value:
+        return None
+    match = re.search(r"[A-Z0-9][A-Z0-9._/-]*", value, re.I)
+    return match.group(0) if match else None
+
+
+def _emirates_id(text: str) -> str | None:
+    match = re.search(r"\b784-\d{4}-\d{7}-\d\b", text)
+    return match.group(0) if match else None
+
+
+def _coverage_period(value: str | None) -> tuple[str | None, str | None]:
+    if not value:
+        return None, None
+    tokens = re.findall(
+        r"\b\d{4}-\d{2}-\d{2}\b|\b\d{1,2}/\d{1,2}/\d{4}\b|\b\d{1,2}\s+[A-Za-z]{3,9}\s+\d{4}\b",
+        value,
+    )
+    return (_date(tokens[0]) if tokens else None, _date(tokens[1]) if len(tokens) > 1 else None)
+
+
+def _encounter_class(explicit: str | None, encounter_type: str) -> str:
+    if explicit:
+        return explicit.strip().upper()
+    token = encounter_type.lower()
+    if "emergency" in token:
+        return "EMER"
+    if "inpatient" in token or "in-patient" in token:
+        return "IMP"
+    if "tele" in token:
+        return "VR"
+    if "home" in token:
+        return "HH"
+    if "day" in token:
+        return "SS"
+    return "AMB"
+
+
+def _infer_jurisdiction(text: str, explicit: str | None) -> str | None:
+    jurisdiction = _jurisdiction(explicit)
+    if jurisdiction:
+        return jurisdiction
+    token = text.lower()
+    if "eclaimlink" in token or "dubai health authority" in token or "dha licensed" in token:
+        return "DUBAI"
+    if "shafafiya" in token or "department of health abu dhabi" in token or "doh licensed" in token:
+        return "ABU_DHABI"
+    if "nphies" in token or "saudi arabia" in token or "cchi" in token:
+        return "KSA"
+    return None
+
+
+def _facility_name(text: str) -> str | None:
+    match = re.search(r"(?i)\bFacility\s*:\s*([^,|\n]+)", text)
+    if match:
+        return match.group(1).strip()
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    for index, line in enumerate(lines[:12]):
+        next_line = lines[index + 1] if index + 1 < len(lines) else ""
+        if re.search(r"(?i)\b(hospital|clinic|medical cent(?:er|re))\b", line) and (
+            "claim form" in next_line.lower() or index == 0
+        ):
+            return line
+    return None
+
+
+def _attachments(text: str) -> list[dict[str, Any]]:
+    attachments = []
+    seen = set()
+    for match in re.finditer(r"(?im)([A-Za-z0-9][A-Za-z0-9_.-]+\.pdf)\s*(?:\(([^)]+)\))?", text):
+        name = match.group(1)
+        if name.lower() in seen:
+            continue
+        seen.add(name.lower())
+        attachments.append(
+            {
+                "type": (match.group(2) or "supporting document").strip(),
+                "name": name,
+                "status": "referenced",
+            }
+        )
+    return attachments
+
+
+def _following_description(lines: list[str], index: int) -> str | None:
+    for candidate in lines[index + 1:index + 4]:
+        if _is_field_boundary(candidate) or _date(candidate):
+            continue
+        if candidate.lower() in {"active", "inactive", "resolved", "principal", "secondary"}:
+            continue
+        if re.fullmatch(r"[\d,.]+", candidate):
+            continue
+        return candidate
+    return None
+
+
+def _following_date(lines: list[str], index: int) -> str | None:
+    for candidate in lines[index + 1:index + 5]:
+        parsed = _date(candidate)
+        if parsed:
+            return parsed
+    return None
+
+
+def _charge_section_lines(text: str) -> list[str]:
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    start = next((index for index, line in enumerate(lines) if re.search(r"(?i)CHARGE\s+SUMMARY", line)), None)
+    if start is None:
+        return []
+    result = []
+    for line in lines[start:]:
+        if result and (line == "TOTAL" or re.match(r"^\d+\.\s+[A-Z][A-Z /&-]+$", line)):
+            break
+        result.append(line)
+    return result
+
+
+def _charge_values(lines: list[str], code: str) -> tuple[int | None, float | None, float | None, float | None]:
+    for index, line in enumerate(lines):
+        if line != code:
+            continue
+        values = []
+        for candidate in lines[index + 1:index + 8]:
+            if re.fullmatch(r"\d+(?:,\d{3})*(?:\.\d{1,2})?", candidate):
+                values.append(_money(candidate))
+            elif values:
+                break
+        if len(values) >= 2:
+            quantity = int(values[0]) if values[0] is not None else None
+            gross = values[1]
+            covered = values[2] if len(values) > 2 else None
+            patient_share = values[3] if len(values) > 3 else None
+            return quantity, gross, covered, patient_share
+    return None, None, None, None
+
+
+def _money(value: str | None) -> float | None:
+    if not value:
+        return None
+    try:
+        return float(value.replace(",", ""))
+    except ValueError:
+        return None
 
 
 def _diagnoses(text: str) -> list[dict[str, Any]]:
@@ -233,6 +457,28 @@ def _diagnoses(text: str) -> list[dict[str, Any]]:
                 },
             }
         )
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    form_pattern = re.compile(r"^([A-Z]\d{2}(?:\.[A-Z0-9]{1,4})?)\s*\((ICD(?:-?10(?:-AM)?)?)\)$", re.I)
+    for index, line in enumerate(lines):
+        match = form_pattern.match(line)
+        if not match:
+            continue
+        code = match.group(1).upper()
+        if code in seen:
+            continue
+        seen.add(code)
+        result.append(
+            {
+                "resourceType": "Condition",
+                "code": {
+                    "coding": [{
+                        "system": "http://hl7.org/fhir/sid/icd-10",
+                        "code": code,
+                        "display": _following_description(lines, index),
+                    }]
+                },
+            }
+        )
     return _remove_none(result)
 
 
@@ -256,6 +502,28 @@ def _procedures(text: str, service_date: str | None) -> list[dict[str, Any]]:
                 "performedDateTime": service_date,
             }
         )
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    form_pattern = re.compile(r"^([A-Z]?\d{4,5})\s*\((CPT|CDT|HCPCS)\)$", re.I)
+    for index, line in enumerate(lines):
+        match = form_pattern.match(line)
+        if not match:
+            continue
+        code = match.group(1).upper()
+        if code in seen:
+            continue
+        seen.add(code)
+        named_system = match.group(2).upper()
+        result.append(
+            {
+                "resourceType": "Procedure",
+                "code": {"coding": [{
+                    "system": named_system,
+                    "code": code,
+                    "display": _following_description(lines, index),
+                }]},
+                "performedDateTime": _following_date(lines, index) or service_date,
+            }
+        )
     return _remove_none(result)
 
 
@@ -265,7 +533,9 @@ def _charges(
     service_date: str | None,
     jurisdiction: str | None,
 ) -> list[dict[str, Any]]:
-    currency = "SAR" if jurisdiction == "KSA" else "AED"
+    currency_match = re.search(r"(?i)Currency\s*:\s*([A-Z]{3})", text)
+    currency = currency_match.group(1).upper() if currency_match else "SAR" if jurisdiction == "KSA" else "AED"
+    charge_lines = _charge_section_lines(text)
     result = []
     for procedure in procedures:
         coding = procedure.get("code", {}).get("coding", [{}])[0]
@@ -274,16 +544,19 @@ def _charges(
             rf"(?im)^.*\b{re.escape(str(code))}\b.*?(?:AED|SAR|Amount|Fee|Gross)\s*[: ]\s*([0-9]+(?:\.[0-9]{{1,2}})?).*$",
             text,
         )
-        amount = float(same_line.group(1)) if same_line else None
+        quantity, amount, covered, patient_share = _charge_values(charge_lines, str(code))
+        if amount is None and same_line:
+            amount = _money(same_line.group(1))
+        net = covered if covered is not None else amount
         result.append(
             {
                 "code": code,
                 "system": coding.get("system"),
                 "description": coding.get("display"),
-                "quantity": 1,
+                "quantity": quantity or 1,
                 "gross": amount,
-                "patient_share": 0.0 if amount is not None else None,
-                "net": amount,
+                "patient_share": patient_share if patient_share is not None else 0.0 if amount is not None else None,
+                "net": net,
                 "currency": currency,
                 "service_date": service_date,
                 "missing_financial_fields": [] if amount is not None else ["gross", "net"],
@@ -295,13 +568,16 @@ def _charges(
 def _date(value: str | None) -> str | None:
     if not value:
         return None
-    text = value.strip()
-    for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%m/%d/%Y"):
-        try:
-            return datetime.strptime(text.split()[0], fmt).date().isoformat()
-        except ValueError:
-            continue
-    return text if re.fullmatch(r"\d{4}-\d{2}-\d{2}", text) else None
+    text = value.strip().replace(",", "")
+    candidates = [text]
+    candidates.extend(re.findall(r"\b\d{4}-\d{2}-\d{2}\b|\b\d{1,2}/\d{1,2}/\d{4}\b|\b\d{1,2}\s+[A-Za-z]{3,9}\s+\d{4}\b", text))
+    for candidate in candidates:
+        for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%m/%d/%Y", "%d %b %Y", "%d %B %Y"):
+            try:
+                return datetime.strptime(candidate.strip(), fmt).date().isoformat()
+            except ValueError:
+                continue
+    return None
 
 
 def _datetime(value: str | None) -> str | None:

@@ -1,52 +1,277 @@
 {
   "resourceType": "Bundle",
-  "id": "ff5f6775-038c-4ef3-8748-7e004ac805f4",
+  "id": "7a8cd582-07cb-4ab6-9c66-5b934621048f",
   "meta": {
     "profile": [
       "http://nphies.sa/fhir/ksa/nphies-fs/StructureDefinition/bundle|1.0.0"
     ]
   },
   "type": "message",
+  "timestamp": "2026-09-08T15:39:34+00:00",
   "entry": [
     {
-      "fullUrl": "urn:uuid:0db74070-175e-4d4b-9483-ca4fe487f5a2",
+      "fullUrl": "MessageHeader/afbca458-705a-4f5b-871a-7a5c174e7777",
       "resource": {
         "resourceType": "MessageHeader",
+        "id": "afbca458-705a-4f5b-871a-7a5c174e7777",
+        "meta": {
+          "profile": [
+            "http://nphies.sa/fhir/ksa/nphies-fs/StructureDefinition/message-header|1.0.0"
+          ]
+        },
         "eventCoding": {
           "system": "http://nphies.sa/terminology/CodeSystem/ksa-message-events",
           "code": "claim-request"
         },
         "source": {
-          "endpoint": "https://veloclaim.local/fhir"
+          "endpoint": "https://velodoc.ai/fhir"
         },
         "destination": [
           {
-            "name": "Bupa Arabia",
+            "endpoint": "https://nphies.sa/fhir/$process-message",
             "receiver": {
+              "type": "Organization",
               "identifier": {
                 "system": "http://nphies.sa/license/payer-license",
+                "use": "official",
                 "value": "BUPA-SA-001"
               }
             }
           }
         ],
+        "sender": {
+          "type": "Organization",
+          "identifier": {
+            "system": "http://nphies.sa/license/provider-license",
+            "use": "official",
+            "value": "NPHIES-FAC-5567"
+          }
+        },
         "focus": [
           {
-            "reference": "Claim/CLM-2ACE4CBF1CD6"
+            "reference": "Claim/CLM-F696AAB99018"
           }
         ]
       }
     },
     {
-      "fullUrl": "Claim/CLM-2ACE4CBF1CD6",
+      "fullUrl": "Organization/SA-FAC-0001",
       "resource": {
-        "resourceType": "Claim",
-        "id": "CLM-2ACE4CBF1CD6",
+        "resourceType": "Organization",
+        "id": "SA-FAC-0001",
         "meta": {
           "profile": [
-            "http://nphies.sa/fhir/ksa/nphies-fs/StructureDefinition/claim|1.0.0"
+            "http://nphies.sa/fhir/ksa/nphies-fs/StructureDefinition/provider-organization|1.0.0"
           ]
         },
+        "identifier": [
+          {
+            "system": "http://nphies.sa/license/provider-license",
+            "use": "official",
+            "value": "NPHIES-FAC-5567"
+          }
+        ],
+        "type": [
+          {
+            "coding": [
+              {
+                "system": "http://nphies.sa/terminology/CodeSystem/organization-type",
+                "code": "prov",
+                "display": "Provider"
+              }
+            ]
+          }
+        ],
+        "name": "King Faisal Specialist Hospital"
+      }
+    },
+    {
+      "fullUrl": "Organization/BUPA-SA-001",
+      "resource": {
+        "resourceType": "Organization",
+        "id": "BUPA-SA-001",
+        "meta": {
+          "profile": [
+            "http://nphies.sa/fhir/ksa/nphies-fs/StructureDefinition/insurer-organization|1.0.0"
+          ]
+        },
+        "identifier": [
+          {
+            "system": "http://nphies.sa/license/payer-license",
+            "use": "official",
+            "value": "BUPA-SA-001"
+          }
+        ],
+        "type": [
+          {
+            "coding": [
+              {
+                "system": "http://nphies.sa/terminology/CodeSystem/organization-type",
+                "code": "ins",
+                "display": "Insurer"
+              }
+            ]
+          }
+        ],
+        "name": "Bupa Arabia"
+      }
+    },
+    {
+      "fullUrl": "Practitioner/SA-PROV-0001",
+      "resource": {
+        "resourceType": "Practitioner",
+        "id": "SA-PROV-0001",
+        "meta": {
+          "profile": [
+            "http://nphies.sa/fhir/ksa/nphies-fs/StructureDefinition/practitioner|1.0.0"
+          ]
+        },
+        "identifier": [
+          {
+            "system": "http://nphies.sa/license/practitioner-license",
+            "use": "official",
+            "value": "NPHIES-PRV-1029"
+          }
+        ],
+        "name": [
+          {
+            "text": "Dr. Sara Al-Harbi",
+            "given": [
+              "Dr.",
+              "Sara"
+            ],
+            "family": "Al-Harbi"
+          }
+        ]
+      }
+    },
+    {
+      "fullUrl": "Patient/SA-PAT-0001",
+      "resource": {
+        "resourceType": "Patient",
+        "id": "SA-PAT-0001",
+        "meta": {
+          "profile": [
+            "http://nphies.sa/fhir/ksa/nphies-fs/StructureDefinition/patient|1.0.0"
+          ]
+        },
+        "identifier": [
+          {
+            "system": "http://nphies.sa/identifier/patient",
+            "use": "official",
+            "value": "1023456789"
+          }
+        ],
+        "name": [
+          {
+            "text": "Abdullah Al-Qahtani",
+            "given": [
+              "Abdullah"
+            ],
+            "family": "Al-Qahtani"
+          }
+        ],
+        "birthDate": "1985-04-12",
+        "gender": "male"
+      }
+    },
+    {
+      "fullUrl": "Coverage/SA-COV-0001",
+      "resource": {
+        "resourceType": "Coverage",
+        "id": "SA-COV-0001",
+        "meta": {
+          "profile": [
+            "http://nphies.sa/fhir/ksa/nphies-fs/StructureDefinition/coverage|1.0.0"
+          ]
+        },
+        "status": "active",
+        "subscriberId": "MEM-445566",
+        "subscriber": {
+          "reference": "Patient/SA-PAT-0001"
+        },
+        "beneficiary": {
+          "reference": "Patient/SA-PAT-0001"
+        },
+        "relationship": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/subscriber-relationship",
+              "code": "self"
+            }
+          ]
+        },
+        "payor": [
+          {
+            "reference": "Organization/BUPA-SA-001"
+          }
+        ],
+        "class": [
+          {
+            "type": {
+              "text": "plan"
+            },
+            "value": "comprehensive"
+          }
+        ],
+        "period": {
+          "start": "2026-01-01",
+          "end": "2026-12-31"
+        }
+      }
+    },
+    {
+      "fullUrl": "Encounter/SA-ENC-0001",
+      "resource": {
+        "resourceType": "Encounter",
+        "id": "SA-ENC-0001",
+        "meta": {
+          "profile": [
+            "http://nphies.sa/fhir/ksa/nphies-fs/StructureDefinition/encounter-claim-amb|1.0.0"
+          ]
+        },
+        "status": "finished",
+        "class": {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+          "code": "AMB"
+        },
+        "subject": {
+          "reference": "Patient/SA-PAT-0001"
+        },
+        "participant": [
+          {
+            "individual": {
+              "reference": "Practitioner/SA-PROV-0001"
+            }
+          }
+        ],
+        "serviceProvider": {
+          "reference": "Organization/SA-FAC-0001"
+        },
+        "period": {
+          "start": "2026-06-15T09:30:00+03:00",
+          "end": "2026-06-15T11:00:00+03:00"
+        }
+      }
+    },
+    {
+      "fullUrl": "Claim/CLM-F696AAB99018",
+      "resource": {
+        "resourceType": "Claim",
+        "id": "CLM-F696AAB99018",
+        "meta": {
+          "profile": [
+            "http://nphies.sa/fhir/ksa/nphies-fs/StructureDefinition/professional-claim|1.0.0"
+          ]
+        },
+        "extension": [
+          {
+            "url": "http://nphies.sa/fhir/ksa/nphies-fs/StructureDefinition/extension-encounter|1.0.0",
+            "valueReference": {
+              "reference": "Encounter/SA-ENC-0001"
+            }
+          }
+        ],
         "status": "active",
         "type": {
           "coding": [
@@ -60,16 +285,12 @@
         "patient": {
           "reference": "Patient/SA-PAT-0001"
         },
-        "created": "2026-06-15",
+        "created": "2026-09-08T15:39:34+00:00",
         "provider": {
-          "identifier": {
-            "value": "NPHIES-FAC-5567"
-          }
+          "reference": "Organization/SA-FAC-0001"
         },
         "insurer": {
-          "identifier": {
-            "value": "BUPA-SA-001"
-          }
+          "reference": "Organization/BUPA-SA-001"
         },
         "priority": {
           "coding": [
@@ -79,6 +300,14 @@
             }
           ]
         },
+        "careTeam": [
+          {
+            "sequence": 1,
+            "provider": {
+              "reference": "Practitioner/SA-PROV-0001"
+            }
+          }
+        ],
         "insurance": [
           {
             "sequence": 1,
@@ -104,7 +333,7 @@
               {
                 "coding": [
                   {
-                    "system": "http://terminology.hl7.org/CodeSystem/ex-diagnosistype",
+                    "system": "http://nphies.sa/terminology/CodeSystem/diagnosis-type",
                     "code": "principal"
                   }
                 ]
@@ -126,7 +355,7 @@
               {
                 "coding": [
                   {
-                    "system": "http://terminology.hl7.org/CodeSystem/ex-diagnosistype",
+                    "system": "http://nphies.sa/terminology/CodeSystem/diagnosis-type",
                     "code": "secondary"
                   }
                 ]
@@ -137,6 +366,9 @@
         "item": [
           {
             "sequence": 1,
+            "careTeamSequence": [
+              1
+            ],
             "productOrService": {
               "coding": [
                 {
@@ -146,6 +378,7 @@
                 }
               ]
             },
+            "servicedDate": "2026-06-15",
             "quantity": {
               "value": 1
             },
@@ -156,6 +389,9 @@
           },
           {
             "sequence": 2,
+            "careTeamSequence": [
+              1
+            ],
             "productOrService": {
               "coding": [
                 {
@@ -165,6 +401,7 @@
                 }
               ]
             },
+            "servicedDate": "2026-06-15",
             "quantity": {
               "value": 1
             },

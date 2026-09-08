@@ -40,6 +40,96 @@ ICD-10: J18.9 - Pneumonia, unspecified organism
 CPT: 99213 - Office outpatient visit Fee: 450.00
 """
 
+DAMAN_TABLE_FORM_TEXT = """
+Dubai Hospital
+MEDICAL CLAIM FORM
+UNITED ARAB EMIRATES
+Hospital | Dubai, UAE | DHA Licensed Facility
+Regulator: Dubai Health Authority (DHA) / eClaimLink
+1. PATIENT INFORMATION
+Patient Name
+Khalid Al-Mazrouei
+Patient ID
+AE-PAT-0001
+Date of Birth
+1990-11-02
+Gender
+Male
+National ID
+784-1990-1234567-1
+(Emirates ID)
+2. COVERAGE / PAYER INFORMATION
+Payer
+Daman - National Health
+Insurance Company
+Payer ID
+DAMAN-AE-014
+Policy Number
+POL-DXB-33221
+Member ID
+MEM-DXB-90011
+Plan / Class
+Enhanced
+Coverage Status
+Active
+Coverage Period
+01 Jan 2026 - 31 Dec 2026
+3. PROVIDER & ENCOUNTER DETAILS
+Attending Provider
+Dr. Fatima Al-Suwaidi
+Specialty
+Emergency Medicine
+License No.
+DHA-P-778812
+Encounter Type
+Emergency / Inpatient Observation
+Encounter Status
+Finished
+Admission
+2026-05-02 22:15
+Discharge
+2026-05-03 04:40
+Reason for Visit: Motor vehicle accident - blunt chest trauma
+4. DIAGNOSES
+S27.9 (ICD-10)
+Injury of unspecified intrathoracic organ
+Active
+5. PROCEDURES / SERVICES
+99284 (CPT)
+Emergency department visit, high severity
+2026-05-02
+71260 (CPT)
+CT thorax with contrast
+2026-05-02
+6. CHARGE SUMMARY (Currency: AED)
+Description
+Code
+Qty
+Total
+Covered
+Patient Resp.
+Emergency department visit - high severity
+99284
+1
+950.00
+855.00
+95.00
+CT thorax with contrast
+71260
+1
+1,800.00
+1,620.00
+180.00
+TOTAL
+2,750.00
+2,475.00
+275.00
+7. SUPPORTING ATTACHMENTS
+ct_thorax_20260502.pdf (Radiology Report)
+ed_note_20260502.pdf (Physician Note)
+Facility: Dubai Hospital, United Arab Emirates
+"""
+
 
 def test_deterministic_encounter_text_extraction_is_pipeline_shaped() -> None:
     package = extract_encounter_from_text(ENCOUNTER_TEXT)
@@ -51,6 +141,27 @@ def test_deterministic_encounter_text_extraction_is_pipeline_shaped() -> None:
     assert package["conditions"][0]["code"]["coding"][0]["code"] == "J18.9"
     assert package["procedures"][0]["code"]["coding"][0]["code"] == "99213"
     assert package["charge_items"][0]["gross"] == 450.0
+
+
+def test_table_style_daman_claim_form_is_extracted_without_template_specific_coordinates() -> None:
+    package = extract_encounter_from_text(DAMAN_TABLE_FORM_TEXT)
+
+    assert missing_routing_fields(package) == []
+    assert package["patient"]["id"] == "AE-PAT-0001"
+    assert package["patient"]["name"][0]["text"] == "Khalid Al-Mazrouei"
+    assert package["coverage"]["payor"][0]["identifier"]["value"] == "DAMAN-AE-014"
+    assert package["coverage"]["period"] == {"start": "2026-01-01", "end": "2026-12-31"}
+    assert package["encounter"]["period"]["start"] == "2026-05-02T22:15:00"
+    assert package["encounter"]["class"]["code"] == "EMER"
+    assert package["provider"]["identifier"][0]["value"] == "DHA-P-778812"
+    assert package["facility"]["name"] == "Dubai Hospital"
+    assert package["jurisdiction"] == "DUBAI"
+    assert [item["code"]["coding"][0]["code"] for item in package["conditions"]] == ["S27.9"]
+    assert [item["code"]["coding"][0]["code"] for item in package["procedures"]] == ["99284", "71260"]
+    assert package["charge_items"][0]["gross"] == 950.0
+    assert package["charge_items"][0]["net"] == 855.0
+    assert package["charge_items"][0]["patient_share"] == 95.0
+    assert len(package["attachments"]) == 2
 
 
 def test_pdf_upload_stores_source_and_runs_existing_pipeline(monkeypatch) -> None:

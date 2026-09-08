@@ -5,3 +5,13 @@
 body {
   margin: 0;
 }
+
+@keyframes velo-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spin {
+  animation: velo-spin 0.8s linear infinite;
+}

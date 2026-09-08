@@ -1,5 +1,10 @@
 from __future__ import annotations
-from fastapi import FastAPI, HTTPException, Response, Depends, Request
+import hashlib
+import json
+import os
+import re
+
+from fastapi import FastAPI, HTTPException, Response, Depends, File, Request, UploadFile
 from fastapi.responses import JSONResponse
 from velo_claim.submission.api import build_submission_router, reviewer
 from velo_claim.submission.shafafiya import SubmissionError
@@ -14,6 +19,7 @@ from velo_claim.builders.prior_auth.builder import PAClaimBuilderModule
 from velo_claim.builders.claim.builder import ClaimBuilderModule
 from velo_claim.core.utils import utc_now
 from velo_claim.fallback.checkpoints import MemoryCheckpointStore
+from velo_claim.ingestion.pdf_encounter import EncounterPdfExtractor, PdfExtractionError
 from velo_claim.pipeline import run_full_pipeline
 
 from .serializers import claim_for_api
@@ -126,6 +132,127 @@ def create_app(services: ServiceContainer | None = None):
             "claim_id": claim_id,
             "claim": claim_for_api(detail or _state_detail(result_state), services.object_store),
             "state": _state_summary(result_state),
+        }
+
+    @app.post("/encounters/pdf")
+    async def ingest_encounter_pdf(file: UploadFile = File(...)) -> dict[str, Any]:
+        services = get_services()
+        max_bytes = int(os.getenv("PDF_ENCOUNTER_MAX_BYTES", str(10 * 1024 * 1024)))
+        if file.content_type not in {"application/pdf", "application/octet-stream"}:
+            raise HTTPException(status_code=415, detail={"code": "PDF_REQUIRED", "message": "Upload a PDF encounter document."})
+        content = await file.read(max_bytes + 1)
+        if not content or len(content) > max_bytes:
+            raise HTTPException(
+                status_code=413,
+                detail={"code": "PDF_SIZE_LIMIT", "message": f"PDF must be between 1 byte and {max_bytes} bytes."},
+            )
+
+        digest = hashlib.sha256(content).hexdigest()
+        claim_id = f"CLM-PDF-{digest[:12].upper()}"
+        existing = services.repository.get_claim_detail(claim_id)
+        if existing:
+            return {
+                "status": "duplicate",
+                "claim_id": claim_id,
+                "claim": claim_for_api(existing, services.object_store),
+                "message": "This PDF was already processed.",
+            }
+
+        safe_name = re.sub(r"[^A-Za-z0-9._-]", "_", file.filename or "encounter.pdf")[:120]
+        source_uri = services.object_store.put_bytes(
+            f"imports/encounters/{digest}/source-{safe_name}",
+            content,
+            content_type="application/pdf",
+        )
+        try:
+            extraction = EncounterPdfExtractor().extract(content)
+        except PdfExtractionError as exc:
+            raise HTTPException(
+                status_code=422,
+                detail={"code": exc.code, "message": str(exc), "source_document_uri": source_uri},
+            ) from exc
+
+        extraction_uri = services.object_store.put_text(
+            f"imports/encounters/{digest}/extraction.json",
+            json.dumps(extraction.to_dict(), indent=2, ensure_ascii=True),
+            content_type="application/json",
+        )
+        if not extraction.ready:
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "code": "PDF_EXTRACTION_INCOMPLETE",
+                    "message": "Required routing facts could not be extracted from the PDF.",
+                    "missing_fields": extraction.missing_routing_fields,
+                    "warnings": extraction.warnings,
+                    "source_document_uri": source_uri,
+                    "extraction_uri": extraction_uri,
+                },
+            )
+
+        package = extraction.encounter_package
+        package.setdefault("attachments", []).append(
+            {
+                "type": "ENCOUNTER_PDF",
+                "name": safe_name,
+                "content_type": "application/pdf",
+                "url": source_uri,
+                "status": "available",
+                "sha256": digest,
+            }
+        )
+        initial_state = {
+            "claim_id": claim_id,
+            "encounter_package": package,
+            "ingestion": {
+                "source": "RCM_PDF_UPLOAD",
+                "source_document_uri": source_uri,
+                "extraction_uri": extraction_uri,
+                "sha256": digest,
+                "filename": safe_name,
+                "extraction_method": extraction.extraction_method,
+            },
+        }
+        try:
+            result_state = run_full_pipeline(initial_state, container=services)
+        except Exception as exc:
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "code": "PDF_PIPELINE_REJECTED",
+                    "message": str(exc),
+                    "source_document_uri": source_uri,
+                    "extraction_uri": extraction_uri,
+                },
+            ) from exc
+        services.repository.insert_audit_event(
+            claim_id,
+            {
+                "agent": "EncounterPdfIngestion",
+                "node": "process_pdf",
+                "event_type": "PDF_ENCOUNTER_INGESTED",
+                "payload": {
+                    "source_document_uri": source_uri,
+                    "extraction_uri": extraction_uri,
+                    "sha256": digest,
+                    "warnings": extraction.warnings,
+                },
+                "ts": utc_now(),
+            },
+        )
+        detail = services.repository.get_claim_detail(claim_id)
+        return {
+            "status": "completed",
+            "claim_id": claim_id,
+            "claim": claim_for_api(detail or _state_detail(result_state), services.object_store),
+            "state": _state_summary(result_state),
+            "extraction": {
+                "method": extraction.extraction_method,
+                "page_count": extraction.page_count,
+                "warnings": extraction.warnings,
+                "source_document_uri": source_uri,
+                "extraction_uri": extraction_uri,
+            },
         }
     def _claim_build_response(result_state: dict[str, Any]) -> dict[str, Any]:
         claim = result_state.get("claim", {})

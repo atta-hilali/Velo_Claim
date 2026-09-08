@@ -23,3 +23,7 @@ zeep==4.3.3
 
 # API contract tests
 httpx==0.28.1
+
+# Secure multipart upload and searchable-PDF text extraction
+python-multipart==0.0.26
+pypdf==6.11.0

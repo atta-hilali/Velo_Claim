@@ -6,29 +6,79 @@ $ProjectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $ProjectRoot
 
 $SshUser = "dev1"
-$SshHost = "2.51.50.72"
+$SshHost = "2.51.71.201"
 $SshPort = 2222
 $RemoteContainer = "velo-claim-api"
 $ApiUrl = "http://127.0.0.1:8000"
 $FrontendUrl = "http://127.0.0.1:5173"
 
+function Invoke-DgxCommand {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$RemoteCommand,
+        [int]$TimeoutSeconds = 15
+    )
+
+    $Job = Start-Job -ScriptBlock {
+        param($RemoteUser, $RemoteHost, $RemotePort, $Command)
+        $Output = & ssh.exe `
+            -p $RemotePort `
+            -o BatchMode=yes `
+            -o ConnectTimeout=10 `
+            -o ConnectionAttempts=1 `
+            "$RemoteUser@$RemoteHost" `
+            $Command 2>&1
+        [pscustomobject]@{
+            ExitCode = $LASTEXITCODE
+            Output = ($Output -join [Environment]::NewLine).Trim()
+        }
+    } -ArgumentList $SshUser, $SshHost, $SshPort, $RemoteCommand
+    try {
+        if (-not (Wait-Job -Job $Job -Timeout $TimeoutSeconds)) {
+            Stop-Job -Job $Job -ErrorAction SilentlyContinue
+            throw "SSH command timed out after $TimeoutSeconds seconds."
+        }
+        $Result = Receive-Job -Job $Job
+        if ($Result.ExitCode -ne 0) {
+            $Details = if ($Result.Output) { $Result.Output } else { "No SSH error output." }
+            throw "SSH command failed with exit code $($Result.ExitCode): $Details"
+        }
+        return $Result.Output
+    }
+    finally {
+        Remove-Job -Job $Job -Force -ErrorAction SilentlyContinue
+    }
+}
+
 Write-Host "Starting Velo Claim..." -ForegroundColor Cyan
 Write-Host "Project root: $ProjectRoot" -ForegroundColor DarkGray
 
 Write-Host "Checking the DGX backend container..." -ForegroundColor Yellow
-$RemoteStatus = ssh -p $SshPort -o BatchMode=yes -o ConnectTimeout=10 `
-    "$SshUser@$SshHost" "docker inspect -f '{{.State.Status}}' $RemoteContainer 2>/dev/null"
-
-if ($LASTEXITCODE -ne 0) {
-    throw "DGX container $RemoteContainer is not installed. Run deploy/docker/deploy_api.sh on DGX first."
+try {
+    $SshProbe = Invoke-DgxCommand -RemoteCommand "printf reachable"
 }
+catch {
+    throw "Cannot reach the DGX over SSH at ${SshHost}:${SshPort}. Check the VPN/network, public IP, firewall, SSH key, and SSH port. Details: $($_.Exception.Message)"
+}
+if ($SshProbe -ne "reachable") {
+    throw "DGX SSH probe returned an unexpected response: $SshProbe"
+}
+Write-Host "  DGX SSH reachable" -ForegroundColor Green
 
-if ($RemoteStatus.Trim() -ne "running") {
+try {
+    $RemoteStatus = Invoke-DgxCommand -RemoteCommand "docker inspect -f '{{.State.Status}}' $RemoteContainer 2>/dev/null"
+}
+catch {
+    throw "DGX is reachable, but container $RemoteContainer could not be inspected. Run deploy/docker/deploy_api.sh on DGX. Details: $($_.Exception.Message)"
+}
+Write-Host "  Backend container status: $RemoteStatus" -ForegroundColor DarkGray
+
+if ($RemoteStatus -ne "running") {
     Write-Host "Starting the DGX backend container..." -ForegroundColor Yellow
-    ssh -p $SshPort -o BatchMode=yes -o ConnectTimeout=10 `
-        "$SshUser@$SshHost" "docker start $RemoteContainer" | Out-Null
-
-    if ($LASTEXITCODE -ne 0) {
+    try {
+        Invoke-DgxCommand -RemoteCommand "docker start $RemoteContainer" | Out-Null
+    }
+    catch {
         throw "DGX container $RemoteContainer could not be started."
     }
 }
@@ -38,8 +88,7 @@ Write-Host "Replacing any old API/database tunnel..." -ForegroundColor Yellow
 Get-CimInstance Win32_Process |
     Where-Object {
         $_.Name -eq "ssh.exe" -and
-        $_.CommandLine -match "-L 8000:127\.0\.0\.1:8000" -and
-        $_.CommandLine -match [regex]::Escape($SshHost)
+        $_.CommandLine -match "-L 8000:(127\.0\.0\.1|localhost):8000"
     } |
     ForEach-Object {
         Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue

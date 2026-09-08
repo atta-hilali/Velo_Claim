@@ -1,6 +1,6 @@
 # Pending DGX Migration
 
-Status: **NOT YET APPLIED**
+Status: `APPLIED´
 
 Before deploying the latest Shafafiya and controlled-submission changes on DGX,
 apply every migration below that is not already recorded as applied:

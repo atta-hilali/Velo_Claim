@@ -12,6 +12,8 @@ and LangGraph agents only orchestrate those modules.
 
 - `velo_claim/context/` resolves raw encounter/FHIR input into `source_context`
   and `routing_context`.
+- `velo_claim/ingestion/` validates encounter PDFs, extracts a pipeline-shaped
+  encounter package, and blocks incomplete routing data before claim creation.
 - `velo_claim/context/vendor_fhir_adapters.py` preserves the previous Epic,
   TrakCare/IRIS, Oracle Health/Cerner, NABIDH, and generic FHIR connection
   logic for future integration into the new context layer.
@@ -98,3 +100,25 @@ blocked while KG and payer-rule validation remain mocked.
 See [setup, API workflow, and verification](docs/shafafiya_submission.md) and the
 [deferred KG integration plan](docs/kg_integration_plan.md). Run
 `python -m pytest -q` for the local checks and `npm run build` in `frontend/`.
+
+## Manual Encounter PDF Import
+
+The RCM queue includes **Import encounter**. It uploads one searchable PDF to
+`POST /encounters/pdf`, stores the original document in S3/MinIO, extracts the
+encounter context, and starts the existing context, routing, preparation, and
+validation pipeline. Re-uploading the exact same PDF returns the existing
+claim instead of creating a duplicate.
+
+The backend accepts PDFs up to 10 MB and 100 pages by default. A PDF without a
+usable text layer is rejected with `PDF_OCR_REQUIRED`; configure
+`PDF_OCR_ENDPOINT` for scanned-document OCR. Optional MedGemma extraction is
+disabled by default and can be enabled with `PDF_ENCOUNTER_USE_LLM=true` after
+configuring an internal extraction endpoint. Missing patient, payer, service
+date, or facility facts stop the pipeline and are returned to the RCM user.
+
+After changing `requirements.txt`, rebuild the DGX API image:
+
+```bash
+cd /home/dev1/Desktop/data/features/feature_atta/Velo_claim
+bash deploy/docker/deploy_api.sh
+```

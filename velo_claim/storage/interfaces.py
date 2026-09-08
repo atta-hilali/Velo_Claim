@@ -100,7 +100,13 @@ class RepositoryInterface(ABC):
 
 class ObjectStoreInterface(ABC):
     @abstractmethod
+    def put_bytes(self, key: str, value: bytes, content_type: str = "application/octet-stream") -> str: ...
+
+    @abstractmethod
     def put_text(self, key: str, value: str, content_type: str = "text/plain") -> str: ...
+
+    @abstractmethod
+    def get_bytes(self, uri: str) -> bytes: ...
 
     @abstractmethod
     def get_text(self, uri: str) -> str: ...

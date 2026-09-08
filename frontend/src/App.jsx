@@ -3,12 +3,13 @@ import React, { useState, useMemo } from "react";
 import {
   Bell, Search, ChevronDown, ChevronRight, X, Check, AlertTriangle,
   AlertCircle, Info, Clock, FileText, Shield, Activity, ListChecks,
-  RefreshCw, ArrowLeft, Hash, Filter
+  RefreshCw, ArrowLeft, Hash, Filter, Upload, LoaderCircle
 } from "lucide-react";
 import {
   fetchDesignClaims,
   runDesignClaimAction,
   updateDesignClaimStatus,
+  uploadEncounterPdf,
 } from "./designApi.js";
 
 /* ---------------------------------------------------------------
@@ -419,10 +420,11 @@ function TopBar() {
 
 /* ---------------------------- QUEUE SCREEN ---------------------------- */
 
-function ClaimsQueue({ claims, onOpenClaim }) {
+function ClaimsQueue({ claims, onOpenClaim, onPdfImported }) {
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [checked, setChecked] = useState([]);
+  const [showPdfUpload, setShowPdfUpload] = useState(false);
 
   const counts = useMemo(() => {
     const c = { all: claims.length, ready: 0, review: 0, hold: 0, waiting: 0, submitted: 0 };
@@ -443,9 +445,14 @@ function ClaimsQueue({ claims, onOpenClaim }) {
 
   return (
     <div style={{ padding: "24px 28px", maxWidth: 1400, margin: "0 auto" }}>
-      <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 4 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 800, color: "#1A1D21", margin: 0 }}>Claims Queue</h1>
-        <span style={{ fontSize: 13.5, color: "#8A9099", fontWeight: 500 }}>{counts.all} claims</span>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, marginBottom: 4 }}>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
+          <h1 style={{ fontSize: 22, fontWeight: 800, color: "#1A1D21", margin: 0 }}>Claims Queue</h1>
+          <span style={{ fontSize: 13.5, color: "#8A9099", fontWeight: 500 }}>{counts.all} claims</span>
+        </div>
+        <button style={{ ...btnPrimary, display: "inline-flex", alignItems: "center", gap: 7, padding: "8px 13px" }} onClick={() => setShowPdfUpload(true)}>
+          <Upload size={15} /> Import encounter
+        </button>
       </div>
       <p style={{ fontSize: 13, color: "#8A9099", margin: "0 0 18px 0" }}>Validation → prior auth → submission, in one queue.</p>
 
@@ -540,7 +547,61 @@ function ClaimsQueue({ claims, onOpenClaim }) {
           </tbody>
         </table>
       </div>
+
+      {showPdfUpload && (
+        <EncounterPdfUploadModal
+          onClose={() => setShowPdfUpload(false)}
+          onCompleted={(result) => {
+            setShowPdfUpload(false);
+            onPdfImported(result);
+          }}
+        />
+      )}
     </div>
+  );
+}
+
+function EncounterPdfUploadModal({ onClose, onCompleted }) {
+  const [file, setFile] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  const submit = async () => {
+    if (!file || busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      onCompleted(await uploadEncounterPdf(file));
+    } catch (requestError) {
+      setError(requestError.message || "Encounter import failed.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Modal title="Import encounter PDF" onClose={busy ? () => {} : onClose}>
+      <label style={{ display: "block", border: "1px dashed #AEB5BD", background: "#FAFBFC", padding: 20, textAlign: "center", cursor: busy ? "default" : "pointer", borderRadius: 7 }}>
+        <Upload size={23} color="#0E8298" style={{ marginBottom: 7 }} />
+        <div style={{ fontSize: 13, color: "#1A1D21", fontWeight: 700 }}>{file ? file.name : "Select encounter PDF"}</div>
+        {file && <div style={{ fontSize: 11.5, color: "#8A9099", marginTop: 4 }}>{(file.size / 1024).toFixed(1)} KB</div>}
+        <input
+          type="file"
+          accept="application/pdf,.pdf"
+          disabled={busy}
+          onChange={(event) => { setFile(event.target.files?.[0] || null); setError(""); }}
+          style={{ display: "none" }}
+        />
+      </label>
+      {error && <div role="alert" style={{ marginTop: 12, padding: "9px 10px", color: "#C22B2B", background: "#FCE9E9", border: "1px solid #F0C8C8", borderRadius: 6, fontSize: 12.5 }}>{error}</div>}
+      <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 16 }}>
+        <button style={btnGhost} disabled={busy} onClick={onClose}>Cancel</button>
+        <button style={{ ...btnPrimary, opacity: !file || busy ? 0.55 : 1, display: "inline-flex", alignItems: "center", gap: 7 }} disabled={!file || busy} onClick={submit}>
+          {busy ? <LoaderCircle size={14} className="spin" /> : <Upload size={14} />}
+          {busy ? "Processing" : "Import"}
+        </button>
+      </div>
+    </Modal>
   );
 }
 
@@ -999,6 +1060,15 @@ export default function VeloClaim() {
     setData(result.claims);
     setActiveClaim(result.claims.find(c => c.id === id) || null);
   };
+  const handlePdfImported = async (result) => {
+    const refreshed = await fetchDesignClaims();
+    setData(refreshed.claims);
+    const imported = refreshed.claims.find((claim) => claim.id === result.claim_id) || result.claim;
+    if (imported) {
+      setActiveClaim(imported);
+      setView("detail");
+    }
+  };
 
   return (
     <div style={{ fontFamily: "Inter, -apple-system, BlinkMacSystemFont, sans-serif", background: "#F6F7F8", minHeight: "100vh" }}>
@@ -1009,7 +1079,7 @@ export default function VeloClaim() {
           Loading claims...
         </div>
       ) : view === "queue" ? (
-        <ClaimsQueue claims={data} onOpenClaim={handleOpenClaim} />
+        <ClaimsQueue claims={data} onOpenClaim={handleOpenClaim} onPdfImported={handlePdfImported} />
       ) : (
         <ClaimDetail claim={activeClaim} onBack={handleBack} onUpdateStatus={handleUpdateStatus} />
       )}

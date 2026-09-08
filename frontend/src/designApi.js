@@ -212,4 +212,27 @@ export async function runDesignClaimAction(claimId, action, metadata = {}) {
   });
 }
 
+export async function uploadEncounterPdf(file) {
+  if (!API_BASE_URL) {
+    throw new Error("VITE_API_BASE_URL is not configured.");
+  }
+  const body = new FormData();
+  body.append("file", file);
+  const response = await fetch(`${API_BASE_URL}/encounters/pdf`, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      ...(reviewerToken ? { Authorization: `Bearer ${reviewerToken}` } : {}),
+    },
+    body,
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const detail = data.detail || data;
+    const missing = Array.isArray(detail.missing_fields) ? ` Missing: ${detail.missing_fields.join(", ")}.` : "";
+    throw new Error(`${detail.message || `API ${response.status}`}${missing}`);
+  }
+  return { ...data, claim: normalizeBackendClaim(data.claim) };
+}
+
 export const submissionRequest = requestJson;

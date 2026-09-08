@@ -295,15 +295,22 @@ class InMemoryObjectStore(ObjectStoreInterface):
     objects: dict[str, dict[str, Any]] = field(default_factory=dict)
     prefix: str = "memory://velo-claim"
 
-    def put_text(self, key: str, value: str, content_type: str = "text/plain") -> str:
+    def put_bytes(self, key: str, value: bytes, content_type: str = "application/octet-stream") -> str:
         uri = f"{self.prefix}/{key.strip('/')}"
         self.objects[uri] = {"value": value, "content_type": content_type, "created_at": utc_now()}
         return uri
 
-    def get_text(self, uri: str) -> str:
+    def put_text(self, key: str, value: str, content_type: str = "text/plain") -> str:
+        return self.put_bytes(key, value.encode("utf-8"), content_type)
+
+    def get_bytes(self, uri: str) -> bytes:
         if uri not in self.objects:
             raise KeyError(f"Object not found: {uri}")
-        return self.objects[uri]["value"]
+        value = self.objects[uri]["value"]
+        return value if isinstance(value, bytes) else str(value).encode("utf-8")
+
+    def get_text(self, uri: str) -> str:
+        return self.get_bytes(uri).decode("utf-8")
 
 
 @dataclass(slots=True)

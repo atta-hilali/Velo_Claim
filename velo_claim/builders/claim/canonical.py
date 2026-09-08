@@ -34,6 +34,8 @@ def build_canonical_claim(
             "name": first_name(source.patient),
             "member_id": source.coverage.get("subscriberId") or first_identifier(source.patient, "velo/member-id"),
             "emirates_id": first_identifier(source.patient, "uae/emirates-id", "emirates-id"),
+            "national_identifier": _national_identifier(source.patient),
+            "national_identifier_type": _national_identifier_type(source.patient),
             "birth_date": source.patient.get("birthDate"),
             "gender": source.patient.get("gender"),
         },
@@ -44,6 +46,7 @@ def build_canonical_claim(
             "coverage_id": source.coverage.get("id"),
             "coverage_status": source.coverage.get("status"),
             "coverage_period": source.coverage.get("period", {}),
+            "eligibility_ref": source.coverage.get("eligibility_ref") or source.coverage.get("id_payer"),
         },
         "provider": {
             "id": source.provider.get("id"),
@@ -61,6 +64,10 @@ def build_canonical_claim(
             "period": source.encounter.get("period", {}),
             "service_date": _service_date(source.encounter),
             "patient_id": source.encounter.get("patient_id") or source.patient.get("id"),
+            "class_code": _encounter_class_code(source.encounter),
+            "shafafiya_type": source.encounter.get("shafafiya_type"),
+            "start_type": source.encounter.get("start_type") or source.encounter.get("admission_type"),
+            "end_type": source.encounter.get("end_type") or source.encounter.get("discharge_type"),
         },
         "diagnoses": diagnoses,
         "procedures": procedures,
@@ -171,6 +178,10 @@ def _line_items(source: SourceContext, procedures: list[dict[str, Any]], currenc
                 "patient_share": _money(charge.get("patient_share", 0.0)),
                 "net": _money(charge.get("net", amount)),
                 "currency": charge.get("currency") or currency,
+                "service_date": charge.get("service_date") or charge.get("start") or _service_date(source.encounter),
+                "date_ordered": charge.get("date_ordered"),
+                "vat": _money(charge.get("vat", 0.0)),
+                "vat_percent": charge.get("vat_percent"),
                 "missing_financial_fields": charge.get("missing_financial_fields", []),
             }
         )
@@ -187,6 +198,7 @@ def _line_items(source: SourceContext, procedures: list[dict[str, Any]], currenc
             "patient_share": 0.0,
             "net": 0.0,
             "currency": currency,
+            "service_date": proc.get("service_date") or _service_date(source.encounter),
         }
         for index, proc in enumerate(procedures)
     ]
@@ -221,6 +233,13 @@ def _service_date(encounter: dict[str, Any]) -> str | None:
     return (period.get("start") or encounter.get("service_date") or "").split("T")[0] or None
 
 
+def _encounter_class_code(encounter: dict[str, Any]) -> str | None:
+    value = encounter.get("class")
+    if isinstance(value, dict):
+        return value.get("code")
+    return value or encounter.get("class_code")
+
+
 def _money(value: Any) -> float:
     if value in (None, ""):
         return 0.0
@@ -228,3 +247,26 @@ def _money(value: Any) -> float:
         return float(value)
     except (TypeError, ValueError):
         return 0.0
+
+
+def _national_identifier(patient: dict[str, Any]) -> str | None:
+    for token in ("nphies", "nin", "national", "iqama", "emirates"):
+        for identifier in patient.get("identifier", []):
+            system = str(identifier.get("system") or "").lower()
+            if token in system and identifier.get("value"):
+                return str(identifier["value"])
+    return None
+
+
+def _national_identifier_type(patient: dict[str, Any]) -> str | None:
+    for identifier in patient.get("identifier", []):
+        system = str(identifier.get("system") or "").lower()
+        if not identifier.get("value"):
+            continue
+        if "iqama" in system:
+            return "iqama"
+        if "emirates" in system:
+            return "emirates_id"
+        if any(token in system for token in ("nphies", "nin", "national")):
+            return "national_id"
+    return None

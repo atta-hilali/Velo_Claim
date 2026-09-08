@@ -265,14 +265,29 @@ def _eligibility_state():
         "routing_context": {"payer_id": "A001", "plan_id": "TH4QF"},
         "canonical_claim": {
             "claim_id": "CLM-ELIG-001",
-            "patient": {"id": "PAT-ELIG-001"},
+            "patient": {
+                "id": "PAT-ELIG-001",
+                "member_id": "MEM-ELIG-001",
+                "emirates_id": "784-1990-1234567-1",
+            },
             "payer": {
                 "id": "A001",
                 "plan_id": "TH4QF",
                 "coverage_status": "active",
                 "coverage_period": {"start": "2026-01-01", "end": "2026-12-31"},
             },
-            "encounter": {"service_date": "2026-06-16"},
+            "provider": {
+                "facility_id": "FAC-AUH-001",
+                "facility_license": "MF2057",
+            },
+            "encounter": {
+                "service_date": "2026-06-16",
+                "class_code": "AMB",
+                "period": {
+                    "start": "2026-06-16T10:00:00+04:00",
+                    "end": "2026-06-16T10:30:00+04:00",
+                },
+            },
             "line_items": [{"code": "99213"}],
         },
         "source_context": {"coverage": {"voi_verified": True}},

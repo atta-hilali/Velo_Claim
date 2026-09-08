@@ -1,0 +1,15 @@
+$kind: http-request
+url: "{{base_url}}/health"
+method: GET
+headers:
+  Content-Type: application/json
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("HTTP 200", () => pm.response.to.have.status(200));
+      if (pm.response.code !== 200) throw new Error(pm.response.text());
+      pm.test("API healthy", () => pm.expect(pm.response.json().status).to.eql("ok"));
+    language: text/javascript
+order: 1000

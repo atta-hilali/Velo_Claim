@@ -14,11 +14,13 @@ class PACanonicalForm:
     service_date: str | None
     procedures: list[dict[str, Any]]
     diagnoses: list[str]
+    encounter: dict[str, Any] = field(default_factory=dict)
     supporting_docs: list[str] = field(default_factory=list)
     payer_id: str = "UNKNOWN"
     plan_id: str = "UNKNOWN"
     currency: str = "AED"
     pre_auth_ref: str | None = None
+    request_identifier: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -28,8 +30,12 @@ def build_pa_canonical_form(state: dict[str, Any], required_codes: list[str]) ->
     claim = state.get("canonical_claim", {})
     required = set(required_codes)
     procedures = [proc for proc in claim.get("procedures", []) if proc.get("code") in required]
-    if not procedures:
-        procedures = [line for line in claim.get("line_items", []) if line.get("code") in required]
+    charges = [line for line in claim.get("line_items", []) if line.get("code") in required]
+    # One PA activity per source charge, even when a procedure code repeats.
+    enriched = [{**next((proc for proc in procedures if proc.get("code") == line.get("code")), {}), **line}
+                for line in charges]
+    charged_codes = {line.get("code") for line in charges}
+    procedures = enriched + [proc for proc in procedures if proc.get("code") not in charged_codes]
     return PACanonicalForm(
         claim_id=claim.get("claim_id") or state.get("claim", {}).get("claim_id"),
         patient=claim.get("patient", {}),
@@ -41,6 +47,7 @@ def build_pa_canonical_form(state: dict[str, Any], required_codes: list[str]) ->
             "name": claim.get("provider", {}).get("facility_name"),
         },
         service_date=claim.get("encounter", {}).get("service_date"),
+        encounter=claim.get("encounter", {}),
         procedures=procedures,
         diagnoses=[item.get("code") for item in claim.get("diagnoses", []) if item.get("code")],
         supporting_docs=[

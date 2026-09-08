@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import json
 import os
-from velo_claim.core.enums import PriorAuthStatus,ExternalTransactionStatus
+from datetime import date, datetime
 from typing import Any
 from uuid import uuid4
 
+from velo_claim.core.enums import ExternalTransactionStatus, PriorAuthStatus
 from velo_claim.storage.interfaces import DuplicateRecordError, RepositoryInterface
 
 
@@ -133,33 +134,46 @@ class PostgresRepository(RepositoryInterface):
             ).fetchone()
             return dict(row) if row else None
     def insert_prior_auth_response(self, request_id: str, data: dict[str, Any]) -> str:
-        # prior_auth_response.claim_id is NOT NULL, so pull it from the parent
-        # request row rather than requiring the caller to supply it.
         with self._connect() as conn:
             parent = conn.execute(
                 "SELECT claim_id FROM prior_auth_request WHERE id = %s",
                 (request_id,),
             ).fetchone()
             claim_id = parent["claim_id"] if parent else None
+            if not parent:
+                raise ValueError(f"Cannot store PA response: request not found: {request_id}")
 
             response_id = data.get("response_id") or str(uuid4())
+            payer_response = data.get("payer_response")
+            if payer_response is None:
+                payer_response = data
+            columns = _table_columns(conn, "prior_auth_response")
+            values_by_column = {
+                "id": response_id,
+                "request_id": request_id,
+                "claim_id": claim_id,
+                "payer_response": json.dumps(payer_response, default=str),
+                "normalized_response": json.dumps(data, default=str),
+                "status": str(data.get("status") or "unknown"),
+                "outcome": data.get("outcome"),
+                "decision": data.get("decision"),
+                "pre_auth_ref": data.get("pre_auth_ref"),
+                "payer_id": data.get("payer_id"),
+                "cpt_codes": json.dumps(data.get("cpt_codes", []), default=str),
+                "valid_from": _database_date(data.get("valid_from")),
+                "valid_to": _database_date(data.get("valid_to")),
+                "message": data.get("message"),
+                "source": str(data.get("source") or data.get("received_via") or "WEBHOOK"),
+                "received_via": str(data.get("received_via") or data.get("source") or "WEBHOOK"),
+                "raw_payload_uri": data.get("raw_payload_uri") or data.get("object_uri"),
+                "object_uri": data.get("object_uri") or data.get("raw_payload_uri"),
+            }
+            insert_columns = [name for name in values_by_column if name in columns]
+            placeholders = ", ".join(["%s"] * len(insert_columns))
             conn.execute(
-                """
-                INSERT INTO prior_auth_response
-                    (id, request_id, claim_id, payer_response, pre_auth_ref, status, received_via, object_uri)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                ON CONFLICT (id) DO NOTHING
-                """,
-                (
-                    response_id,
-                    request_id,
-                    claim_id,
-                    json.dumps(data.get("payer_response")) if data.get("payer_response") is not None else None,
-                    data.get("pre_auth_ref"),
-                    str(data.get("status")) if data.get("status") else None,
-                    str(data.get("received_via")) if data.get("received_via") else None,
-                    data.get("object_uri"),
-                ),
+                f"INSERT INTO prior_auth_response ({', '.join(insert_columns)}) "
+                f"VALUES ({placeholders}) ON CONFLICT (id) DO NOTHING",
+                [values_by_column[name] for name in insert_columns],
             )
         return response_id
 
@@ -287,8 +301,8 @@ class PostgresRepository(RepositoryInterface):
         with self._connect() as conn:
             conn.execute(
                 """
-                INSERT INTO pa_payload (claim_id, version, standard, payload_type, object_uri, sha256_hash, status)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                INSERT INTO pa_payload (claim_id, version, standard, payload_type, object_uri, sha256_hash, required_codes, status)
+                VALUES (%s, %s, %s, %s, %s, %s, %s::jsonb, %s)
                 ON CONFLICT (claim_id, version) DO NOTHING
                 """,
                 (
@@ -298,6 +312,7 @@ class PostgresRepository(RepositoryInterface):
                     _payload_type(data.get("payload_type")),
                     data.get("object_uri"),
                     data.get("sha256_hash"),
+                    json.dumps(data.get("required_codes", []), default=str),
                     str(data.get("status")),
                 ),
             )
@@ -306,13 +321,29 @@ class PostgresRepository(RepositoryInterface):
         request_id = data.get("request_id") or str(uuid4())
         display_id = data.get("display_id") or f"PA-{uuid4().hex[:12].upper()}"
         with self._connect() as conn:
+            columns = _table_columns(conn, "prior_auth_request")
+            values_by_column = {
+                "id": request_id,
+                "claim_id": claim_id,
+                "standard": str(data.get("standard")),
+                "payload_type": _payload_type(data.get("payload_type")),
+                "object_uri": data.get("object_uri"),
+                "sha256_hash": data.get("sha256_hash") or data.get("payload_hash"),
+                "required_codes": json.dumps(data.get("required_codes", []), default=str),
+                "payer_id": data.get("payer_id"),
+                "plan_id": data.get("plan_id"),
+                "service_date": _database_date(data.get("service_date")),
+                "status": str(data.get("status")),
+                "request_payload": json.dumps(data.get("request_payload", {}), default=str),
+                "callback_state": json.dumps(data.get("callback_state", {}), default=str),
+                "display_id": display_id,
+            }
+            insert_columns = [name for name in values_by_column if name in columns]
+            placeholders = ", ".join(["%s"] * len(insert_columns))
             conn.execute(
-                """
-                INSERT INTO prior_auth_request (id, claim_id, standard, object_uri, status,display_id)
-                VALUES (%s, %s, %s, %s, %s,%s)
-                ON CONFLICT (id) DO NOTHING
-                """,
-                (request_id, claim_id, str(data.get("standard")), data.get("object_uri"), str(data.get("status")),display_id),
+                f"INSERT INTO prior_auth_request ({', '.join(insert_columns)}) "
+                f"VALUES ({placeholders}) ON CONFLICT (id) DO NOTHING",
+                [values_by_column[name] for name in insert_columns],
             )
         return request_id
 
@@ -347,16 +378,6 @@ class PostgresRepository(RepositoryInterface):
             data = dict(row)
             data.update(data.get("payer_response") or {})
             return data
-
-    def insert_prior_auth_response(self, request_id: str, data: dict[str, Any]) -> None:
-        with self._connect() as conn:
-            conn.execute(
-                """
-                INSERT INTO prior_auth_response (request_id, payer_response, pre_auth_ref, status)
-                VALUES (%s, %s::jsonb, %s, %s)
-                """,
-                (request_id, json.dumps(data, default=str), data.get("pre_auth_ref"), str(data.get("status"))),
-            )
 
     def insert_validation_report(self, claim_id: str, data: dict[str, Any]) -> str:
         report_id = data.get("report_id") or str(uuid4())
@@ -530,14 +551,12 @@ class PostgresRepository(RepositoryInterface):
             return data
     def get_prior_auth_request(self, request_id_or_display_id: str) -> dict[str, Any] | None:
         with self._connect() as conn:
+            columns = _table_columns(conn, "prior_auth_request")
+            display_predicate = " OR display_id = %s" if "display_id" in columns else ""
+            params = (request_id_or_display_id, request_id_or_display_id) if display_predicate else (request_id_or_display_id,)
             row = conn.execute(
-                """
-                SELECT id, claim_id, standard, object_uri, submitted_at,
-                       status, payer_transaction_id, created_at, updated_at, display_id
-                FROM prior_auth_request
-                WHERE id::text = %s OR display_id = %s
-                """,
-                (request_id_or_display_id, request_id_or_display_id),
+                f"SELECT * FROM prior_auth_request WHERE id::text = %s{display_predicate}",
+                params,
             ).fetchone()
         return dict(row) if row else None
 
@@ -546,9 +565,7 @@ class PostgresRepository(RepositoryInterface):
         with self._connect() as conn:
             row = conn.execute(
                 """
-                SELECT id, request_id, claim_id, payer_response, pre_auth_ref,
-                       status, received_via, object_uri, received_at, created_at
-                FROM prior_auth_response
+                SELECT * FROM prior_auth_response
                 WHERE request_id = %s
                 ORDER BY received_at DESC
                 LIMIT 1
@@ -775,9 +792,27 @@ class PostgresRepository(RepositoryInterface):
             )
 
 
-def _payload_type(value: Any) -> str:
+def _payload_type(value: Any) -> str | None:
+    if value in (None, ""):
+        return None
     text = str(value)
     return "xml" if text == "application/xml" else text
+
+
+def _database_date(value: Any) -> str | date | None:
+    if value in (None, "") or isinstance(value, date):
+        return value
+    text = str(value).strip()
+    try:
+        return datetime.fromisoformat(text.replace("Z", "+00:00")).date().isoformat()
+    except ValueError:
+        pass
+    for pattern in ("%d/%m/%Y %H:%M", "%d/%m/%Y %H:%M:%S", "%d/%m/%Y"):
+        try:
+            return datetime.strptime(text, pattern).date().isoformat()
+        except ValueError:
+            continue
+    raise ValueError(f"Unsupported database date: {value}")
 
 
 def _table_columns(conn: Any, table_name: str) -> set[str]:

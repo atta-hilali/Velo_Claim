@@ -7,12 +7,15 @@ from langgraph.graph import END, START, StateGraph
 
 from velo_claim.agents.audit import audited_node
 from velo_claim.builders.eligibility.nphies import NphiesEligibilityBuilder
+from velo_claim.builders.eligibility.shafafiya import ShafafiyaEligibilityBuilder
 from velo_claim.checks.eligibility import run_eligibility_check
 from velo_claim.core.enums import ClaimStandard, EligibilityStatus, PayloadStatus, Severity
 from velo_claim.core.models import CheckIssue, CheckResult, PayerRuleSet
 from velo_claim.fallback.checkpoints import MemoryCheckpointStore
 from velo_claim.fallback.waiting import enter_waiting_for_payer
 from velo_claim.storage.interfaces import CacheStoreInterface, ObjectStoreInterface, RepositoryInterface
+from velo_claim.standards.shafafiya import parse_authorization_response
+from velo_claim.validation.payload_validators import PayloadValidator
 
 
 eligibility_checkpoint_store = MemoryCheckpointStore()
@@ -29,6 +32,7 @@ def build_eligibility_subgraph(
     """Reusable Eligibility Check State Machine from the MD."""
 
     checkpoint_store = checkpoint_store or eligibility_checkpoint_store
+    payload_validator = PayloadValidator()
 
     def normalize_eligibility_input(state: dict[str, Any]) -> dict[str, Any]:
         claim = state.get("canonical_claim", {})
@@ -68,28 +72,55 @@ def build_eligibility_subgraph(
     def build_eligibility_payload(state: dict[str, Any]) -> dict[str, Any]:
         if state.get("eligibility_terminal"):
             return state
+        if _callback_response(state):
+            return state
         platform = state.get("eligibility_platform")
         try:
             standard = ClaimStandard(platform)
         except ValueError:
             standard = None
-        if standard == ClaimStandard.NPHIES:
-            payload = NphiesEligibilityBuilder().build(
+        if standard in {ClaimStandard.NPHIES, ClaimStandard.SHAFAFIYA}:
+            builder = NphiesEligibilityBuilder() if standard == ClaimStandard.NPHIES else ShafafiyaEligibilityBuilder()
+            payload = builder.build(
                 state.get("canonical_claim", {}),
                 state.get("source_context", {}),
             )
+            _, conformity = payload_validator.validate_eligibility_request(
+                payload=payload,
+                payload_type=builder.content_type,
+                route={**state.get("route", {}), "eligibility_standard": standard},
+            )
+            if not conformity.passes:
+                result = CheckResult(
+                    "ELIGIBILITY",
+                    EligibilityStatus.FAIL_HOLD_CRITICAL,
+                    conformity.issues,
+                    {"payload_conformity": conformity.to_dict()},
+                )
+                return {
+                    **state,
+                    "eligibility_payload": payload,
+                    "eligibility_payload_type": builder.content_type,
+                    "eligibility_payload_standard": standard,
+                    "eligibility_payload_validation": conformity.to_dict(),
+                    "eligibility_result": result.to_dict(),
+                    "_eligibility_result_object": result,
+                    "eligibility_terminal": True,
+                }
             claim_id = state.get("canonical_claim", {}).get("claim_id") or "unknown"
             payload_state = {
                 **state,
                 "eligibility_payload": payload,
-                "eligibility_payload_type": NphiesEligibilityBuilder.content_type,
-                "eligibility_payload_standard": ClaimStandard.NPHIES,
+                "eligibility_payload_type": builder.content_type,
+                "eligibility_payload_standard": standard,
+                "eligibility_payload_validation": conformity.to_dict(),
             }
             if object_store:
+                extension = "json" if builder.content_type == "fhir_bundle_json" else "xml"
                 uri = object_store.put_text(
-                    f"claims/{claim_id}/eligibility/payloads/1/payload.json",
+                    f"claims/{claim_id}/eligibility/payloads/1/payload.{extension}",
                     payload,
-                    content_type="application/fhir+json",
+                    content_type="application/fhir+json" if extension == "json" else "application/xml",
                 )
                 payload_state["eligibility_payload_uri"] = uri
             return payload_state
@@ -139,7 +170,41 @@ def build_eligibility_subgraph(
     def parse_eligibility_response(state: dict[str, Any]) -> dict[str, Any]:
         if state.get("eligibility_terminal"):
             return state
-        response = state.get("eligibility_response")
+        response = state.get("eligibility_response") or _callback_response(state)
+        if response is None:
+            return state
+
+        xml_payload = _xml_payload(response)
+        if xml_payload and str(state.get("eligibility_platform")) == str(ClaimStandard.SHAFAFIYA):
+            _, conformity = payload_validator.validate_prior_authorization_response(
+                payload=xml_payload,
+                payload_type="application/xml",
+                route={**state.get("route", {}), "prior_auth_standard": ClaimStandard.SHAFAFIYA},
+            )
+            if not conformity.passes:
+                result = CheckResult(
+                    "ELIGIBILITY",
+                    EligibilityStatus.FAIL_HOLD_CRITICAL,
+                    conformity.issues,
+                    {"response_conformity": conformity.to_dict()},
+                )
+                return {
+                    **state,
+                    "eligibility_response_validation": conformity.to_dict(),
+                    "eligibility_result": result.to_dict(),
+                    "_eligibility_result_object": result,
+                    "eligibility_terminal": True,
+                }
+            parsed = parse_authorization_response(
+                xml_payload,
+                claim_id=state.get("canonical_claim", {}).get("claim_id"),
+                payer_id=state.get("canonical_claim", {}).get("payer", {}).get("id"),
+            )
+            response = {
+                **parsed,
+                "status": "eligible" if parsed.get("decision") == "approved" else "ineligible",
+                "eligibility_ref": parsed.get("pre_auth_ref"),
+            }
         if not isinstance(response, dict):
             return state
 
@@ -209,15 +274,45 @@ def build_eligibility_subgraph(
     def patch_claim_with_coverage(state: dict[str, Any]) -> dict[str, Any]:
         claim = state.get("canonical_claim", {})
         result = state.get("eligibility_result", {})
-        if result.get("passes"):
+        if str(result.get("status")) in {
+            str(EligibilityStatus.PASS),
+            str(EligibilityStatus.CACHED_VALID),
+        }:
+            eligibility_ref = result.get("data", {}).get("eligibility_ref")
+            rebuild_required = bool(
+                eligibility_ref
+                and str(eligibility_ref) not in str(state.get("claim_payload") or "")
+            )
             claim = {
                 **claim,
                 "payer": {
                     **claim.get("payer", {}),
                     "eligibility_status": result.get("status"),
                     "benefit_summary": result.get("data", {}).get("benefit_summary", {}),
-                    "eligibility_ref": result.get("data", {}).get("eligibility_ref"),
+                    "eligibility_ref": eligibility_ref,
                 },
+            }
+            result_object = state.get("_eligibility_result_object")
+            result = {
+                **result,
+                "data": {
+                    **result.get("data", {}),
+                    "payload_rebuild_required": rebuild_required,
+                },
+            }
+            if result_object:
+                result_object.data["payload_rebuild_required"] = rebuild_required
+                result = result_object.to_dict()
+            cache.set(
+                state["eligibility_input"]["cache_key"],
+                result,
+                ttl_seconds=payer_rules.eligibility_ttl_seconds,
+            )
+            return {
+                **state,
+                "canonical_claim": claim,
+                "eligibility_result": result,
+                "payload_rebuild_required": state.get("payload_rebuild_required") or rebuild_required,
             }
         return {**state, "canonical_claim": claim}
 
@@ -354,15 +449,26 @@ def _submit_to_payer_enabled(state: dict[str, Any]) -> bool:
     return str(value).strip().lower() in {"1", "true", "yes", "y", "on"}
 
 
-def _callback_response(state: dict[str, Any]) -> dict[str, Any] | None:
+def _callback_response(state: dict[str, Any]) -> Any:
     response = state.get("eligibility_response")
-    if isinstance(response, dict):
+    if response is not None:
         return response
     callback_results = state.get("callback_results") or {}
     for key in ("parse_eligibility_response", "eligibility", "eligibility_response"):
         response = callback_results.get(key)
-        if isinstance(response, dict):
+        if response is not None:
             return response
+    return None
+
+
+def _xml_payload(response: Any) -> str | None:
+    if isinstance(response, str) and response.lstrip().startswith("<"):
+        return response
+    if isinstance(response, dict):
+        for key in ("payload", "body", "response"):
+            value = response.get(key)
+            if isinstance(value, str) and value.lstrip().startswith("<"):
+                return value
     return None
 
 

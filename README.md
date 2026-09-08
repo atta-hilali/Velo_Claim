@@ -34,8 +34,10 @@ and LangGraph agents only orchestrate those modules.
 - `velo_claim/agents/` contains thin LangGraph state machines.
 - `velo_claim/security/generate_jwks.py` preserves JWKS generation without
   exposing private keys.
-- `velo_claim/migrations/001_initial_schema.sql` contains the first PostgreSQL
-  schema migration.
+- `velo_claim/migrations/` contains the ordered PostgreSQL migrations. Apply
+  every unapplied migration through `005_payer_submission_journal.sql`.
+- `data/schemas/shafafiya/v2.0/` contains the immutable official XSD release
+  used for claims, eligibility, prior authorization, and remittance responses.
 
 ## Preserved Data And Connection Artifacts
 
@@ -56,7 +58,7 @@ from tests and should not be the source of truth.
 ## Run The Clean Pipeline Test
 
 ```powershell
-python -m pytest test_clean_rebuild_pipeline.py -q
+python -m pytest -q
 ```
 
 The test runs the current package end to end:
@@ -84,3 +86,15 @@ MockPayerRuleLoader -> payer/plan rules
 
 Production replacements should implement the same interfaces, not change the
 agent code.
+
+## Controlled Shafafiya Test Submission
+
+Claim and PA submission now use exact-payload human approval, an auditable
+submission journal, a WSDL-bound Shafafiya adapter, and response reconciliation.
+Delivery acknowledgement is separate from the payer decision. The default is
+**disabled**; manual test-portal exchange and PTE are supported. Production is
+blocked while KG and payer-rule validation remain mocked.
+
+See [setup, API workflow, and verification](docs/shafafiya_submission.md) and the
+[deferred KG integration plan](docs/kg_integration_plan.md). Run
+`python -m pytest -q` for the local checks and `npm run build` in `frontend/`.

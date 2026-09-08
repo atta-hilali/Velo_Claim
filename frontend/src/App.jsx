@@ -1,3 +1,4 @@
+import SubmissionPanel from "./SubmissionPanel.jsx";
 import React, { useState, useMemo } from "react";
 import {
   Bell, Search, ChevronDown, ChevronRight, X, Check, AlertTriangle,
@@ -850,22 +851,17 @@ function ClaimDetail({ claim, onBack, onUpdateStatus }) {
 
   const approve = () => setModal("approve");
   const sendBack = () => setModal("sendback");
-  const forceSubmit = () => setModal("force");
-  const escalate = () => {
-    runDesignClaimAction(claim.id, "escalate").catch((error) => {
-      console.warn("Escalation API call failed.", error);
-    });
-    setToast("Claim escalated.");
+  const escalate = async () => {
+    try { await runDesignClaimAction(claim.id, "escalate"); await onUpdateStatus(claim.id); setToast("Claim escalated."); }
+    catch (error) { setToast(error.message); }
   };
 
-  const confirmApprove = () => { onUpdateStatus(claim.id, "submitted"); setModal(null); setToast("Claim approved and submitted."); };
-  const confirmSendBack = () => {
-    runDesignClaimAction(claim.id, "send_back", { reason }).catch((error) => {
-      console.warn("Send-back API call failed.", error);
-    });
-    setModal(null); setReason(""); onBack(); setToast("Sent back for edit.");
+
+  const confirmSendBack = async () => {
+    try { await runDesignClaimAction(claim.id, "send_back", { reason }); await onUpdateStatus(claim.id); setModal(null); setReason(""); setToast("Sent back for edit."); }
+    catch (error) { setToast(error.message); }
   };
-  const confirmForce = () => { if (!reason.trim()) return; onUpdateStatus(claim.id, "submitted", { reason, override: true }); setModal(null); setReason(""); setToast("Submitted via override."); };
+
 
   if (!claim) {
     return (
@@ -908,10 +904,9 @@ function ClaimDetail({ claim, onBack, onUpdateStatus }) {
           </div>
         </div>
         <div style={{ display: "flex", gap: 10, marginTop: 18, flexWrap: "wrap" }}>
-          <button onClick={approve} disabled={claim.status === "submitted"} style={{ ...btnPrimary, background: "#fff", color: "#0E8298", opacity: claim.status === "submitted" ? 0.5 : 1 }}>Approve & Submit</button>
+          <button onClick={approve} style={{ ...btnPrimary, background: "#fff", color: "#0E8298", opacity: 1 }}>Review Submission</button>
           <button onClick={sendBack} style={{ ...btnGhost, background: "rgba(255,255,255,.12)", color: "#fff", border: "1px solid rgba(255,255,255,.4)" }}>Send Back for Edit</button>
           <button onClick={escalate} style={{ ...btnGhost, background: "rgba(255,255,255,.12)", color: "#fff", border: "1px solid rgba(255,255,255,.4)" }}>Escalate</button>
-          <button onClick={forceSubmit} style={{ ...btnGhost, background: "rgba(194,43,43,.18)", color: "#FFD7D7", border: "1px solid rgba(255,255,255,.4)" }}>Override & Force Submit</button>
         </div>
       </div>
 
@@ -939,11 +934,7 @@ function ClaimDetail({ claim, onBack, onUpdateStatus }) {
 
       {modal === "approve" && (
         <Modal title="Approve & Submit Claim" onClose={() => setModal(null)}>
-          <p style={{ fontSize: 13.5, color: "#3A4048", lineHeight: 1.6 }}>This will submit <b>{claim.id}</b> to {claim.payer} via {claim.format}. This action can't be undone.</p>
-          <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 16 }}>
-            <button style={btnGhost} onClick={() => setModal(null)}>Cancel</button>
-            <button style={btnPrimary} onClick={confirmApprove}>Confirm & Submit</button>
-          </div>
+          <SubmissionPanel claimId={claim.id} onDelivered={() => onUpdateStatus(claim.id)} />
         </Modal>
       )}
 
@@ -962,25 +953,6 @@ function ClaimDetail({ claim, onBack, onUpdateStatus }) {
         </Modal>
       )}
 
-      {modal === "force" && (
-        <Modal title="Override & Force Submit" onClose={() => setModal(null)}>
-          <div style={{ display: "flex", gap: 8, background: "#FCE9E9", border: "1px solid #F3C2C2", borderRadius: 8, padding: 10, marginBottom: 12 }}>
-            <AlertTriangle size={15} color="#C22B2B" style={{ flexShrink: 0, marginTop: 1 }} />
-            <span style={{ fontSize: 12.5, color: "#7A1F1F" }}>This bypasses outstanding validation issues. A written reason is required and will be logged to the audit trail.</span>
-          </div>
-          <label style={{ fontSize: 11.5, fontWeight: 700, color: "#8A9099", textTransform: "uppercase" }}>Reason (required)</label>
-          <textarea
-            value={reason} onChange={e => setReason(e.target.value)}
-            placeholder="Explain why this claim must be force-submitted…"
-            style={{ width: "100%", minHeight: 80, marginTop: 6, padding: 10, fontSize: 13, border: "1px solid #E4E7EB", borderRadius: 8, resize: "vertical", fontFamily: "inherit" }}
-          />
-          <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 16 }}>
-            <button style={btnGhost} onClick={() => setModal(null)}>Cancel</button>
-            <button style={{ ...btnDanger, background: reason.trim() ? "#C22B2B" : "#F3C2C2", color: "#fff", border: "none", cursor: reason.trim() ? "pointer" : "not-allowed" }} onClick={confirmForce} disabled={!reason.trim()}>Force Submit</button>
-          </div>
-        </Modal>
-      )}
-
       {toast && <Toast message={toast} onClose={() => setToast(null)} />}
     </div>
   );
@@ -991,30 +963,11 @@ function ClaimDetail({ claim, onBack, onUpdateStatus }) {
 export default function VeloClaim() {
   const [view, setView] = useState("queue");
   const [activeClaim, setActiveClaim] = useState(null);
-//   const [data, setData] = useState(fallbackClaims);
   const [data, setData] = useState([]);
+  const [loadError, setLoadError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
-  console.log(data)
 
-//   React.useEffect(() => {
-// 	  let mounted = true;
-// 	  fetchDesignClaims()
-//       .then((result) => {
-// 		  if (mounted && result.source === "backend") {
-// 			  setData(result.claims);
-// 			} else if (mounted && result.claims.length) {
-// 				setData(result.claims);
-// 			}
-// 		})
-// 		.catch((error) => {
-// 			console.warn("Velo Claim API unavailable, using fallback claims.", error);
-// 		});
-
-// 		return () => {
-//       mounted = false;
-//     };
-//   }, []);
-	React.useEffect(() => {
+  React.useEffect(() => {
     let mounted = true;
 
     fetchDesignClaims()
@@ -1028,7 +981,7 @@ export default function VeloClaim() {
       })
       .catch((error) => {
         console.warn("Velo Claim API unavailable, using fallback claims.", error);
-        if (mounted) setData(fallbackClaims);
+        if (mounted) { setData([]); setLoadError("Cannot load claims. Check the backend connection and refresh."); }
       })
       .finally(() => {
         if (mounted) setIsLoading(false);
@@ -1041,25 +994,16 @@ export default function VeloClaim() {
 
   const handleOpenClaim = (cl) => { setActiveClaim(cl); setView("detail"); };
   const handleBack = () => setView("queue");
-  const handleUpdateStatus = (id, status, metadata = {}) => {
-    setData(d => d.map(c => c.id === id ? { ...c, status } : c));
-    setActiveClaim(c => c ? { ...c, status } : c);
-    updateDesignClaimStatus(id, status, metadata).catch((error) => {
-      console.warn("Status update API call failed.", error);
-    });
+  const handleUpdateStatus = async (id) => {
+    const result = await fetchDesignClaims();
+    setData(result.claims);
+    setActiveClaim(result.claims.find(c => c.id === id) || null);
   };
 
-//   return (
-//     <div style={{ fontFamily: "Inter, -apple-system, BlinkMacSystemFont, sans-serif", background: "#F6F7F8", minHeight: "100vh" }}>
-//       <TopBar />
-//       {view === "queue"
-//         ? <ClaimsQueue claims={data} onOpenClaim={handleOpenClaim} />
-//         : <ClaimDetail claim={activeClaim} onBack={handleBack} onUpdateStatus={handleUpdateStatus} />}
-//     </div>
-//   );
-return (
+  return (
     <div style={{ fontFamily: "Inter, -apple-system, BlinkMacSystemFont, sans-serif", background: "#F6F7F8", minHeight: "100vh" }}>
       <TopBar />
+      {loadError && <p role="alert" style={{padding:20, color:"#C22B2B"}}>{loadError}</p>}
       {isLoading ? (
         <div style={{ padding: "40px", textAlign: "center", color: "#8A9099" }}>
           Loading claims...

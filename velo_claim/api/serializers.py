@@ -41,7 +41,8 @@ def claim_for_api(detail: dict[str, Any], object_store: ObjectStoreInterface | N
 
     claim_id = detail.get("claim_id") or canonical.get("claim_id")
     status = _frontend_status(
-        report.get("status")
+        detail.get("status")
+        or report.get("status")
         or report.get("final_status")
         or report_row.get("final_status")
         or detail.get("payload_status")

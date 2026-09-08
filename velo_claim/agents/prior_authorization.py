@@ -11,7 +11,7 @@ from velo_claim.core.models import RoutingContext
 
 def build_prior_authorization_agent(*, container: ServiceContainer | None = None):
     services = container or build_default_container()
-    pa_builder = PAClaimBuilderModule(repository=services.repository, object_store=services.object_store)
+    pa_builder = PAClaimBuilderModule(repository=services.repository, object_store=services.object_store, submission_store=services.submission_store)
 
     def run_subgraph(state: dict) -> dict:
         routing = RoutingContext(**state.get("routing_context", {}))

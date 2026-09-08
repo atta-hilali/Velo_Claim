@@ -9,18 +9,20 @@ from langgraph.graph import END, START, StateGraph
 from velo_claim.agents.audit import audited_node
 from velo_claim.builders.prior_auth.builder import PAClaimBuilderModule
 from velo_claim.checks.prior_auth import auth_valid
-from velo_claim.core.enums import PayloadStatus, PriorAuthStatus, Severity
+from velo_claim.core.enums import ClaimStandard, PayloadStatus, PriorAuthStatus, Severity
 from velo_claim.core.models import CheckIssue, CheckResult, PayerRuleSet
 from velo_claim.core.utils import normalize_code
 from velo_claim.kg.interface import Neo4jClientInterface
 from velo_claim.rules.engine import pa_required_for_code
 from velo_claim.storage.interfaces import ObjectStoreInterface, RepositoryInterface
+from velo_claim.standards.shafafiya import parse_authorization_response
+from velo_claim.validation.payload_validators import PayloadValidator
 
 
 WAITING_RESPONSE_STATUSES = {"queued", "pending", "pended", "partial", "in-progress", "inprogress"}
-APPROVED_RESPONSE_STATUSES = {"approved", "active", "authorized", "authorised"}
+APPROVED_RESPONSE_STATUSES = {"approved", "active", "authorized", "authorised", "yes"}
 REFERENCE_ACCEPTED_RESPONSE_STATUSES = {"accepted"}
-DENIED_RESPONSE_STATUSES = {"denied", "rejected", "declined", "cancelled", "canceled"}
+DENIED_RESPONSE_STATUSES = {"denied", "rejected", "declined", "cancelled", "canceled", "no"}
 ERROR_RESPONSE_STATUSES = {"error", "failed", "invalid"}
 COMPLETE_RESPONSE_STATUSES = {"complete", "completed"}
 
@@ -33,7 +35,16 @@ def normalize_prior_auth_response(raw_response: Any, state: dict[str, Any]) -> d
     payer = claim.get("payer", {})
     required_codes = [normalize_code(code) for code in state.get("prior_auth_required_codes", []) if code]
 
-    parsed = _extract_response_fields(raw)
+    response_payload = _xml_payload(raw)
+    standard = state.get("route", {}).get("prior_auth_standard") or state.get("route", {}).get("claim_standard")
+    if response_payload and str(standard) == str(ClaimStandard.SHAFAFIYA):
+        parsed = parse_authorization_response(
+            response_payload,
+            claim_id=claim.get("claim_id"),
+            payer_id=payer.get("id"),
+        )
+    else:
+        parsed = _extract_response_fields(raw)
     status = _authorization_status(parsed)
     cpt_codes = [normalize_code(code) for code in parsed.get("cpt_codes", []) if code]
     if status == "approved" and not cpt_codes:
@@ -51,6 +62,9 @@ def normalize_prior_auth_response(raw_response: Any, state: dict[str, Any]) -> d
         "valid_from": parsed.get("valid_from"),
         "valid_to": parsed.get("valid_to"),
         "message": parsed.get("message"),
+        "authorization_request_id": parsed.get("authorization_request_id"),
+        "provider_id": parsed.get("provider_id"),
+        "activity_results": parsed.get("activity_results", []),
         "raw_response": raw,
     }
 
@@ -72,6 +86,14 @@ def _coerce_response(raw_response: Any) -> dict[str, Any]:
                 return {"payload": text}
         return {"payload": text}
     return {"payload": raw_response}
+
+
+def _xml_payload(raw: dict[str, Any]) -> str | None:
+    for key in ("payload", "body", "response"):
+        value = raw.get(key)
+        if isinstance(value, str) and value.lstrip().startswith("<"):
+            return value
+    return None
 
 
 def _extract_response_fields(raw: dict[str, Any]) -> dict[str, Any]:
@@ -294,13 +316,16 @@ def _payload_contains_pre_auth_ref(state: dict[str, Any], pre_auth_ref: str | No
 
 
 def _prior_auth_request_id(state: dict[str, Any], normalized: dict[str, Any]) -> str | None:
+    existing = state.get("prior_auth_existing_request") or {}
+    internal_id = state.get("prior_auth_request_id") or state.get("pa_request_id") or existing.get("request_id")
+    if internal_id:
+        return internal_id
     raw = normalized.get("raw_response") or {}
     if isinstance(raw, dict):
         for key in ("request_id", "prior_auth_request_id", "authorization_request_id"):
             if raw.get(key):
                 return raw[key]
-    existing = state.get("prior_auth_existing_request") or {}
-    return state.get("prior_auth_request_id") or existing.get("request_id")
+    return None
 
 
 def build_prior_auth_subgraph(
@@ -312,6 +337,8 @@ def build_prior_auth_subgraph(
     object_store: ObjectStoreInterface | None = None,
 ):
     """Reusable Prior Auth Check State Machine from the MD."""
+
+    payload_validator = PayloadValidator()
 
     def normalize_prior_auth_input(state: dict[str, Any]) -> dict[str, Any]:
         claim = state.get("canonical_claim", {})
@@ -417,17 +444,14 @@ def build_prior_auth_subgraph(
             return state
         if state.get("prior_auth_existing_request"):
             return {**state, "prior_auth_request_id": state["prior_auth_existing_request"].get("request_id")}
-        claim = state.get("canonical_claim", {})
-        request_id = repository.insert_prior_auth_request(
-            claim["claim_id"],
-            {
-                "standard": state.get("route", {}).get("prior_auth_standard"),
-                "object_uri": state.get("pa_payload_uri"),
-                "status": PriorAuthStatus.REQUIRED_MISSING,
-                "required_codes": state.get("prior_auth_missing_codes", []),
-            },
-        )
-        return {**state, "prior_auth_request_id": request_id, "prior_auth_submit_status": "MANUAL_PORTAL_TASK"}
+        request_id = state.get("pa_request_id")
+        if not request_id:
+            raise ValueError("PA builder did not return a persisted pa_request_id.")
+        return {
+            **state,
+            "prior_auth_request_id": request_id,
+            "prior_auth_submit_status": "MANUAL_PORTAL_TASK",
+        }
 
     def poll_if_needed(state: dict[str, Any]) -> dict[str, Any]:
         return state
@@ -440,6 +464,28 @@ def build_prior_auth_subgraph(
             return state
 
         claim = state.get("canonical_claim", {})
+        response_payload = _xml_payload(_coerce_response(raw_response))
+        standard = state.get("route", {}).get("prior_auth_standard") or state.get("route", {}).get("claim_standard")
+        if response_payload and str(standard) == str(ClaimStandard.SHAFAFIYA):
+            _, conformity = payload_validator.validate_prior_authorization_response(
+                payload=response_payload,
+                payload_type="application/xml",
+                route=state.get("route", {}),
+            )
+            if not conformity.passes:
+                result = CheckResult(
+                    "PRIOR_AUTH",
+                    PriorAuthStatus.HOLD_CRITICAL,
+                    conformity.issues,
+                    {"response_conformity": conformity.to_dict()},
+                )
+                return {
+                    **state,
+                    "prior_auth_response_validation": conformity.to_dict(),
+                    "prior_auth_result": result.to_dict(),
+                    "_prior_auth_result_object": result,
+                    "prior_auth_terminal": True,
+                }
         normalized = normalize_prior_auth_response(raw_response, state)
         request_id = _prior_auth_request_id(state, normalized)
         status = normalized["status"]

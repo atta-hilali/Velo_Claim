@@ -1,0 +1,26 @@
+$kind: http-request
+description: After reviewing request 09, set approval_note to your review note. This records human approval; it does not send XML.
+url: "{{base_url}}/submission/prior_auth/{{pa_request_id}}/approve"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "payload_hash": "{{payload_hash}}",
+      "note": "{{approval_note}}"
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{reviewer_token}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("HTTP 200", () => pm.response.to.have.status(200));
+      if (pm.response.code !== 200) throw new Error(pm.response.text());
+      pm.collectionVariables.set('approval_id',pm.response.json().id);
+      pm.test('Named reviewer recorded', () => pm.expect(pm.response.json().actor).to.eql('local-postman-reviewer'));
+    language: text/javascript
+order: 10000

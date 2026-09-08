@@ -1,0 +1,22 @@
+$kind: http-request
+description: Requires the submission update and reviewer token. Inspect the response payload XML before approving. Expected sender MF2057 is synthetic fixture data.
+url: "{{base_url}}/submission/prior_auth/{{pa_request_id}}/preview"
+method: GET
+headers:
+  Content-Type: application/json
+auth:
+  type: bearer
+  credentials:
+    token: "{{reviewer_token}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("HTTP 200", () => pm.response.to.have.status(200));
+      if (pm.response.code !== 200) throw new Error(pm.response.text());
+      const data=pm.response.json();
+      pm.test('Manual local mode', () => pm.expect(data.mode).to.eql('manual'));
+      pm.test('PA XML uses test disposition', () => {pm.expect(data.payload).to.include('Prior.Request'); pm.expect(data.payload).to.include('PTE_SUBMIT');});
+      pm.collectionVariables.set('payload_hash',data.payload_hash);
+      pm.collectionVariables.set('pa_request_id',data.entity_id);
+    language: text/javascript
+order: 9000

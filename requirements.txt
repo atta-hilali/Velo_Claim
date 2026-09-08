@@ -17,3 +17,9 @@ lxml>=5.4,<7
 
 # Local verification
 pytest==9.0.3
+
+# WSDL-bound Shafafiya SOAP adapter
+zeep==4.3.3
+
+# API contract tests
+httpx==0.28.1

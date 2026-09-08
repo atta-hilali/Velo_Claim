@@ -1,0 +1,81 @@
+<xs:schema elementFormDefault="qualified" version="2.0" id="PriorAuthorization" xmlns:tns="http://www.haad.ae/DataDictionary/CommonTypes" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsd="undefined">
+   <xs:import schemaLocation="CommonTypes.xsd" namespace="http://www.haad.ae/DataDictionary/CommonTypes"/>
+   <xs:element name="Prior.Authorization">
+      <xs:complexType>
+         <xs:sequence>
+            <xs:element name="Header">
+               <xs:complexType>
+                  <xs:sequence>
+                     <xs:element name="SenderID" type="tns:HeaderSenderID"/>
+                     <xs:element name="ReceiverID" type="tns:HeaderReceiverID"/>
+                     <xs:element name="TransactionDate" type="tns:HeaderTransactionDate"/>
+                     <xs:element name="RecordCount" type="tns:HeaderRecordCount"/>
+                     <xs:element name="DispositionFlag" type="tns:HeaderDispositionFlag"/>
+                  </xs:sequence>
+               </xs:complexType>
+            </xs:element>
+            <xs:element name="Authorization">
+               <xs:complexType>
+                  <xs:sequence>
+                     <xs:element name="Result" type="tns:AuthorizationResult" minOccurs="0"/>
+                     <xs:element name="ID" type="tns:AuthorizationID"/>
+                     <xs:element name="IDPayer" type="tns:AuthorizationIDPayer" minOccurs="0"/>
+                     <xs:element name="DenialCode" type="tns:AuthorizationDenialCode" minOccurs="0"/>
+                     <xs:element name="Start" type="tns:AuthorizationStart"/>
+                     <xs:element name="End" type="tns:AuthorizationEnd"/>
+                     <xs:element name="Limit" type="tns:AuthorizationLimit" minOccurs="0"/>
+                     <xs:element name="Comments" type="tns:AuthorizationComments" minOccurs="0"/>
+                     <xs:element name="Activity" minOccurs="0" maxOccurs="unbounded">
+                        <xs:complexType>
+                           <xs:sequence>
+                              <xs:element name="ID">
+                                 <xs:simpleType>
+                                    <xs:restriction base="xs:string">
+                                       <xs:minLength value="1"/>
+                                       <xs:maxLength value="30"/>
+                                       <xs:whiteSpace value="collapse"/>
+                                    </xs:restriction>
+                                 </xs:simpleType>
+                              </xs:element>
+                              <xs:element name="Type" type="tns:ActivityType"/>
+                              <xs:element name="Code" type="tns:ActivityCode"/>
+                              <xs:element name="Quantity" type="tns:ActivityQuantity" minOccurs="0"/>
+                              <xs:element name="Net" type="tns:ActivityNet"/>
+                              <xs:element name="List" type="tns:ActivityList" minOccurs="0"/>
+                              <xs:element name="PatientShare" type="tns:ActivityPatientShare" minOccurs="0"/>
+                              <xs:element name="PaymentAmount" type="tns:ActivityPaymentAmount"/>
+                              <xs:element name="DenialCode" type="tns:ActivityDenialCode" minOccurs="0"/>
+                              <xs:element name="Observation" minOccurs="0" maxOccurs="unbounded">
+                                 <xs:complexType>
+                                    <xs:sequence>
+                                       <xs:element name="Type" type="tns:ObservationType"/>
+                                       <xs:element name="Code" type="tns:ObservationCode"/>
+                                       <xs:element name="Value">
+                                          <xs:simpleType>
+                                             <xs:restriction base="xs:string">
+                                                <xs:minLength value="1"/>
+                                                <xs:whiteSpace value="collapse"/>
+                                             </xs:restriction>
+                                          </xs:simpleType>
+                                       </xs:element>
+                                       <xs:element name="ValueType">
+                                          <xs:simpleType>
+                                             <xs:restriction base="xs:string">
+                                                <xs:minLength value="1"/>
+                                                <xs:whiteSpace value="collapse"/>
+                                             </xs:restriction>
+                                          </xs:simpleType>
+                                       </xs:element>
+                                    </xs:sequence>
+                                 </xs:complexType>
+                              </xs:element>
+                           </xs:sequence>
+                        </xs:complexType>
+                     </xs:element>
+                  </xs:sequence>
+               </xs:complexType>
+            </xs:element>
+         </xs:sequence>
+      </xs:complexType>
+   </xs:element>
+</xs:schema>

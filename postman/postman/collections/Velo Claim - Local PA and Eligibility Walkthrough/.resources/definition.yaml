@@ -1,0 +1,20 @@
+$kind: collection
+description: "Run requests 01-15 in order, one at a time. Requires the Velo_Claim_Submission_Update patch for requests 09-13. Backend at http://127.0.0.1:8000 with memory storage and manual submission mode. Set SHAFAFIYA_SENDER_ID=MF2057, disable coding/validation LLM and ELIGIBILITY_SUBMIT_TO_PAYER, configure VELO_SUBMISSION_REVIEWERS with a private token mapped to local-postman-reviewer. Set reviewer_token locally in Postman; do not share it. After reviewing XML, set approval_note. IDs are captured automatically. Fresh UUIDs prevent earlier eligibility cache values from masking negative test cases. All fixtures are synthetic. There is no standalone eligibility endpoint: POST /encounters runs it. Active means local context passed, not live payer eligibility confirmation. PA request 07 tests the explicit builder even for a non-required procedure; request 14 separately tests automatic PA requirements. Export is local only; no network payer send, fabricated portal receipt, or fabricated payer response is included. If you restart memory mode, rerun from 01."
+variables:
+  base_url: http://127.0.0.1:8000
+  reviewer_token: ""
+  approval_note: ""
+  claim_id: ""
+  pa_request_id: ""
+  auto_pa_request_id: ""
+  payload_hash: ""
+  approval_id: ""
+  delivery_id: ""
+  pa_build_body: ""
+  case_id: ""
+scripts:
+  - type: http:beforeRequest
+    code: |-
+      const base = pm.variables.get('base_url');
+      if (!/^http:\/\/(127\.0\.0\.1|localhost):[0-9]+\/?$/.test(base)) throw new Error('This synthetic collection is intended for your local API only.');
+    language: text/javascript

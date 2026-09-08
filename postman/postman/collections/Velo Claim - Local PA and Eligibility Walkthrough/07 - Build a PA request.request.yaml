@@ -1,0 +1,21 @@
+$kind: http-request
+description: Run 02 first. Body is a full state object plus required_codes, not just a claim_id. This deliberately constructs a PA for fixture code 99213 to test the builder; mock rules do not require PA for that code. Request 14 separately tests an automatically required PA.
+url: "{{base_url}}/prior-auth/build"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: "{{pa_build_body}}"
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("HTTP 200", () => pm.response.to.have.status(200));
+      if (pm.response.code !== 200) throw new Error(pm.response.text());
+      const data=pm.response.json();
+      pm.test('PA draft created', () => {pm.expect(data.ok).to.eql(true); pm.expect(data.pa_request_id).to.be.a('string');});
+      pm.collectionVariables.set('pa_request_id',data.pa_request_id);
+    language: text/javascript
+order: 7000

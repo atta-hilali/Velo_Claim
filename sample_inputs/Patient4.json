@@ -1,0 +1,134 @@
+{
+  "jurisdiction": "SAUDI_ARABIA",
+  "patient": {
+    "id": "SA-PAT-0002",
+    "nationalId": "1076543210",
+    "idType": "NATIONAL_ID",
+    "firstName": "Noura",
+    "lastName": "Al-Otaibi",
+    "gender": "female",
+    "dateOfBirth": "1992-09-23",
+    "nationality": "SAU",
+    "maritalStatus": "single",
+    "contact": {
+      "phone": "+966551987654",
+      "email": "noura.alotaibi@example.com",
+      "address": {
+        "line": "Prince Sultan Road, Al Zahra",
+        "city": "Jeddah",
+        "region": "Makkah Province",
+        "postalCode": "23425",
+        "country": "SA"
+      }
+    }
+  },
+  "coverage": {
+    "id": "SA-COV-0002",
+    "payer": "Tawuniya",
+    "payerId": "TAWUNIYA-SA-002",
+    "policyNumber": "POL-889900",
+    "planType": "employer_sponsored",
+    "memberId": "MEM-667788",
+    "class": "premium",
+    "network": "in_network",
+    "status": "active",
+    "startDate": "2026-01-01",
+    "endDate": "2026-12-31",
+    "relationshipToSubscriber": "self"
+  },
+  "provider": {
+    "id": "SA-PROV-0002",
+    "name": "Dr. Khalid Al-Zahrani",
+    "role": "physician",
+    "specialty": "Orthopedic Surgery",
+    "licenseNumber": "SCFHS-556677",
+    "nphiesProviderId": "NPHIES-PRV-2045"
+  },
+  "facility": {
+    "id": "SA-FAC-0002",
+    "name": "Dr. Soliman Fakeeh Hospital",
+    "type": "hospital",
+    "city": "Jeddah",
+    "moh": false,
+    "nphiesFacilityId": "NPHIES-FAC-7834"
+  },
+  "encounter": {
+    "id": "SA-ENC-0002",
+    "type": "outpatient",
+    "class": "ambulatory",
+    "admissionDate": "2026-07-20T14:00:00+03:00",
+    "dischargeDate": "2026-07-20T16:15:00+03:00",
+    "reasonForVisit": "Persistent right knee pain following a sports injury",
+    "status": "finished"
+  },
+  "conditions": [
+    {
+      "code": "M25.561",
+      "codeSystem": "ICD-10-CM",
+      "display": "Pain in right knee",
+      "onsetDate": "2026-06-28",
+      "clinicalStatus": "active"
+    },
+    {
+      "code": "S83.91XA",
+      "codeSystem": "ICD-10-CM",
+      "display": "Sprain of unspecified site of right knee, initial encounter",
+      "onsetDate": "2026-06-28",
+      "clinicalStatus": "active"
+    }
+  ],
+  "procedures": [
+    {
+      "code": "99214",
+      "codeSystem": "CPT",
+      "display": "Office visit, established patient, moderate complexity",
+      "date": "2026-07-20",
+      "performedBy": "SA-PROV-0002"
+    },
+    {
+      "code": "73562",
+      "codeSystem": "CPT",
+      "display": "Radiologic examination of knee, three views",
+      "date": "2026-07-20",
+      "performedBy": "SA-PROV-0002"
+    }
+  ],
+  "charge_items": [
+    {
+      "id": "CHG-0003",
+      "description": "Orthopedic specialist consultation",
+      "code": "99214",
+      "quantity": 1,
+      "unitPrice": 350.00,
+      "currency": "SAR",
+      "totalAmount": 350.00,
+      "coveredAmount": 280.00,
+      "patientResponsibility": 70.00
+    },
+    {
+      "id": "CHG-0004",
+      "description": "Right knee X-ray, three views",
+      "code": "73562",
+      "quantity": 1,
+      "unitPrice": 300.00,
+      "currency": "SAR",
+      "totalAmount": 300.00,
+      "coveredAmount": 240.00,
+      "patientResponsibility": 60.00
+    }
+  ],
+  "attachments": [
+    {
+      "id": "ATT-0003",
+      "type": "radiology_report",
+      "fileName": "right_knee_xray_report_20260720.pdf",
+      "uploadedDate": "2026-07-20T16:30:00+03:00"
+    },
+    {
+      "id": "ATT-0004",
+      "type": "physician_note",
+      "fileName": "orthopedic_consultation_note_20260720.pdf",
+      "uploadedDate": "2026-07-20T16:45:00+03:00"
+    }
+  ]
+}

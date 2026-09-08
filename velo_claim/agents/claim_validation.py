@@ -11,12 +11,13 @@ from velo_claim.checks.orchestrator import calculate_validation_report, run_vali
 from velo_claim.core.container import ServiceContainer, build_default_container
 from velo_claim.core.enums import PayloadStatus, Severity
 from velo_claim.core.models import RoutingContext
+from velo_claim.core.utils import sha256_text
 from velo_claim.validation.payload_validators import PayloadValidator
 
 
 def build_claim_validation_agent(*, container: ServiceContainer | None = None):
     services = container or build_default_container()
-    pa_builder = PAClaimBuilderModule(repository=services.repository, object_store=services.object_store)
+    pa_builder = PAClaimBuilderModule(repository=services.repository, object_store=services.object_store, submission_store=services.submission_store)
     claim_builder = ClaimBuilderModule(
         repository=services.repository,
         object_store=services.object_store,
@@ -97,6 +98,7 @@ def build_claim_validation_agent(*, container: ServiceContainer | None = None):
         checks = state["_validation_check_objects"]
         report = calculate_validation_report(claim_id, checks)
         report_dict = report.to_dict()
+        report_dict["payload_hash"] = sha256_text(state.get("claim_payload") or "")
         report_id = services.repository.insert_validation_report(
             claim_id,
             {

@@ -1,0 +1,59 @@
+<xs:schema elementFormDefault="qualified" version="2.0" id="RemittanceAdvice" xmlns:tns="http://www.haad.ae/DataDictionary/CommonTypes" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:import schemaLocation="CommonTypes.xsd" namespace="http://www.haad.ae/DataDictionary/CommonTypes"/>
+  <xs:element name="Remittance.Advice">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Header">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="SenderID" type="tns:HeaderSenderID"/>
+              <xs:element name="ReceiverID" type="tns:HeaderReceiverID"/>
+              <xs:element name="TransactionDate" type="tns:HeaderTransactionDate"/>
+              <xs:element name="RecordCount" type="tns:HeaderRecordCount"/>
+              <xs:element name="DispositionFlag" type="tns:HeaderDispositionFlag"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="Claim" minOccurs="1" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="ID" type="tns:ClaimID"/>
+              <xs:element name="IDPayer" type="tns:ClaimIDPayer"/>
+              <xs:element name="ProviderID" type="tns:ClaimProviderID" minOccurs="0"/>
+              <xs:element name="DenialCode" type="tns:ClaimDenialCode" minOccurs="0"/>
+              <xs:element name="PaymentReference" type="tns:ClaimPaymentReference"/>
+              <xs:element name="DateSettlement" type="tns:ClaimDateSettlement" minOccurs="0"/>
+              <xs:element name="Encounter" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="FacilityID" type="tns:EncounterFacilityID" minOccurs="0"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="Activity" minOccurs="1" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="ID" type="tns:ActivityID" minOccurs="0"/>
+                    <xs:element name="Start" type="tns:ActivityStart"/>
+                    <xs:element name="Type" type="tns:ActivityType"/>
+                    <xs:element name="Code" type="tns:ActivityCode"/>
+                    <xs:element name="Quantity" type="tns:ActivityQuantity"/>
+                    <xs:element name="Net" type="tns:ActivityNet"/>
+                    <xs:element name="List" type="tns:ActivityList" minOccurs="0"/>
+                    <xs:element name="OrderingClinician" type="tns:ActivityOrderingClinician" minOccurs="0"/>
+                    <xs:element name="Clinician" type="tns:ActivityClinician" minOccurs="0"/>
+                    <xs:element name="PriorAuthorizationID" type="tns:ActivityPriorAuthorizationID" minOccurs="0"/>
+                    <xs:element name="Gross" type="tns:ActivityGross" minOccurs="0"/>
+                    <xs:element name="PatientShare" type="tns:ActivityPatientShare" minOccurs="0"/>
+                    <xs:element name="PaymentAmount" type="tns:ActivityPaymentAmount"/>
+                    <xs:element name="DenialCode" type="tns:ActivityDenialCode" minOccurs="0"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>        
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

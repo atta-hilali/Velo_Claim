@@ -58,15 +58,9 @@ def run_prior_auth_check(
 
     if missing_codes and not issues:
         state = pa_builder.build(state, missing_codes)
-        request_id = repository.insert_prior_auth_request(
-            claim["claim_id"],
-            {
-                "standard": state.get("route", {}).get("prior_auth_standard"),
-                "object_uri": state.get("pa_payload_uri"),
-                "status": PriorAuthStatus.REQUIRED_MISSING,
-                "required_codes": missing_codes,
-            },
-        )
+        request_id = state.get("pa_request_id")
+        if not request_id:
+            raise ValueError("PA builder did not return a persisted pa_request_id.")
         issues.append(
             CheckIssue(
                 code="PA_REQUIRED_MISSING",
@@ -119,7 +113,9 @@ def _parse_date(value: str | None) -> date | None:
     try:
         return datetime.fromisoformat(str(value).replace("Z", "+00:00")).date()
     except ValueError:
-        try:
-            return date.fromisoformat(str(value).split("T")[0])
-        except ValueError:
-            return None
+        for pattern in ("%d/%m/%Y %H:%M", "%d/%m/%Y %H:%M:%S", "%d/%m/%Y"):
+            try:
+                return datetime.strptime(str(value), pattern).date()
+            except ValueError:
+                continue
+        return None

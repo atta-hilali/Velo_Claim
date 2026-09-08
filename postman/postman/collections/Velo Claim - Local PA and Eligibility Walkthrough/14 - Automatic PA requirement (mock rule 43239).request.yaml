@@ -1,0 +1,189 @@
+$kind: http-request
+description: "Separate synthetic scenario: A001 / TH4QF / CPT 43239 and ICD K21.0. Pipeline automatically creates a PA draft because the existing mock rule requires it. This does not establish an authoritative real payer rule."
+url: "{{base_url}}/encounters"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "claim_id": "PM-PA_REQUIRED-{{case_id}}",
+      "source_context": {
+        "patient": {
+          "resourceType": "Patient",
+          "id": "PM-P-PA_REQUIRED-{{case_id}}",
+          "identifier": [
+            {
+              "system": "velo/member-id",
+              "value": "AUH-M-0001"
+            },
+            {
+              "system": "uae/emirates-id",
+              "value": "784-1988-7654321-2"
+            }
+          ],
+          "name": [
+            {
+              "text": "SYNTHETIC POSTMAN PATIENT"
+            }
+          ],
+          "birthDate": "1988-04-19",
+          "gender": "female"
+        },
+        "coverage": {
+          "resourceType": "Coverage",
+          "id": "PM-COV-PA_REQUIRED-{{case_id}}",
+          "status": "active",
+          "subscriberId": "AUH-M-0001",
+          "voi_verified": true,
+          "payor": [
+            {
+              "identifier": {
+                "value": "A001"
+              },
+              "display": "DAMAN"
+            }
+          ],
+          "class": [
+            {
+              "type": {
+                "text": "plan"
+              },
+              "value": "TH4QF",
+              "name": "Thiqa"
+            }
+          ],
+          "period": {
+            "start": "2026-01-01",
+            "end": "2026-12-31"
+          }
+        },
+        "encounter": {
+          "resourceType": "Encounter",
+          "id": "PM-E-PA_REQUIRED-{{case_id}}",
+          "status": "finished",
+          "type": [
+            {
+              "text": "Family medicine consultation"
+            }
+          ],
+          "period": {
+            "start": "2026-06-16T09:15:00+04:00",
+            "end": "2026-06-16T09:45:00+04:00"
+          },
+          "subject": {
+            "reference": "Patient/PM-P-PA_REQUIRED-{{case_id}}"
+          },
+          "participant": [
+            {
+              "individual": {
+                "reference": "Practitioner/DR-AUH-001"
+              }
+            }
+          ],
+          "serviceProvider": {
+            "reference": "Organization/FAC-AUH-001"
+          }
+        },
+        "provider": {
+          "resourceType": "Practitioner",
+          "id": "DR-AUH-001",
+          "identifier": [
+            {
+              "system": "doh/clinician-license",
+              "value": "GD6476"
+            }
+          ],
+          "name": [
+            {
+              "text": "Dr. Sara Haddad"
+            }
+          ]
+        },
+        "facility": {
+          "resourceType": "Organization",
+          "id": "FAC-AUH-001",
+          "name": "Velo Clinic Abu Dhabi",
+          "identifier": [
+            {
+              "system": "doh/facility-license",
+              "value": "MF2057"
+            }
+          ]
+        },
+        "conditions": [
+          {
+            "resourceType": "Condition",
+            "id": "COND-AUH-001",
+            "code": {
+              "coding": [
+                {
+                  "system": "http://hl7.org/fhir/sid/icd-10",
+                  "code": "K21.0",
+                  "display": "Synthetic diagnosis"
+                }
+              ]
+            }
+          }
+        ],
+        "procedures": [
+          {
+            "resourceType": "Procedure",
+            "id": "PROC-AUH-001",
+            "code": {
+              "coding": [
+                {
+                  "system": "http://www.ama-assn.org/go/cpt",
+                  "code": "43239",
+                  "display": "Synthetic endoscopy"
+                }
+              ]
+            },
+            "performedDateTime": "2026-06-16T09:20:00+04:00"
+          }
+        ],
+        "attachments": [
+          {
+            "type": "SOAP_NOTE",
+            "name": "soap_note.pdf"
+          },
+          {
+            "type": "ENDOSCOPY_REPORT",
+            "name": "synthetic-endoscopy.pdf"
+          }
+        ],
+        "charge_items": [
+          {
+            "id": "ACT-AUH-001",
+            "code": "43239",
+            "system": "CPT",
+            "description": "Synthetic endoscopy",
+            "quantity": 1,
+            "gross": 450.0,
+            "patient_share": 0.0,
+            "net": 450.0,
+            "currency": "AED"
+          }
+        ]
+      }
+    }
+auth:
+  type: noauth
+scripts:
+  - type: beforeRequest
+    code: |-
+      const id = pm.variables.replaceIn('{{$guid}}');
+      pm.collectionVariables.set('case_id', id);
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test("HTTP 200", () => pm.response.to.have.status(200));
+      if (pm.response.code !== 200) throw new Error(pm.response.text());
+      const c=pm.response.json().claim;
+      const issue=c.validation_report.issues.find(i => i.code === 'PA_REQUIRED_MISSING');
+      pm.test('Mock payer rule requires PA', () => pm.expect(issue).to.be.an('object'));
+      pm.collectionVariables.set('auto_pa_request_id',issue.evidence.request_id);
+      pm.test('Claim cannot be submitted yet', () => pm.expect(c.status).not.to.eql('ready'));
+    language: text/javascript
+order: 14000

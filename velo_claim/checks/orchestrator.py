@@ -73,10 +73,7 @@ def calculate_validation_report(claim_id: str, checks: list[CheckResult]) -> Val
         for check in checks
     ):
         return ValidationReport(claim_id, 100, ValidationStatus.WAITING_FOR_PAYER, issues, checks)
-    if any(
-        check.check_type == "PRIOR_AUTH" and check.data.get("payload_rebuild_required")
-        for check in checks
-    ):
+    if any(check.data.get("payload_rebuild_required") for check in checks):
         return ValidationReport(claim_id, 100, ValidationStatus.NEEDS_PAYLOAD_REBUILD, issues, checks)
     if any(issue.severity == Severity.CRITICAL for issue in issues):
         return ValidationReport(claim_id, 0, ValidationStatus.HOLD_CRITICAL, issues, checks)
@@ -95,5 +92,6 @@ def calculate_validation_report(claim_id: str, checks: list[CheckResult]) -> Val
         else:
             score -= issue.penalty
     score = max(0, score)
-    status = ValidationStatus.READY_TO_SUBMIT if score >= 80 else ValidationStatus.NEEDS_REVIEW
+    blocking_error = any(issue.severity == Severity.ERROR for issue in issues)
+    status = ValidationStatus.READY_TO_SUBMIT if score >= 80 and not blocking_error else ValidationStatus.NEEDS_REVIEW
     return ValidationReport(claim_id, score, status, issues, checks)

@@ -97,7 +97,13 @@ def _payer_rule_set_from_dict(value: PayerRuleSet | dict[str, Any]) -> PayerRule
         bundling_rules=dict(value.get("bundling_rules") or {}),
         required_doc_types=dict(value.get("required_doc_types") or {}),
         submission_channel=str(value.get("submission_channel") or "MANUAL_PORTAL"),
-        source=value.get("source") if value.get("source") in {"LIVE", "CACHED", "MOCK"} else "CACHED",
+        rules=list(value.get("rules") or []),
+        max_deduction_per_layer={
+            str(key): float(item)
+            for key, item in dict(value.get("max_deduction_per_layer") or {}).items()
+        },
+        source_version=value.get("source_version"),
+        source=value.get("source") if value.get("source") in {"LIVE", "CACHED", "FILE", "MOCK"} else "CACHED",
     )
 
 
@@ -110,5 +116,8 @@ def _copy_rule_set(rule_set: PayerRuleSet, *, source: str) -> PayerRuleSet:
         bundling_rules={key: list(value) for key, value in rule_set.bundling_rules.items()},
         required_doc_types={key: list(value) for key, value in rule_set.required_doc_types.items()},
         submission_channel=rule_set.submission_channel,
+        rules=[dict(rule) for rule in rule_set.rules],
+        max_deduction_per_layer=dict(rule_set.max_deduction_per_layer),
+        source_version=rule_set.source_version,
         source=source,
     )

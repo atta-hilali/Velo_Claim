@@ -154,7 +154,10 @@ class PayerRuleSet:
     bundling_rules: dict[str, list[str]]
     required_doc_types: dict[str, list[str]]
     submission_channel: str
-    source: Literal["LIVE", "CACHED", "MOCK"] = "MOCK"
+    rules: list[dict[str, Any]] = field(default_factory=list)
+    max_deduction_per_layer: dict[str, float] = field(default_factory=dict)
+    source_version: str | None = None
+    source: Literal["LIVE", "CACHED", "FILE", "MOCK"] = "MOCK"
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

@@ -1,6 +1,9 @@
 python -m velo_claim.examples.submit_manual_encounter `
+  --api http://127.0.0.1:8000 `
   --input sample_inputs/Patient1.json `
   --output sample_outputs/patient1_response.json `
   --payload-output sample_outputs/patient1_payload.json `
   --timeout 300 `
   --payload-timeout 180
+
+ssh -N -p 2222 -L 7474:localhost:7474 -L 7687:localhost:7687 dev1@2.51.50.72

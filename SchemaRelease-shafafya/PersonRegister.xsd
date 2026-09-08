@@ -1,0 +1,85 @@
+<xs:schema elementFormDefault="qualified" version="2.0" id="PersonRegister" xmlns:tns="http://www.haad.ae/DataDictionary/CommonTypes" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:import schemaLocation="CommonTypes.xsd" namespace="http://www.haad.ae/DataDictionary/CommonTypes"/>
+  <xs:element name="Person.Register">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Header">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="SenderID" type="tns:HeaderSenderID"/>
+              <xs:element name="ReceiverID" type="tns:HeaderReceiverID"/>
+              <xs:element name="TransactionDate" type="tns:HeaderTransactionDate"/>
+              <xs:element name="RecordCount" type="tns:HeaderRecordCount"/>
+              <xs:element name="DispositionFlag" type="tns:HeaderDispositionFlag"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="Person" minOccurs="1" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:sequence>
+             <!-- Started New Element Changes -->
+              <xs:element name="UnifiedNumber" type="tns:PersonUnifiedNumber" minOccurs="0"/>
+             <!-- Ended New Element Changes -->
+              <xs:element name="FirstName" type="tns:PersonFirstName" minOccurs="0"/>
+               <!-- Started New Element Changes -->
+              <xs:element name="FirstNameEn" type="tns:PersonFirstNameEn" minOccurs="0"/>
+              <xs:element name="MiddleNameEn" type="tns:PersonMiddleNameEn" minOccurs="0"/>
+              <xs:element name="LastNameEn" type="tns:PersonLastNameEn" minOccurs="0"/>
+              <xs:element name="FirstNameAr" type="tns:PersonFirstNameAr" minOccurs="0"/>
+              <xs:element name="MiddleNameAr" type="tns:PersonMiddleNameAr" minOccurs="0"/>
+              <xs:element name="LastNameAr" type="tns:PersonLastNameAr" minOccurs="0"/>
+              <!-- Ended New Element Changes -->
+              <xs:element name="ContactNumber" type="tns:PersonContactNumber" minOccurs="0"/>
+              <xs:element name="BirthDate" type="tns:PersonBirthDate"/>
+              <xs:element name="Gender" type="tns:PersonGender"/>
+              <xs:element name="Nationality" type="tns:PersonNationality"/>
+               <!-- Started New Element Changes -->
+               <xs:element name="NationalityCode" type="tns:PersonNationalityCode" minOccurs="0"/>
+               <!-- Ended New Element Changes -->
+              <xs:element name="City" type="tns:PersonCity"/>
+              <!-- Started New Element Changes -->
+               <xs:element name="CityCode" type="tns:PersonCityCode" minOccurs="0"/>
+              <!-- Ended New Element Changes -->
+			    <!-- Started New Element Changes -->
+                            <xs:element name="CountryOfResidence" type="tns:PersonCountryOfResidence" minOccurs="0"/>
+                            <xs:element name="EmirateOfResidence" type="tns:PersonEmirateOfResidence" minOccurs="0"/>
+                            <!-- Ended New Element Changes -->
+              <xs:element name="PassportNumber" type="tns:PersonPassportNumber" minOccurs="0"/>
+              <xs:element name="EmiratesIDNumber" type="tns:PersonEmiratesIDNumber"/>
+              <xs:element name="Member" minOccurs="0">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="ID" type="tns:MemberID"/>
+                    <xs:element name="Relation" type="tns:MemberRelation" minOccurs="0"/>
+                    <xs:element name="RelationTo" type="tns:MemberRelationTo" minOccurs="0"/>
+                    <xs:element name="Contract" minOccurs="0" maxOccurs="unbounded">
+                      <xs:complexType>
+                        <xs:sequence>
+                          <xs:element name="PayerID" type="tns:ContractPayerID" minOccurs="0"/>
+                          <xs:element name="TPAID" type="tns:ContractTPAID" minOccurs="0"/>
+                          <xs:element name="PackageName" type="tns:ContractPackageName"/>
+                          <xs:element name="StartDate" type="tns:ContractStartDate"/>
+                          <xs:element name="RenewalDate" type="tns:ContractRenewalDate"/>
+                          <xs:element name="ExpiryDate" type="tns:ContractExpiryDate"/>
+                          <xs:element name="GrossPremium" type="tns:ContractGrossPremium"/>
+                          <xs:element name="PolicyHolder" type="tns:ContractPolicyHolder"/>
+                          <xs:element name="CompanyID" type="tns:ContractCompanyID" minOccurs="0"/>
+                          <!-- Started New Element Changes for VAT-->
+                          <xs:element name="CollectedPremium" type="tns:ContractCollectedPremium" minOccurs="0"/>
+                          <xs:element name="VAT" type="tns:ContractVAT" minOccurs="0"/>
+                          <xs:element name="VATPercent" type="tns:ContractVATPercent" minOccurs="0"/>
+                                <!-- Ended New Element Changes for VAT-->
+
+                        </xs:sequence>
+                      </xs:complexType>
+                    </xs:element>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

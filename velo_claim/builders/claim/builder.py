@@ -49,6 +49,12 @@ class ClaimBuilderModule:
         existing_pre_auth_ref = state.get("canonical_claim", {}).get("pre_auth_ref") or state.get("pre_auth_ref")
         if existing_pre_auth_ref:
             canonical_claim["pre_auth_ref"] = existing_pre_auth_ref
+        existing_eligibility_ref = (
+            state.get("canonical_claim", {}).get("payer", {}).get("eligibility_ref")
+            or state.get("eligibility_ref")
+        )
+        if existing_eligibility_ref:
+            canonical_claim["payer"]["eligibility_ref"] = existing_eligibility_ref
         claim_id = canonical_claim["claim_id"]
         self.repository.upsert_claim(
             claim_id,

@@ -13,3 +13,4 @@ localResources:
 cloudResources:
   collections:
     ../postman/collections/Velo Claim API: fa13eeaf-63e9-48a2-b1c1-4be95529b16f
+    ../postman/collections/Velo Claim - Local PA and Eligibility Walkthrough: 894caabf-cd52-40c9-8827-0badabfa9f4d

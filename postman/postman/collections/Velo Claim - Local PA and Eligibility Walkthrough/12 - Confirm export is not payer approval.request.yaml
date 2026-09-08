@@ -1,0 +1,20 @@
+$kind: http-request
+url: "{{base_url}}/submissions/{{delivery_id}}"
+method: GET
+headers:
+  Content-Type: application/json
+auth:
+  type: bearer
+  credentials:
+    token: "{{reviewer_token}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("HTTP 200", () => pm.response.to.have.status(200));
+      if (pm.response.code !== 200) throw new Error(pm.response.text());
+      const data=pm.response.json();
+      pm.test('Exported only', () => pm.expect(data.delivery_status).to.eql('EXPORTED'));
+      pm.test('Payer decision pending', () => pm.expect(data.payer_decision).to.eql('PENDING'));
+      pm.test('No platform transaction invented', () => pm.expect(data.transaction_id).to.eql(null));
+    language: text/javascript
+order: 12000

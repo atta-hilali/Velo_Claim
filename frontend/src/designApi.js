@@ -1,3 +1,5 @@
+let reviewerToken = "";
+export function setReviewerToken(value) { reviewerToken = value; }
 const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL;
 const API_DISABLED = configuredApiBaseUrl === "fallback" || configuredApiBaseUrl === "off";
 const API_BASE_URL = API_DISABLED
@@ -153,7 +155,7 @@ function normalizeBackendClaim(raw) {
   return claim;
 }
 
-async function requestJson(path, options = {}) {
+async function requestJson(path, options = {}, raw = false) {
   if (!API_BASE_URL) {
     throw new Error("VITE_API_BASE_URL is not configured.");
   }
@@ -161,6 +163,7 @@ async function requestJson(path, options = {}) {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     headers: {
       Accept: "application/json",
+      ...(reviewerToken ? {Authorization: `Bearer ${reviewerToken}`} : {}),
       "Content-Type": "application/json",
       ...(options.headers || {}),
     },
@@ -171,7 +174,7 @@ async function requestJson(path, options = {}) {
     throw new Error(`API ${response.status}: ${await response.text()}`);
   }
 
-  return response.json();
+  return raw ? response : response.json();
 }
 
 export async function fetchDesignClaims() {
@@ -189,7 +192,7 @@ export async function fetchDesignClaims() {
 
 export async function updateDesignClaimStatus(claimId, status, metadata = {}) {
   if (!API_BASE_URL) {
-    return { ok: true, source: "fallback" };
+    throw new Error("Actions are unavailable without a connected backend.");
   }
 
   return requestJson(`/claims/${encodeURIComponent(claimId)}/status`, {
@@ -200,7 +203,7 @@ export async function updateDesignClaimStatus(claimId, status, metadata = {}) {
 
 export async function runDesignClaimAction(claimId, action, metadata = {}) {
   if (!API_BASE_URL) {
-    return { ok: true, source: "fallback" };
+    throw new Error("Actions are unavailable without a connected backend.");
   }
 
   return requestJson(`/claims/${encodeURIComponent(claimId)}/actions/${action}`, {
@@ -208,3 +211,5 @@ export async function runDesignClaimAction(claimId, action, metadata = {}) {
     body: JSON.stringify(metadata),
   });
 }
+
+export const submissionRequest = requestJson;

@@ -1,0 +1,16 @@
+$kind: http-request
+url: "{{base_url}}/prior-auth/{{auto_pa_request_id}}/status"
+method: GET
+headers:
+  Content-Type: application/json
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("HTTP 200", () => pm.response.to.have.status(200));
+      if (pm.response.code !== 200) throw new Error(pm.response.text());
+      const data=pm.response.json();
+      pm.test('Draft has no payer decision', () => {pm.expect(data.decided).to.eql(false); pm.expect(data.submitted_at).to.be.oneOf([null,undefined]);});
+    language: text/javascript
+order: 15000

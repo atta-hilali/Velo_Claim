@@ -1,0 +1,27 @@
+$kind: http-request
+description: Manual mode only. Returns XML and a filename in Content-Disposition. This collection contains no real payer submission or receipt fabrication.
+url: "{{base_url}}/submissions/export"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "approval_id": "{{approval_id}}"
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{reviewer_token}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("HTTP 200", () => pm.response.to.have.status(200));
+      if (pm.response.code !== 200) throw new Error(pm.response.text());
+      pm.test('XML returned', () => pm.expect(pm.response.text()).to.include('Prior.Request'));
+      const id=pm.response.headers.get('X-Submission-ID');
+      pm.test('Delivery ID returned', () => pm.expect(id).to.be.a('string'));
+      pm.collectionVariables.set('delivery_id',id);
+    language: text/javascript
+order: 11000

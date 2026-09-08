@@ -5,12 +5,16 @@ import os
 import subprocess
 import tempfile
 import xml.etree.ElementTree as ET
+from urllib.parse import urlparse
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 from velo_claim.core.enums import ClaimStandard, Severity
 from velo_claim.core.models import CheckIssue, CheckResult
+
+
+DEFAULT_SHAFAFIYA_SCHEMA_DIR = Path(__file__).resolve().parents[2] / "data" / "schemas" / "shafafiya" / "v2.0"
 
 
 @dataclass(slots=True)
@@ -29,10 +33,10 @@ class PayloadValidationConfig:
             nphies_profile_required=os.getenv("NPHIES_PROFILE_REQUIRED", "true").lower() in {"1", "true", "yes"},
             nphies_fhir_validator_command=os.getenv("NPHIES_FHIR_VALIDATOR_COMMAND") or os.getenv("FHIR_VALIDATOR_COMMAND"),
             nphies_fhir_validator_timeout_seconds=int(os.getenv("NPHIES_FHIR_VALIDATOR_TIMEOUT_SECONDS", "60")),
-            shafafiya_xsd_path=os.getenv("SHAFAFIYA_CLAIM_XSD_PATH"),
+            shafafiya_xsd_path=os.getenv("SHAFAFIYA_CLAIM_XSD_PATH") or str(DEFAULT_SHAFAFIYA_SCHEMA_DIR / "ClaimSubmission.xsd"),
             eclaimlink_xsd_path=os.getenv("ECLAIMLINK_CLAIM_XSD_PATH"),
-            shafafiya_prior_request_xsd_path=os.getenv("SHAFAFIYA_PRIOR_REQUEST_XSD_PATH"),
-            shafafiya_prior_authorization_xsd_path=os.getenv("SHAFAFIYA_PRIOR_AUTHORIZATION_XSD_PATH"),
+            shafafiya_prior_request_xsd_path=os.getenv("SHAFAFIYA_PRIOR_REQUEST_XSD_PATH") or str(DEFAULT_SHAFAFIYA_SCHEMA_DIR / "PriorRequest.xsd"),
+            shafafiya_prior_authorization_xsd_path=os.getenv("SHAFAFIYA_PRIOR_AUTHORIZATION_XSD_PATH") or str(DEFAULT_SHAFAFIYA_SCHEMA_DIR / "PriorAuthorization.xsd"),
         )
 
 
@@ -117,20 +121,12 @@ class PayloadValidator:
         except json.JSONDecodeError as exc:
             return None, CheckResult("PAYLOAD_CONFORMITY", "FAILED", [_critical("PAYLOAD_PARSE_FAILED", "claim_payload", str(exc))])
 
-        if bundle.get("resourceType") != "Bundle":
-            issues.append(_error("NPHIES_BUNDLE_REQUIRED", "claim_payload.resourceType", "NPHIES payload must be a FHIR Bundle."))
-        if bundle.get("type") != "message":
-            issues.append(_error("NPHIES_MESSAGE_BUNDLE_REQUIRED", "claim_payload.type", "NPHIES Bundle.type must be message."))
-        if self.config.nphies_profile_required and not bundle.get("meta", {}).get("profile"):
-            issues.append(_error("NPHIES_BUNDLE_PROFILE_MISSING", "claim_payload.meta.profile", "NPHIES Bundle.meta.profile is required."))
-        entries = [entry.get("resource", {}) for entry in bundle.get("entry", [])]
-        if not entries or entries[0].get("resourceType") != "MessageHeader":
-            issues.append(_error("NPHIES_MESSAGE_HEADER_FIRST", "claim_payload.entry[0]", "NPHIES MessageHeader must be the first Bundle entry."))
-        claim = next((resource for resource in entries if resource.get("resourceType") == "Claim"), None)
-        if not claim:
-            issues.append(_error("NPHIES_CLAIM_MISSING", "claim_payload.entry", "NPHIES Bundle must contain a Claim resource."))
-        elif self.config.nphies_profile_required and not claim.get("meta", {}).get("profile"):
-            issues.append(_error("NPHIES_CLAIM_PROFILE_MISSING", "Claim.meta.profile", "NPHIES Claim.meta.profile is required."))
+        issues.extend(
+            _validate_nphies_claim_structure(
+                bundle,
+                require_profiles=self.config.nphies_profile_required,
+            )
+        )
         issues.extend(self._validate_nphies_profile_with_command(payload))
         return bundle, CheckResult("PAYLOAD_CONFORMITY", _issue_status(issues), issues)
 
@@ -334,6 +330,212 @@ class PayloadValidator:
                     )
         issues.extend(self._validate_nphies_profile_with_command(payload, check_type=check_type))
         return bundle, CheckResult(check_type, _issue_status(issues), issues)
+
+
+def _validate_nphies_claim_structure(
+    bundle: dict[str, Any],
+    *,
+    require_profiles: bool,
+) -> list[CheckIssue]:
+    issues: list[CheckIssue] = []
+    if bundle.get("resourceType") != "Bundle":
+        issues.append(_error("NPHIES_BUNDLE_REQUIRED", "claim_payload.resourceType", "NPHIES payload must be a FHIR Bundle."))
+    if bundle.get("type") != "message":
+        issues.append(_error("NPHIES_MESSAGE_BUNDLE_REQUIRED", "claim_payload.type", "NPHIES Bundle.type must be message."))
+    if not bundle.get("id"):
+        issues.append(_error("NPHIES_BUNDLE_ID_MISSING", "claim_payload.id", "NPHIES Bundle.id is required."))
+    if not bundle.get("timestamp"):
+        issues.append(_error("NPHIES_BUNDLE_TIMESTAMP_MISSING", "claim_payload.timestamp", "NPHIES Bundle.timestamp is required."))
+    if require_profiles and not bundle.get("meta", {}).get("profile"):
+        issues.append(_error("NPHIES_BUNDLE_PROFILE_MISSING", "claim_payload.meta.profile", "NPHIES Bundle.meta.profile is required."))
+
+    entries = [entry.get("resource", {}) for entry in bundle.get("entry", []) if isinstance(entry, dict)]
+    expected_order = [
+        "MessageHeader",
+        "Organization",
+        "Organization",
+        "Practitioner",
+        "Patient",
+        "Coverage",
+        "Encounter",
+        "Claim",
+    ]
+    actual_order = [resource.get("resourceType") for resource in entries]
+    if actual_order != expected_order:
+        issues.append(
+            _error(
+                "NPHIES_RESOURCE_ORDER_INVALID",
+                "claim_payload.entry",
+                f"NPHIES claim Bundle resources must be ordered as {expected_order}; found {actual_order}.",
+            )
+        )
+    if require_profiles:
+        for index, resource in enumerate(entries):
+            if resource.get("resourceType") and not resource.get("meta", {}).get("profile"):
+                issues.append(
+                    _error(
+                        "NPHIES_RESOURCE_PROFILE_MISSING",
+                        f"claim_payload.entry[{index}].resource.meta.profile",
+                        f"NPHIES {resource.get('resourceType')} requires meta.profile.",
+                    )
+                )
+
+    by_type: dict[str, list[dict[str, Any]]] = {}
+    for resource in entries:
+        by_type.setdefault(str(resource.get("resourceType")), []).append(resource)
+    header = _one(by_type, "MessageHeader")
+    practitioner = _one(by_type, "Practitioner")
+    patient = _one(by_type, "Patient")
+    coverage = _one(by_type, "Coverage")
+    encounter = _one(by_type, "Encounter")
+    claim = _one(by_type, "Claim")
+    organizations = by_type.get("Organization", [])
+
+    if header:
+        event = header.get("eventCoding", {})
+        _require_equal(issues, event.get("system"), "http://nphies.sa/terminology/CodeSystem/ksa-message-events", "NPHIES_EVENT_SYSTEM_INVALID", "MessageHeader.eventCoding.system")
+        _require_equal(issues, event.get("code"), "claim-request", "NPHIES_EVENT_CODE_INVALID", "MessageHeader.eventCoding.code")
+        if not header.get("id"):
+            issues.append(_error("NPHIES_MESSAGE_HEADER_ID_MISSING", "MessageHeader.id", "MessageHeader.id is required and must be regenerated per message."))
+        _require_http_endpoint(issues, header.get("source", {}).get("endpoint"), "MessageHeader.source.endpoint")
+        destination = (header.get("destination") or [{}])[0]
+        _require_http_endpoint(issues, destination.get("endpoint"), "MessageHeader.destination[0].endpoint")
+        _validate_license_identifier(issues, destination.get("receiver", {}).get("identifier", {}), "http://nphies.sa/license/payer-license", "MessageHeader.destination[0].receiver.identifier")
+        _validate_license_identifier(issues, header.get("sender", {}).get("identifier", {}), "http://nphies.sa/license/provider-license", "MessageHeader.sender.identifier")
+
+    if len(organizations) != 2:
+        issues.append(_error("NPHIES_ORGANIZATION_COUNT_INVALID", "claim_payload.entry", "NPHIES claim Bundle requires exactly two Organization resources."))
+    else:
+        organization_codes = {
+            coding.get("code")
+            for organization in organizations
+            for item in organization.get("type", [])
+            for coding in item.get("coding", [])
+        }
+        if not {"prov", "ins"}.issubset(organization_codes):
+            issues.append(_error("NPHIES_ORGANIZATION_TYPES_INVALID", "Organization.type", "Provider and insurer Organization type codings are required."))
+
+    if practitioner:
+        _validate_license_identifier(issues, _first_identifier(practitioner), "http://nphies.sa/license/practitioner-license", "Practitioner.identifier")
+        _validate_human_name(issues, practitioner, "Practitioner.name")
+    if patient:
+        patient_identifier = _first_identifier(patient)
+        _require_equal(issues, patient_identifier.get("system"), "http://nphies.sa/identifier/patient", "NPHIES_PATIENT_IDENTIFIER_SYSTEM_INVALID", "Patient.identifier.system")
+        if not patient_identifier.get("value"):
+            issues.append(_error("NPHIES_PATIENT_IDENTIFIER_MISSING", "Patient.identifier.value", "Patient national identifier is required."))
+        _validate_human_name(issues, patient, "Patient.name")
+
+    if coverage:
+        relationship = _first_coding(coverage.get("relationship"))
+        _require_equal(issues, relationship.get("system"), "http://terminology.hl7.org/CodeSystem/subscriber-relationship", "NPHIES_RELATIONSHIP_SYSTEM_INVALID", "Coverage.relationship.coding.system")
+        _require_equal(issues, relationship.get("code"), "self", "NPHIES_RELATIONSHIP_CODE_INVALID", "Coverage.relationship.coding.code")
+        for field in ("subscriber", "beneficiary"):
+            if not coverage.get(field, {}).get("reference"):
+                issues.append(_error("NPHIES_COVERAGE_REFERENCE_MISSING", f"Coverage.{field}", f"Coverage.{field} reference is required."))
+        if not coverage.get("payor", [{}])[0].get("reference"):
+            issues.append(_error("NPHIES_COVERAGE_PAYOR_MISSING", "Coverage.payor", "Coverage.payor Organization reference is required."))
+        period = coverage.get("period") or {}
+        if not period.get("start") or not period.get("end"):
+            issues.append(_error("NPHIES_COVERAGE_PERIOD_INCOMPLETE", "Coverage.period", "Coverage.period.start and end are required."))
+
+    if encounter:
+        encounter_class = encounter.get("class", {})
+        _require_equal(issues, encounter_class.get("system"), "http://terminology.hl7.org/CodeSystem/v3-ActCode", "NPHIES_ENCOUNTER_CLASS_SYSTEM_INVALID", "Encounter.class.system")
+        if encounter_class.get("code") not in {"AMB", "EMER", "HH", "IMP", "SS", "VR"}:
+            issues.append(_error("NPHIES_ENCOUNTER_CLASS_INVALID", "Encounter.class.code", "Encounter class must be AMB, EMER, HH, IMP, SS, or VR."))
+        period = encounter.get("period") or {}
+        if not period.get("start") or not period.get("end") or period.get("start") == period.get("end"):
+            issues.append(_error("NPHIES_ENCOUNTER_PERIOD_INVALID", "Encounter.period", "Encounter period requires distinct start and end values."))
+        if not encounter.get("participant", [{}])[0].get("individual", {}).get("reference"):
+            issues.append(_error("NPHIES_ENCOUNTER_PARTICIPANT_MISSING", "Encounter.participant", "Encounter must reference the rendering Practitioner."))
+
+    if claim:
+        _require_equal(issues, claim.get("use"), "claim", "NPHIES_CLAIM_USE_INVALID", "Claim.use")
+        profile = " ".join(claim.get("meta", {}).get("profile", []))
+        if require_profiles and not any(name in profile for name in ("professional-claim", "institutional-claim", "oral-claim", "pharmacy-claim", "vision-claim")):
+            issues.append(_error("NPHIES_CLAIM_PROFILE_INVALID", "Claim.meta.profile", "Claim must use a supported NPHIES claim-type profile."))
+        _validate_claim_codings(issues, claim)
+        _validate_claim_references(issues, claim, entries)
+
+    return issues
+
+
+def _one(by_type: dict[str, list[dict[str, Any]]], resource_type: str) -> dict[str, Any] | None:
+    values = by_type.get(resource_type, [])
+    if len(values) != 1:
+        return None
+    return values[0]
+
+
+def _first_identifier(resource: dict[str, Any]) -> dict[str, Any]:
+    identifiers = resource.get("identifier") or []
+    return identifiers[0] if identifiers else {}
+
+
+def _first_coding(codeable: dict[str, Any] | None) -> dict[str, Any]:
+    coding = (codeable or {}).get("coding") or []
+    return coding[0] if coding else {}
+
+
+def _require_equal(issues: list[CheckIssue], actual: Any, expected: Any, code: str, field: str) -> None:
+    if actual != expected:
+        issues.append(_error(code, field, f"{field} must be {expected}; found {actual!r}."))
+
+
+def _require_http_endpoint(issues: list[CheckIssue], value: Any, field: str) -> None:
+    parsed = urlparse(str(value or ""))
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        issues.append(_error("NPHIES_ENDPOINT_INVALID", field, f"{field} must be an absolute HTTP(S) endpoint."))
+
+
+def _validate_license_identifier(issues: list[CheckIssue], identifier: dict[str, Any], system: str, field: str) -> None:
+    _require_equal(issues, identifier.get("system"), system, "NPHIES_LICENSE_SYSTEM_INVALID", f"{field}.system")
+    if identifier.get("use") != "official" or not identifier.get("value"):
+        issues.append(_error("NPHIES_LICENSE_IDENTIFIER_INVALID", field, f"{field} requires use=official and a value."))
+
+
+def _validate_human_name(issues: list[CheckIssue], resource: dict[str, Any], field: str) -> None:
+    name = (resource.get("name") or [{}])[0]
+    if not name.get("family") or not name.get("given"):
+        issues.append(_error("NPHIES_HUMAN_NAME_INCOMPLETE", field, f"{field} requires family and given."))
+
+
+def _validate_claim_codings(issues: list[CheckIssue], claim: dict[str, Any]) -> None:
+    claim_type = _first_coding(claim.get("type"))
+    priority = _first_coding(claim.get("priority"))
+    _require_equal(issues, claim_type.get("system"), "http://terminology.hl7.org/CodeSystem/claim-type", "NPHIES_CLAIM_TYPE_SYSTEM_INVALID", "Claim.type.coding.system")
+    _require_equal(issues, priority.get("system"), "http://terminology.hl7.org/CodeSystem/processpriority", "NPHIES_PRIORITY_SYSTEM_INVALID", "Claim.priority.coding.system")
+    for index, diagnosis in enumerate(claim.get("diagnosis", [])):
+        coding = _first_coding(diagnosis.get("diagnosisCodeableConcept"))
+        diagnosis_type = _first_coding((diagnosis.get("type") or [{}])[0])
+        _require_equal(issues, coding.get("system"), "http://hl7.org/fhir/sid/icd-10", "NPHIES_DIAGNOSIS_SYSTEM_INVALID", f"Claim.diagnosis[{index}].diagnosisCodeableConcept.coding.system")
+        _require_equal(issues, diagnosis_type.get("system"), "http://nphies.sa/terminology/CodeSystem/diagnosis-type", "NPHIES_DIAGNOSIS_TYPE_SYSTEM_INVALID", f"Claim.diagnosis[{index}].type.coding.system")
+    for index, item in enumerate(claim.get("item", [])):
+        coding = _first_coding(item.get("productOrService"))
+        if coding.get("system") != "http://www.ama-assn.org/go/cpt":
+            issues.append(_error("NPHIES_PROCEDURE_SYSTEM_INVALID", f"Claim.item[{index}].productOrService.coding.system", "Professional claim service items must use the AMA CPT system."))
+    total = claim.get("total") or {}
+    if total.get("value") is None or total.get("currency") != "SAR":
+        issues.append(_error("NPHIES_TOTAL_INVALID", "Claim.total", "Claim.total requires a value in SAR."))
+
+
+def _validate_claim_references(issues: list[CheckIssue], claim: dict[str, Any], entries: list[dict[str, Any]]) -> None:
+    available = {f"{resource.get('resourceType')}/{resource.get('id')}" for resource in entries}
+    references = [
+        claim.get("patient", {}).get("reference"),
+        claim.get("provider", {}).get("reference"),
+        claim.get("insurer", {}).get("reference"),
+        (claim.get("insurance") or [{}])[0].get("coverage", {}).get("reference"),
+        (claim.get("careTeam") or [{}])[0].get("provider", {}).get("reference"),
+    ]
+    references.extend(
+        extension.get("valueReference", {}).get("reference")
+        for extension in claim.get("extension", [])
+        if "encounter" in str(extension.get("url", ""))
+    )
+    for reference in references:
+        if not reference or reference not in available:
+            issues.append(_error("NPHIES_REFERENCE_UNRESOLVED", "Claim.reference", f"Claim reference {reference!r} does not resolve inside the Bundle."))
 
 
 def _critical(code: str, field: str, message: str, *, check_type: str = "PAYLOAD_CONFORMITY") -> CheckIssue:

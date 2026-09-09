@@ -5,6 +5,10 @@ from typing import Any, Literal
 
 from velo_claim.core.enums import (
     ClaimStandard,
+    CorrectionReviewDecision,
+    CorrectionSource,
+    CorrectionStatus,
+    CorrectionSuggestionStatus,
     EligibilityStatus,
     Jurisdiction,
     PayloadStatus,
@@ -189,6 +193,70 @@ class ValidationReport:
         }
 
 
+@dataclass(slots=True)
+class CorrectionCycle:
+    cycle_id: str
+    claim_id: str
+    validation_report_id: str
+    base_claim_version: int
+    base_payload_version: int
+    cycle_number: int
+    status: CorrectionStatus = CorrectionStatus.GENERATING
+    payer_rule_source_version: str | None = None
+    created_at: str = field(default_factory=utc_now)
+
+    def to_dict(self) -> dict[str, Any]:
+        value = asdict(self)
+        value["status"] = str(self.status)
+        return value
+
+
+@dataclass(slots=True)
+class CorrectionSuggestion:
+    suggestion_id: str
+    cycle_id: str
+    claim_id: str
+    base_claim_version: int
+    base_payload_version: int
+    validation_report_id: str
+    issue_ids: list[str]
+    issue_codes: list[str]
+    field_path: str
+    old_value: Any
+    proposed_value: Any
+    source: CorrectionSource
+    confidence: float
+    rationale: str
+    evidence: dict[str, Any]
+    rule_refs: list[dict[str, Any]]
+    status: CorrectionSuggestionStatus
+    cycle_count: int
+    suggestion_hash: str
+    created_at: str = field(default_factory=utc_now)
+
+    def to_dict(self) -> dict[str, Any]:
+        value = asdict(self)
+        value["source"] = str(self.source)
+        value["status"] = str(self.status)
+        return value
+
+
+@dataclass(slots=True)
+class CorrectionReview:
+    review_id: str
+    suggestion_id: str
+    decision: CorrectionReviewDecision
+    reviewer_id: str
+    modified_value: Any = None
+    comment: str | None = None
+    reviewed_at: str = field(default_factory=utc_now)
+
+    def to_dict(self) -> dict[str, Any]:
+        value = asdict(self)
+        value["decision"] = str(self.decision)
+        return value
+
+
 CanonicalState = dict[str, Any]
 
 
@@ -219,6 +287,17 @@ def default_state() -> CanonicalState:
         "routing_context": {},
         "callback_state": CallbackState().to_dict(),
         "next_agent": None,
+        "validation_report_id": None,
+        "correction_cycle_id": None,
+        "correction_cycle_count": 0,
+        "correction_status": CorrectionStatus.NOT_STARTED,
+        "correction_candidate_issues": [],
+        "correction_issue_groups": [],
+        "deterministic_suggestions": [],
+        "unresolved_correction_issues": [],
+        "llm_suggestions": [],
+        "correction_suggestions": [],
+        "correction_review_summary": {},
         "errors": [],
         "warnings": [],
     }

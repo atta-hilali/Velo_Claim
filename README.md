@@ -35,10 +35,13 @@ and LangGraph agents only orchestrate those modules.
   mock test backends. `velo_claim/rules/` combines versioned payer rules with
   graph evidence without treating missing graph facts as negative decisions.
 - `velo_claim/agents/` contains thin LangGraph state machines.
+- `velo_claim/corrections/` and
+  `velo_claim/agents/correction_suggester.py` implement the reusable,
+  human-reviewed correction workflow for `NEEDS_REVIEW` claims.
 - `velo_claim/security/generate_jwks.py` preserves JWKS generation without
   exposing private keys.
 - `velo_claim/migrations/` contains the ordered PostgreSQL migrations. Apply
-  every unapplied migration through `005_payer_submission_journal.sql`.
+  every unapplied migration through `007_correction_workflow.sql`.
 - `data/schemas/shafafiya/v2.0/` contains the immutable official XSD release
   used for claims, eligibility, prior authorization, and remittance responses.
 
@@ -75,16 +78,16 @@ FHIR/context resolution
 -> final READY_TO_SUBMIT decision
 ```
 
-## Local Default Stack
+## Test Doubles and Production Services
 
-The local default container uses runnable development implementations:
+Automated tests can inject isolated in-memory implementations:
 
 ```text
 InMemoryRepository  -> PostgreSQL-shaped records
 InMemoryObjectStore -> S3/MinIO-shaped payload storage
 InMemoryCacheStore  -> Redis-shaped cache/locks
-MockNeo4jClient     -> explicit local/test coding and prior-auth graph queries
-MockPayerRuleLoader -> payer/plan rules
+MockNeo4jClient     -> explicit test-only graph responses
+MockPayerRuleLoader -> explicit test-only payer/plan rules
 ```
 
 Production selects the graph backend explicitly with
@@ -92,6 +95,12 @@ Production selects the graph backend explicitly with
 `NEO4J_PASSWORD`, and `NEO4J_DATABASE`; it does not silently fall back to mock
 knowledge if Neo4j is unavailable. The `/health` response exposes graph
 connectivity and reports a degraded service when the graph cannot be reached.
+
+The correction workflow also uses the DGX MedGemma service through
+`CORRECTION_LLM_*` configuration, with fallback to `VALIDATION_LLM_*` and
+`MEDGEMMA_*`. Production container construction rejects a mock KG. See
+[Correction Suggester and Human Review](docs/correction_suggester.md) for the
+graph, reviewer API, migration, safety rules, and deployment configuration.
 
 Production replacements should implement the same interfaces, not change the
 agent code.

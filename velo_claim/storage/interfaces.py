@@ -71,7 +71,72 @@ class RepositoryInterface(ABC):
     def insert_validation_report(self, claim_id: str, data: dict[str, Any]) -> str: ...
 
     @abstractmethod
-    def insert_validation_issue(self, report_id: str, issue: dict[str, Any]) -> None: ...
+    def insert_validation_issue(self, report_id: str, issue: dict[str, Any]) -> str: ...
+
+    @abstractmethod
+    def get_validation_report(self, report_id: str) -> dict[str, Any] | None: ...
+
+    @abstractmethod
+    def get_latest_validation_report(self, claim_id: str) -> dict[str, Any] | None: ...
+
+    @abstractmethod
+    def list_validation_issues(self, report_id: str) -> list[dict[str, Any]]: ...
+
+    @abstractmethod
+    def get_current_claim_version(self, claim_id: str) -> dict[str, Any] | None: ...
+
+    @abstractmethod
+    def get_claim_version(self, claim_id: str, version: int) -> dict[str, Any] | None: ...
+
+    @abstractmethod
+    def create_correction_cycle(self, claim_id: str, data: dict[str, Any]) -> dict[str, Any]: ...
+
+    @abstractmethod
+    def get_correction_cycle(self, cycle_id: str) -> dict[str, Any] | None: ...
+
+    @abstractmethod
+    def list_correction_cycles(self, claim_id: str) -> list[dict[str, Any]]: ...
+
+    @abstractmethod
+    def insert_correction_suggestion(self, data: dict[str, Any]) -> dict[str, Any]: ...
+
+    @abstractmethod
+    def get_correction_suggestion(self, suggestion_id: str) -> dict[str, Any] | None: ...
+
+    @abstractmethod
+    def list_correction_suggestions(self, cycle_id: str) -> list[dict[str, Any]]: ...
+
+    @abstractmethod
+    def insert_correction_review(self, data: dict[str, Any]) -> dict[str, Any]: ...
+
+    @abstractmethod
+    def list_correction_reviews(self, suggestion_id: str) -> list[dict[str, Any]]: ...
+
+    @abstractmethod
+    def update_correction_suggestion_status(self, suggestion_id: str, status: str) -> None: ...
+
+    @abstractmethod
+    def update_correction_cycle_status(self, cycle_id: str, status: str) -> None: ...
+
+    @abstractmethod
+    def get_approved_correction_rule(
+        self, issue_code: str, check_type: str, field_path: str
+    ) -> dict[str, Any] | None: ...
+
+    @abstractmethod
+    def list_correction_history(self, claim_id: str, field_path: str) -> list[dict[str, Any]]: ...
+
+    @abstractmethod
+    def commit_corrected_claim(
+        self,
+        *,
+        claim_id: str,
+        cycle_id: str,
+        expected_base_version: int,
+        new_version: int,
+        version_data: dict[str, Any],
+        payload_data: dict[str, Any],
+    ) -> None: ...
 
     @abstractmethod
     def insert_audit_event(self, claim_id: str, data: dict[str, Any]) -> None: ...

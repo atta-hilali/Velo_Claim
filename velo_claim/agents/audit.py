@@ -87,6 +87,21 @@ def _write_audit(
         object_store.put_text(key, json.dumps(event, indent=2, default=str), content_type="application/json")
 
 
+def record_audit_event(
+    *,
+    repository: RepositoryInterface,
+    object_store: ObjectStoreInterface | None,
+    claim_id: str,
+    agent: str,
+    node: str,
+    event_type: AuditEventType,
+    payload: dict[str, Any],
+) -> None:
+    """Write a domain audit event without exposing the private audit helper."""
+
+    _write_audit(repository, object_store, claim_id, agent, node, event_type, payload)
+
+
 def _object_audit_enabled(object_store: ObjectStoreInterface) -> bool:
     if type(object_store).__name__ == "InMemoryObjectStore":
         return True

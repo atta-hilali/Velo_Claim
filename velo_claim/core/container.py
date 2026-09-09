@@ -76,11 +76,17 @@ def build_container_from_env() -> ServiceContainer:
     )
     file_rules = FilePayerRuleLoader(rules_path, payer_registry_path)
     http_fetcher = HttpPayerRuleFetcher.from_env()
+    kg_client = _build_kg_client(project_root)
+    if str(kg_client.diagnostics().get("backend") or "").lower() == "mock":
+        raise ValueError(
+            "VALIDATION_KG_BACKEND=mock is not allowed with VELO_CLAIM_STORAGE=production. "
+            "Configure the DGX Neo4j service with VALIDATION_KG_BACKEND=neo4j."
+        )
     return ServiceContainer(
         repository=repository,
         object_store=object_store,
         cache=cache,
-        kg_client=_build_kg_client(project_root),
+        kg_client=kg_client,
         submission_store=PostgresSubmissionStore(repository),
         payer_rule_loader=LivePayerRuleLoader(
             repository=repository,
@@ -112,6 +118,6 @@ def _build_kg_client(project_root: Path) -> Neo4jClientInterface:
     if backend == "mock":
         return MockNeo4jClient()
     raise ValueError(
-        "Production requires an explicit VALIDATION_KG_BACKEND value: neo4j, json, or mock. "
-        "Use neo4j on DGX; mock and json are intended only for explicit development/test runtimes."
+        "An explicit VALIDATION_KG_BACKEND value is required: neo4j, json, or mock. "
+        "The production container rejects mock; use neo4j on DGX."
     )

@@ -9,6 +9,7 @@ import re
 from fastapi import FastAPI, HTTPException, Response, Depends, File, Request, UploadFile
 from fastapi.responses import JSONResponse
 from velo_claim.submission.api import build_submission_router, reviewer
+from velo_claim.corrections.api import build_correction_router
 from velo_claim.submission.shafafiya import SubmissionError
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -513,6 +514,7 @@ def create_app(services: ServiceContainer | None = None):
         raise HTTPException(410, "Simulation and local cancellation are retired. Use the controlled submission workflow.")
 
     app.include_router(build_submission_router(get_services))
+    app.include_router(build_correction_router(get_services))
     return app
 
 

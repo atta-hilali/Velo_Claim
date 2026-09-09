@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from copy import deepcopy
 from datetime import UTC, datetime, timedelta
+from fnmatch import fnmatch
 from typing import Any
 from uuid import uuid4
 
@@ -31,6 +33,10 @@ class InMemoryRepository(RepositoryInterface):
     callback_events: dict[str, dict[str, Any]] = field(default_factory=dict)
     submission_attempts: list[dict[str, Any]] = field(default_factory=list)
     payer_rule_sets: dict[tuple[str, str], dict[str, Any]] = field(default_factory=dict)
+    correction_cycles: dict[str, dict[str, Any]] = field(default_factory=dict)
+    correction_suggestions: dict[str, dict[str, Any]] = field(default_factory=dict)
+    correction_reviews: list[dict[str, Any]] = field(default_factory=list)
+    correction_rules: list[dict[str, Any]] = field(default_factory=list)
 
     def upsert_claim(self, claim_id: str, data: dict[str, Any]) -> None:
         existing = self.claims.get(claim_id, {})
@@ -39,7 +45,20 @@ class InMemoryRepository(RepositoryInterface):
         self.claims[claim_id].setdefault("created_at", utc_now())
 
     def insert_claim_version(self, claim_id: str, version: int, data: dict[str, Any]) -> None:
-        self.claim_versions.append({"claim_id": claim_id, "version": version, **data, "created_at": utc_now()})
+        if any(row["claim_id"] == claim_id and row["version"] == version for row in self.claim_versions):
+            return
+        self.claim_versions.append(
+            {
+                "id": data.get("id") or str(uuid4()),
+                "claim_id": claim_id,
+                "version": version,
+                "is_current": True,
+                **deepcopy(data),
+                "created_at": utc_now(),
+            }
+        )
+        if claim_id in self.claims:
+            self.claims[claim_id]["current_version"] = version
 
     def put_route_decision(self, claim_id: str, route: dict[str, Any]) -> None:
         existing = self.route_decisions.get(claim_id)
@@ -55,6 +74,8 @@ class InMemoryRepository(RepositoryInterface):
 
     def insert_claim_payload(self, claim_id: str, version: int, data: dict[str, Any]) -> None:
         self.claim_payloads.append({"claim_id": claim_id, "version": version, **data, "created_at": utc_now()})
+        if claim_id in self.claims:
+            self.claims[claim_id]["current_payload_version"] = version
 
     def latest_claim_payload(self, claim_id: str) -> dict[str, Any] | None:
         rows = [row for row in self.claim_payloads if row["claim_id"] == claim_id]
@@ -176,8 +197,213 @@ class InMemoryRepository(RepositoryInterface):
         }
         return report_id
 
-    def insert_validation_issue(self, report_id: str, issue: dict[str, Any]) -> None:
-        self.validation_issues.append({"report_id": report_id, **issue, "created_at": utc_now()})
+    def insert_validation_issue(self, report_id: str, issue: dict[str, Any]) -> str:
+        issue_id = issue.get("issue_id") or issue.get("id") or str(uuid4())
+        self.validation_issues.append(
+            {"id": issue_id, "issue_id": issue_id, "report_id": report_id, **deepcopy(issue), "created_at": utc_now()}
+        )
+        return issue_id
+
+    def get_validation_report(self, report_id: str) -> dict[str, Any] | None:
+        row = self.validation_reports.get(report_id)
+        return deepcopy(row) if row else None
+
+    def get_latest_validation_report(self, claim_id: str) -> dict[str, Any] | None:
+        rows = [row for row in self.validation_reports.values() if row.get("claim_id") == claim_id]
+        row = max(rows, key=lambda item: str(item.get("created_at") or "")) if rows else None
+        return deepcopy(row) if row else None
+
+    def list_validation_issues(self, report_id: str) -> list[dict[str, Any]]:
+        return [deepcopy(row) for row in self.validation_issues if row.get("report_id") == report_id]
+
+    def get_current_claim_version(self, claim_id: str) -> dict[str, Any] | None:
+        rows = [row for row in self.claim_versions if row.get("claim_id") == claim_id]
+        row = max(rows, key=lambda item: int(item.get("version") or 0)) if rows else None
+        return deepcopy(row) if row else None
+
+    def get_claim_version(self, claim_id: str, version: int) -> dict[str, Any] | None:
+        row = next(
+            (item for item in self.claim_versions if item.get("claim_id") == claim_id and item.get("version") == version),
+            None,
+        )
+        return deepcopy(row) if row else None
+
+    def create_correction_cycle(self, claim_id: str, data: dict[str, Any]) -> dict[str, Any]:
+        for row in self.correction_cycles.values():
+            if (
+                row.get("claim_id") == claim_id
+                and row.get("validation_report_id") == data.get("validation_report_id")
+                and int(row.get("cycle_number") or 0) == int(data.get("cycle_number") or 0)
+            ):
+                return deepcopy(row)
+        cycle_id = data.get("cycle_id") or data.get("id") or str(uuid4())
+        row = {
+            "id": cycle_id,
+            "cycle_id": cycle_id,
+            "claim_id": claim_id,
+            **deepcopy(data),
+            "created_at": data.get("created_at") or utc_now(),
+            "updated_at": utc_now(),
+        }
+        self.correction_cycles[cycle_id] = row
+        return deepcopy(row)
+
+    def get_correction_cycle(self, cycle_id: str) -> dict[str, Any] | None:
+        row = self.correction_cycles.get(cycle_id)
+        return deepcopy(row) if row else None
+
+    def list_correction_cycles(self, claim_id: str) -> list[dict[str, Any]]:
+        rows = [deepcopy(row) for row in self.correction_cycles.values() if row.get("claim_id") == claim_id]
+        return sorted(rows, key=lambda row: int(row.get("cycle_number") or 0))
+
+    def insert_correction_suggestion(self, data: dict[str, Any]) -> dict[str, Any]:
+        existing = next(
+            (
+                row
+                for row in self.correction_suggestions.values()
+                if row.get("suggestion_hash") == data.get("suggestion_hash")
+            ),
+            None,
+        )
+        if existing:
+            return deepcopy(existing)
+        suggestion_id = data.get("suggestion_id") or data.get("id") or str(uuid4())
+        row = {
+            "id": suggestion_id,
+            "suggestion_id": suggestion_id,
+            **deepcopy(data),
+            "created_at": data.get("created_at") or utc_now(),
+            "updated_at": utc_now(),
+        }
+        self.correction_suggestions[suggestion_id] = row
+        return deepcopy(row)
+
+    def get_correction_suggestion(self, suggestion_id: str) -> dict[str, Any] | None:
+        row = self.correction_suggestions.get(suggestion_id)
+        return deepcopy(row) if row else None
+
+    def list_correction_suggestions(self, cycle_id: str) -> list[dict[str, Any]]:
+        rows = [deepcopy(row) for row in self.correction_suggestions.values() if row.get("cycle_id") == cycle_id]
+        return sorted(rows, key=lambda row: str(row.get("created_at") or ""))
+
+    def insert_correction_review(self, data: dict[str, Any]) -> dict[str, Any]:
+        suggestion_id = str(data.get("suggestion_id") or "")
+        suggestion = self.correction_suggestions.get(suggestion_id)
+        if not suggestion:
+            raise ValueError(f"Correction suggestion not found: {suggestion_id}")
+        existing = next((row for row in self.correction_reviews if row.get("suggestion_id") == suggestion_id), None)
+        if existing:
+            if existing.get("decision") == data.get("decision") and existing.get("reviewer_id") == data.get("reviewer_id"):
+                return deepcopy(existing)
+            raise DuplicateRecordError(f"Correction suggestion already reviewed: {suggestion_id}")
+        review_id = data.get("review_id") or data.get("id") or str(uuid4())
+        row = {
+            "id": review_id,
+            "review_id": review_id,
+            **deepcopy(data),
+            "reviewed_at": data.get("reviewed_at") or utc_now(),
+        }
+        self.correction_reviews.append(row)
+        suggestion["status"] = str(data.get("decision"))
+        suggestion["updated_at"] = utc_now()
+        self._refresh_correction_cycle_status(str(suggestion["cycle_id"]))
+        return deepcopy(row)
+
+    def list_correction_reviews(self, suggestion_id: str) -> list[dict[str, Any]]:
+        return [deepcopy(row) for row in self.correction_reviews if row.get("suggestion_id") == suggestion_id]
+
+    def update_correction_suggestion_status(self, suggestion_id: str, status: str) -> None:
+        row = self.correction_suggestions.get(suggestion_id)
+        if row:
+            row.update(status=str(status), updated_at=utc_now())
+            self._refresh_correction_cycle_status(str(row["cycle_id"]))
+
+    def update_correction_cycle_status(self, cycle_id: str, status: str) -> None:
+        row = self.correction_cycles.get(cycle_id)
+        if row:
+            row.update(status=str(status), updated_at=utc_now())
+
+    def get_approved_correction_rule(
+        self, issue_code: str, check_type: str, field_path: str
+    ) -> dict[str, Any] | None:
+        for rule in reversed(self.correction_rules):
+            if (
+                rule.get("issue_code") == issue_code
+                and rule.get("check_type") == check_type
+                and str(rule.get("status")) in {"ACTIVE", "APPROVED"}
+                and rule.get("approved_by")
+                and fnmatch(field_path, str(rule.get("field_pattern") or ""))
+            ):
+                return deepcopy(rule)
+        return None
+
+    def list_correction_history(self, claim_id: str, field_path: str) -> list[dict[str, Any]]:
+        rows = []
+        for suggestion in self.correction_suggestions.values():
+            if suggestion.get("claim_id") == claim_id and suggestion.get("field_path") == field_path:
+                reviews = self.list_correction_reviews(str(suggestion["suggestion_id"]))
+                rows.append({**deepcopy(suggestion), "reviews": reviews})
+        return sorted(rows, key=lambda row: str(row.get("created_at") or ""))
+
+    def commit_corrected_claim(
+        self,
+        *,
+        claim_id: str,
+        cycle_id: str,
+        expected_base_version: int,
+        new_version: int,
+        version_data: dict[str, Any],
+        payload_data: dict[str, Any],
+    ) -> None:
+        current = self.get_current_claim_version(claim_id)
+        if not current or int(current.get("version") or 0) != expected_base_version:
+            raise DuplicateRecordError("The claim version changed before the correction could be applied.")
+        original_versions = deepcopy(self.claim_versions)
+        original_payloads = deepcopy(self.claim_payloads)
+        original_claim = deepcopy(self.claims.get(claim_id, {}))
+        original_cycle = deepcopy(self.correction_cycles.get(cycle_id, {}))
+        original_suggestions = deepcopy(self.correction_suggestions)
+        try:
+            self.insert_claim_version(
+                claim_id,
+                new_version,
+                {**version_data, "parent_version": expected_base_version, "correction_cycle_id": cycle_id},
+            )
+            self.insert_claim_payload(claim_id, new_version, payload_data)
+            self.upsert_claim(claim_id, {"status": str(payload_data.get("status") or "DRAFT_BUILT")})
+            self.claims[claim_id].update(current_version=new_version, current_payload_version=new_version)
+            for suggestion in self.correction_suggestions.values():
+                if suggestion.get("cycle_id") == cycle_id and suggestion.get("status") in {"APPROVED", "MODIFIED"}:
+                    suggestion.update(status="APPLIED", updated_at=utc_now())
+            self.update_correction_cycle_status(cycle_id, "APPLIED")
+        except Exception:
+            self.claim_versions = original_versions
+            self.claim_payloads = original_payloads
+            self.claims[claim_id] = original_claim
+            self.correction_cycles[cycle_id] = original_cycle
+            self.correction_suggestions = original_suggestions
+            raise
+
+    def _refresh_correction_cycle_status(self, cycle_id: str) -> None:
+        cycle = self.correction_cycles.get(cycle_id)
+        if not cycle:
+            return
+        statuses = [
+            str(row.get("status"))
+            for row in self.correction_suggestions.values()
+            if row.get("cycle_id") == cycle_id
+        ]
+        if not statuses:
+            status = "GENERATING"
+        elif "REJECTED" in statuses:
+            status = "REJECTED"
+        elif all(item in {"APPROVED", "MODIFIED"} for item in statuses):
+            status = "READY_TO_APPLY"
+        elif any(item in {"APPROVED", "MODIFIED", "REJECTED"} for item in statuses):
+            status = "PARTIALLY_REVIEWED"
+        else:
+            status = "AWAITING_HUMAN_REVIEW"
+        cycle.update(status=status, updated_at=utc_now())
 
     def insert_audit_event(self, claim_id: str, data: dict[str, Any]) -> None:
         self.audit_events.append({"claim_id": claim_id, **data, "ts": data.get("ts") or utc_now()})

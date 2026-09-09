@@ -125,6 +125,7 @@ def build_claim_validation_agent(*, container: ServiceContainer | None = None):
                 state_warnings.append(item)
         return {
             **state,
+            "validation_report_id": report_id,
             "validation_report": report_dict,
             "validation_report_uri": report_uri,
             "score": report.score,
@@ -153,13 +154,26 @@ def build_claim_validation_agent(*, container: ServiceContainer | None = None):
                     "updated_by": "ClaimValidationAgent.decision_router",
                 },
             )
-        return {**state, "payload_status": payload_status, "next_agent": "SubmissionAgent" if payload_status == PayloadStatus.READY_TO_SUBMIT else None}
+        next_agent = None
+        if payload_status == PayloadStatus.READY_TO_SUBMIT:
+            next_agent = "SubmissionAgent"
+        elif payload_status == PayloadStatus.NEEDS_REVIEW:
+            next_agent = "CorrectionSuggesterAgent"
+        return {**state, "payload_status": payload_status, "next_agent": next_agent}
 
     def fallback_rebuild(state: dict[str, Any]) -> dict[str, Any]:
         attempt = int(state.get("rebuild_attempt_count") or 0) + 1
         if attempt > 3:
             return {**state, "payload_status": PayloadStatus.HOLD_CRITICAL, "rebuild_attempt_count": attempt}
-        rebuilt = claim_builder.build({**state, "rebuild_attempt_count": attempt})
+        canonical_claim = state.get("canonical_claim")
+        if not canonical_claim:
+            raise ValueError("Payload fallback requires the current canonical claim.")
+        rebuilt = claim_builder.build_payload_from_canonical(
+            {**state, "rebuild_attempt_count": attempt},
+            canonical_claim,
+            rebuild_reason="PAYLOAD_CONFORMITY_REBUILD",
+            created_by_agent="ClaimValidationAgent",
+        )
         return {**rebuilt, "rebuild_attempt_count": attempt, "payload_status": PayloadStatus.DRAFT_BUILT}
 
     def route_after_score(state: dict[str, Any]) -> str:

@@ -8,7 +8,7 @@ Set-Location $ProjectRoot
 $SshUser = "dev1"
 $SshHost = "2.51.71.201"
 $SshPort = 2222
-$RemoteContainer = "velo-claim-api"
+$RemoteContainer = "velo-claim-backend"
 $ApiUrl = "http://127.0.0.1:8000"
 $FrontendUrl = "http://127.0.0.1:5173"
 
@@ -88,7 +88,7 @@ Write-Host "Replacing any old API/database tunnel..." -ForegroundColor Yellow
 Get-CimInstance Win32_Process |
     Where-Object {
         $_.Name -eq "ssh.exe" -and
-        $_.CommandLine -match "-L 8000:(127\.0\.0\.1|localhost):8000"
+        $_.CommandLine -match "-L\s+8000:"
     } |
     ForEach-Object {
         Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue
@@ -100,8 +100,13 @@ $TunnelArguments = @(
     "-o", "ExitOnForwardFailure=yes",
     "-o", "ServerAliveInterval=30",
     "-o", "ServerAliveCountMax=3",
-    "-L", "8000:127.0.0.1:8000",
-    "-L", "5433:127.0.0.1:5433",
+    "-L", "8000:127.0.0.1:8002",
+    "-L", "5433:127.0.0.1:5434",
+    "-L", "6379:127.0.0.1:6378",
+    "-L", "9000:127.0.0.1:9002",
+    "-L", "9001:127.0.0.1:9003",
+    "-L", "7474:127.0.0.1:7475",
+    "-L", "7687:127.0.0.1:7688",
     "$SshUser@$SshHost",
     "-N"
 )
@@ -134,6 +139,15 @@ if ($null -eq $Health -or $Health.status -ne "ok") {
 }
 
 Write-Host "  API healthy: $($Health.storage), $($Health.object_store), $($Health.cache)" -ForegroundColor Green
+if ($null -eq $Health.knowledge_graph -or $Health.knowledge_graph.backend -ne "neo4j") {
+    Stop-Process -Id $TunnelProcess.Id -Force -ErrorAction SilentlyContinue
+    throw "The API is reachable, but the production Neo4j backend is not active."
+}
+if ($Health.knowledge_graph.connectivity -ne "healthy" -or $Health.knowledge_graph.mock_fallback) {
+    Stop-Process -Id $TunnelProcess.Id -Force -ErrorAction SilentlyContinue
+    throw "Neo4j is unhealthy or the backend is using a mock fallback."
+}
+Write-Host "  KG healthy: Neo4j/$($Health.knowledge_graph.database), mock fallback disabled" -ForegroundColor Green
 
 $FrontendRunning = $false
 try {
@@ -175,4 +189,7 @@ Write-Host ""
 Write-Host "Velo Claim is ready." -ForegroundColor Cyan
 Write-Host "  Frontend: $FrontendUrl"
 Write-Host "  API:      $ApiUrl"
+Write-Host "  Postgres: localhost:5433"
+Write-Host "  Neo4j:    http://127.0.0.1:7474 (Bolt: 127.0.0.1:7687)"
+Write-Host "  MinIO:    http://127.0.0.1:9001"
 Write-Host "  Tunnel PID: $($TunnelProcess.Id)" -ForegroundColor DarkGray

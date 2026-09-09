@@ -1,0 +1,171 @@
+{
+  "claim_id": "CLM-DAMAN-KG-TEST-001",
+  "payer_id": "DAMAN",
+  "plan_id": "DAMAN-ENHANCED",
+  "jurisdiction": "ABU_DHABI",
+  "source_context": {
+    "patient": {
+      "resourceType": "Patient",
+      "id": "PAT-DAMAN-KG-001",
+      "identifier": [
+        {
+          "system": "velo/member-id",
+          "value": "MEM-DAMAN-KG-001"
+        },
+        {
+          "system": "uae/emirates-id",
+          "value": "784-1988-7654321-2"
+        }
+      ],
+      "name": [
+        {
+          "text": "Synthetic KG Test Patient"
+        }
+      ],
+      "birthDate": "1988-04-19",
+      "gender": "female"
+    },
+    "coverage": {
+      "resourceType": "Coverage",
+      "id": "COV-DAMAN-KG-001",
+      "status": "active",
+      "subscriberId": "MEM-DAMAN-KG-001",
+      "voi_verified": true,
+      "payor": [
+        {
+          "identifier": {
+            "value": "DAMAN"
+          },
+          "display": "Daman"
+        }
+      ],
+      "class": [
+        {
+          "type": {
+            "text": "plan"
+          },
+          "value": "DAMAN-ENHANCED"
+        }
+      ],
+      "period": {
+        "start": "2026-01-01",
+        "end": "2026-12-31"
+      }
+    },
+    "encounter": {
+      "resourceType": "Encounter",
+      "id": "ENC-DAMAN-KG-001",
+      "status": "finished",
+      "class": {
+        "code": "AMB"
+      },
+      "type": [
+        {
+          "text": "Dental consultation"
+        }
+      ],
+      "period": {
+        "start": "2026-06-15T09:00:00+04:00",
+        "end": "2026-06-15T09:30:00+04:00"
+      },
+      "subject": {
+        "reference": "Patient/PAT-DAMAN-KG-001"
+      },
+      "participant": [
+        {
+          "individual": {
+            "reference": "Practitioner/DENT-DAMAN-KG-001"
+          }
+        }
+      ],
+      "serviceProvider": {
+        "reference": "Organization/FAC-DAMAN-KG-001"
+      }
+    },
+    "provider": {
+      "resourceType": "Practitioner",
+      "id": "DENT-DAMAN-KG-001",
+      "identifier": [
+        {
+          "system": "doh/clinician-license",
+          "value": "GD6476"
+        }
+      ],
+      "name": [
+        {
+          "text": "Dr Synthetic Test"
+        }
+      ]
+    },
+    "facility": {
+      "resourceType": "Organization",
+      "id": "FAC-DAMAN-KG-001",
+      "name": "Synthetic Dental Clinic",
+      "identifier": [
+        {
+          "system": "doh/facility-license",
+          "value": "MF2057"
+        }
+      ]
+    },
+    "conditions": [
+      {
+        "resourceType": "Condition",
+        "id": "COND-DAMAN-KG-001",
+        "code": {
+          "coding": [
+            {
+              "system": "ICD-10-CM",
+              "code": "K05.30",
+              "display": "Chronic periodontitis, unspecified"
+            }
+          ]
+        }
+      }
+    ],
+    "procedures": [
+      {
+        "resourceType": "Procedure",
+        "id": "PROC-DAMAN-KG-001",
+        "code": {
+          "coding": [
+            {
+              "system": "CDT",
+              "code": "D4342",
+              "display": "Periodontal scaling and root planing"
+            }
+          ]
+        },
+        "performedDateTime": "2026-06-15T09:15:00+04:00"
+      }
+    ],
+    "attachments": [
+      {
+        "type": "Tooth identification",
+        "name": "tooth-chart.pdf"
+      },
+      {
+        "type": "full-mouth periodontal charting",
+        "name": "periodontal-chart.pdf"
+      },
+      {
+        "type": "OPG or bitewing X-",
+        "name": "bitewing.pdf"
+      }
+    ],
+    "charge_items": [
+      {
+        "id": "ACT-DAMAN-KG-001",
+        "code": "D4342",
+        "system": "CDT",
+        "description": "Periodontal scaling and root planing",
+        "quantity": 1,
+        "gross": 126.0,
+        "patient_share": 25.2,
+        "net": 100.8,
+        "currency": "AED",
+        "service_date": "2026-06-15"
+      }
+    ]
+  }
+}

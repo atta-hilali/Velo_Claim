@@ -127,36 +127,50 @@ def _procedures(source: SourceContext, payer_rules: PayerRuleSet, kg_client: Neo
             display = procedure.get("description") or procedure.get("display")
         if code:
             code = normalize_code(code)
+            procedure_system = _procedure_system(system)
+            bundled, bundling_evidence = bundled_codes_for_code(
+                procedure_code=code,
+                procedure_system=procedure_system,
+                payer_id=payer_rules.payer_id,
+                plan_id=payer_rules.plan_id,
+                service_date=procedure.get("performedDateTime") or _service_date(source.encounter),
+                payer_rules=payer_rules,
+                kg_client=kg_client,
+            )
             procedures.append(
                 {
-                    "system": _procedure_system(system),
+                    "system": procedure_system,
                     "code": code,
                     "description": display or code,
                     "quantity": int(procedure.get("quantity") or procedure.get("units") or 1),
                     "service_date": procedure.get("performedDateTime") or _service_date(source.encounter),
-                    "bundled_with": bundled_codes_for_code(
-                        cpt_code=code,
-                        payer_rules=payer_rules,
-                        kg_client=kg_client,
-                    ),
+                    "bundled_with": bundled,
+                    "kg_bundling": bundling_evidence.to_dict(),
                 }
             )
     if not procedures:
         for item in source.charge_items:
             code = normalize_code(item.get("code") or item.get("cpt") or item.get("procedure_code"))
             if code:
+                procedure_system = item.get("system", "CPT")
+                bundled, bundling_evidence = bundled_codes_for_code(
+                    procedure_code=code,
+                    procedure_system=procedure_system,
+                    payer_id=payer_rules.payer_id,
+                    plan_id=payer_rules.plan_id,
+                    service_date=item.get("service_date") or _service_date(source.encounter),
+                    payer_rules=payer_rules,
+                    kg_client=kg_client,
+                )
                 procedures.append(
                     {
-                        "system": item.get("system", "CPT"),
+                        "system": procedure_system,
                         "code": code,
                         "description": item.get("description", code),
                         "quantity": int(item.get("quantity") or 1),
                         "service_date": item.get("service_date") or _service_date(source.encounter),
-                        "bundled_with": bundled_codes_for_code(
-                            cpt_code=code,
-                            payer_rules=payer_rules,
-                            kg_client=kg_client,
-                        ),
+                        "bundled_with": bundled,
+                        "kg_bundling": bundling_evidence.to_dict(),
                     }
                 )
     return procedures

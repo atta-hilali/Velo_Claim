@@ -7,56 +7,88 @@ import urllib.request
 from velo_claim.core.enums import Severity
 from velo_claim.core.models import CheckIssue, CheckResult
 from velo_claim.kg.interface import Neo4jClientInterface
+from velo_claim.kg.models import KnowledgeStatus, normalize_code_system
 
 
 def check_coding_consistency(state: dict, kg_client: Neo4jClientInterface) -> CheckResult:
     claim = state.get("canonical_claim", {})
     diagnoses = claim.get("diagnoses", [])
-    procedures = claim.get("procedures", [])
+    procedures = claim.get("procedures", []) or claim.get("line_items", [])
     issues: list[CheckIssue] = []
+    evidence: list[dict] = []
     if not diagnoses:
-        issues.append(
-            CheckIssue(
-                code="DIAGNOSIS_MISSING",
-                severity=Severity.ERROR,
-                check_type="CODING",
-                field="canonical_claim.diagnoses",
-                message="No diagnosis code is present.",
-                suggestion="Add diagnosis code from Condition or encounter documentation.",
-                penalty=20,
-            )
-        )
+        issues.append(_issue("DIAGNOSIS_MISSING", Severity.ERROR, "canonical_claim.diagnoses",
+                             "No diagnosis code is present.", 20))
     if not procedures:
-        issues.append(
-            CheckIssue(
-                code="PROCEDURE_MISSING",
-                severity=Severity.ERROR,
-                check_type="CODING",
-                field="canonical_claim.procedures",
-                message="No procedure code is present.",
-                suggestion="Add CPT/CDT code from Procedure or charge item.",
-                penalty=20,
-            )
-        )
-    for proc in procedures:
-        if not diagnoses:
+        issues.append(_issue("PROCEDURE_MISSING", Severity.ERROR, "canonical_claim.procedures",
+                             "No procedure code is present.", 20))
+
+    for procedure in procedures:
+        if not diagnoses or not procedure.get("code"):
             continue
-        compatible = any(kg_client.query_icd_cpt_compatibility(diag.get("code"), proc.get("code")) for diag in diagnoses)
-        if not compatible:
-            llm_evidence = _llm_coding_review(state, proc) if _llm_enabled() else None
+        procedure_system = normalize_code_system(procedure.get("system"))
+        results = [
+            kg_client.query_diagnosis_procedure_compatibility(
+                diagnosis_code=diagnosis.get("code", ""),
+                procedure_code=procedure.get("code", ""),
+                diagnosis_system=normalize_code_system(diagnosis.get("system"), diagnosis=True),
+                procedure_system=procedure_system,
+                service_date=procedure.get("service_date") or claim.get("encounter", {}).get("service_date"),
+            )
+            for diagnosis in diagnoses
+            if diagnosis.get("code")
+        ]
+        evidence.extend(result.to_dict() for result in results)
+        if any(result.status == KnowledgeStatus.SUPPORTED for result in results):
+            continue
+        if any(result.status == KnowledgeStatus.UNAVAILABLE for result in results):
             issues.append(
-                CheckIssue(
-                    code="ICD_CPT_COMPATIBILITY_REVIEW",
-                    severity=Severity.WARNING,
-                    check_type="CODING",
-                    field=f"canonical_claim.procedures.{proc.get('code')}",
-                    message=f"No KG compatibility edge found for CPT {proc.get('code')} and current diagnoses.",
-                    suggestion="Route to coding review or use LLM-assisted coding enrichment.",
-                    penalty=5,
-                    evidence={"llm_required": True, "llm_review": llm_evidence},
+                _issue(
+                    "KG_CODING_UNAVAILABLE", Severity.ERROR,
+                    f"canonical_claim.procedures.{procedure.get('code')}",
+                    "Coding knowledge could not be checked because Neo4j is unavailable.", 20,
+                    evidence={"kg_results": [result.to_dict() for result in results]},
                 )
             )
-    return CheckResult("CODING", "PASS" if not issues else "REVIEW", issues)
+            continue
+        explicitly_unsupported = any(result.status == KnowledgeStatus.NOT_SUPPORTED for result in results)
+        llm_evidence = _llm_coding_review(state, procedure) if _llm_enabled() else None
+        issues.append(
+            _issue(
+                "DIAGNOSIS_PROCEDURE_NOT_SUPPORTED" if explicitly_unsupported else "DIAGNOSIS_PROCEDURE_KNOWLEDGE_UNKNOWN",
+                Severity.ERROR if explicitly_unsupported else Severity.WARNING,
+                f"canonical_claim.procedures.{procedure.get('code')}",
+                (
+                    f"The KG explicitly does not support {procedure_system} {procedure.get('code')} for the supplied diagnoses."
+                    if explicitly_unsupported
+                    else f"No explicit KG support edge was found for {procedure_system} {procedure.get('code')}; compatibility is unknown."
+                ),
+                20 if explicitly_unsupported else 5,
+                evidence={"kg_results": [result.to_dict() for result in results], "llm_review": llm_evidence},
+            )
+        )
+    requires_review = any(
+        result.get("source") == "NEO4J"
+        and result.get("status") in {
+            str(KnowledgeStatus.UNKNOWN),
+            str(KnowledgeStatus.UNAVAILABLE),
+            str(KnowledgeStatus.CONFLICT),
+        }
+        for result in evidence
+    )
+    status = "PASS" if not issues else "REVIEW_REQUIRED" if requires_review else "REVIEW"
+    return CheckResult("CODING", status, issues, {"kg_results": evidence})
+
+
+def _issue(
+    code: str, severity: Severity, field: str, message: str, penalty: int,
+    *, evidence: dict | None = None,
+) -> CheckIssue:
+    return CheckIssue(
+        code=code, severity=severity, check_type="CODING", field=field, message=message,
+        suggestion="Route to coding review and verify authoritative coding evidence.",
+        penalty=penalty, evidence=evidence or {},
+    )
 
 
 def _llm_enabled() -> bool:
@@ -70,21 +102,12 @@ def _llm_coding_review(state: dict, procedure: dict) -> dict | None:
     payload = {
         "model": os.getenv("CODING_LLM_MODEL") or os.getenv("VALIDATION_LLM_MODEL", "medgemma"),
         "messages": [
-            {
-                "role": "system",
-                "content": "Return strict JSON with fields: supported, reason, missing_evidence.",
-            },
-            {
-                "role": "user",
-                "content": json.dumps(
-                    {
-                        "diagnoses": state.get("canonical_claim", {}).get("diagnoses", []),
-                        "procedure": procedure,
-                        "attachments": state.get("canonical_claim", {}).get("attachments", []),
-                    },
-                    default=str,
-                ),
-            },
+            {"role": "system", "content": "Return strict JSON with fields: supported, reason, missing_evidence."},
+            {"role": "user", "content": json.dumps({
+                "diagnoses": state.get("canonical_claim", {}).get("diagnoses", []),
+                "procedure": procedure,
+                "attachments": state.get("canonical_claim", {}).get("attachments", []),
+            }, default=str)},
         ],
         "temperature": 0,
     }

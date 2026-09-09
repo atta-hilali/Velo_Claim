@@ -13,7 +13,8 @@ from velo_claim.core.enums import ClaimStandard, PayloadStatus, PriorAuthStatus,
 from velo_claim.core.models import CheckIssue, CheckResult, PayerRuleSet
 from velo_claim.core.utils import normalize_code
 from velo_claim.kg.interface import Neo4jClientInterface
-from velo_claim.rules.engine import pa_required_for_code
+from velo_claim.kg.models import KnowledgeStatus, normalize_code_system
+from velo_claim.rules.engine import prior_auth_requirement_for_code
 from velo_claim.storage.interfaces import ObjectStoreInterface, RepositoryInterface
 from velo_claim.standards.shafafiya import parse_authorization_response
 from velo_claim.validation.payload_validators import PayloadValidator
@@ -348,6 +349,7 @@ def build_prior_auth_subgraph(
                 "activities": [
                     {
                         "code": line.get("code"),
+                        "system": line.get("system") or "CPT",
                         "service_date": claim.get("encounter", {}).get("service_date"),
                         "payer_id": claim.get("payer", {}).get("id"),
                         "plan_id": claim.get("payer", {}).get("plan_id"),
@@ -361,21 +363,66 @@ def build_prior_auth_subgraph(
     def determine_requirement(state: dict[str, Any]) -> dict[str, Any]:
         claim = state.get("canonical_claim", {})
         payer = claim.get("payer", {})
-        required_codes = [
-            activity["code"]
-            for activity in state.get("prior_auth_input", {}).get("activities", [])
-            if pa_required_for_code(
+        required_codes: list[str] = []
+        knowledge_results: list[dict[str, Any]] = []
+        knowledge_issues: list[CheckIssue] = []
+        for activity in state.get("prior_auth_input", {}).get("activities", []):
+            system = normalize_code_system(activity.get("system"))
+            decision = prior_auth_requirement_for_code(
                 payer_id=payer.get("id", ""),
                 plan_id=payer.get("plan_id", ""),
-                cpt_code=activity["code"],
+                procedure_code=activity["code"],
+                procedure_system=system,
+                service_date=activity.get("service_date"),
                 payer_rules=payer_rules,
                 kg_client=kg_client,
             )
-        ]
+            knowledge_results.append(decision.to_dict())
+            if decision.status == KnowledgeStatus.REQUIRED:
+                required_codes.append(activity["code"])
+            elif system == "CDT" and decision.source in {"NEO4J", "RULE_ENGINE"} and decision.status in {
+                KnowledgeStatus.UNKNOWN,
+                KnowledgeStatus.UNAVAILABLE,
+                KnowledgeStatus.CONFLICT,
+            }:
+                knowledge_issues.append(
+                    CheckIssue(
+                        code=f"PA_KNOWLEDGE_{decision.status}",
+                        severity=Severity.ERROR,
+                        check_type="PRIOR_AUTH",
+                        field=f"canonical_claim.line_items.{activity['code']}",
+                        message=decision.reason or f"Prior-authorization requirement is {decision.status}.",
+                        suggestion="Confirm PA requirements with the payer before submission.",
+                        penalty=20,
+                        evidence={"kg_result": decision.to_dict()},
+                    )
+                )
+        if knowledge_issues:
+            result = CheckResult(
+                "PRIOR_AUTH",
+                "REVIEW_REQUIRED",
+                knowledge_issues,
+                {"required_codes": required_codes, "knowledge_results": knowledge_results},
+            )
+            return {
+                **state,
+                "prior_auth_result": result.to_dict(),
+                "_prior_auth_result_object": result,
+                "prior_auth_terminal": True,
+            }
         if not required_codes:
-            result = CheckResult("PRIOR_AUTH", PriorAuthStatus.NOT_REQUIRED, data={"required_codes": []})
+            result = CheckResult(
+                "PRIOR_AUTH",
+                PriorAuthStatus.NOT_REQUIRED,
+                data={"required_codes": [], "knowledge_results": knowledge_results},
+            )
             return {**state, "prior_auth_result": result.to_dict(), "_prior_auth_result_object": result, "prior_auth_terminal": True}
-        return {**state, "prior_auth_required_codes": required_codes, "prior_auth_terminal": False}
+        return {
+            **state,
+            "prior_auth_required_codes": required_codes,
+            "prior_auth_knowledge_results": knowledge_results,
+            "prior_auth_terminal": False,
+        }
 
     def validate_existing_auth(state: dict[str, Any]) -> dict[str, Any]:
         if state.get("prior_auth_terminal"):

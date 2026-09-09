@@ -31,8 +31,9 @@ and LangGraph agents only orchestrate those modules.
   primitives.
 - `velo_claim/storage/` defines PostgreSQL/S3/Redis-shaped interfaces with
   in-memory implementations for local development.
-- `velo_claim/kg/` and `velo_claim/rules/` provide mock Neo4j and mock payer
-  rule loaders behind production-ready interfaces.
+- `velo_claim/kg/` provides a read-only Neo4j client with explicit JSON and
+  mock test backends. `velo_claim/rules/` combines versioned payer rules with
+  graph evidence without treating missing graph facts as negative decisions.
 - `velo_claim/agents/` contains thin LangGraph state machines.
 - `velo_claim/security/generate_jwks.py` preserves JWKS generation without
   exposing private keys.
@@ -82,9 +83,15 @@ The local default container uses runnable development implementations:
 InMemoryRepository  -> PostgreSQL-shaped records
 InMemoryObjectStore -> S3/MinIO-shaped payload storage
 InMemoryCacheStore  -> Redis-shaped cache/locks
-MockNeo4jClient     -> coding and prior-auth graph queries
+MockNeo4jClient     -> explicit local/test coding and prior-auth graph queries
 MockPayerRuleLoader -> payer/plan rules
 ```
+
+Production selects the graph backend explicitly with
+`VALIDATION_KG_BACKEND=neo4j`. It uses `NEO4J_URI`, `NEO4J_USER`,
+`NEO4J_PASSWORD`, and `NEO4J_DATABASE`; it does not silently fall back to mock
+knowledge if Neo4j is unavailable. The `/health` response exposes graph
+connectivity and reports a degraded service when the graph cannot be reached.
 
 Production replacements should implement the same interfaces, not change the
 agent code.
@@ -94,11 +101,12 @@ agent code.
 Claim and PA submission now use exact-payload human approval, an auditable
 submission journal, a WSDL-bound Shafafiya adapter, and response reconciliation.
 Delivery acknowledgement is separate from the payer decision. The default is
-**disabled**; manual test-portal exchange and PTE are supported. Production is
-blocked while KG and payer-rule validation remain mocked.
+**disabled**; manual test-portal exchange and PTE are supported. Production
+still requires authoritative payer-rule feeds and configured payer endpoints;
+the populated Neo4j graph can now be selected as the validation KG backend.
 
 See [setup, API workflow, and verification](docs/shafafiya_submission.md) and the
-[deferred KG integration plan](docs/kg_integration_plan.md). Run
+[KG integration plan](docs/kg_integration_plan.md). Run
 `python -m pytest -q` for the local checks and `npm run build` in `frontend/`.
 
 ## Manual Encounter PDF Import

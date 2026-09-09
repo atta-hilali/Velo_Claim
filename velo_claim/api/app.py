@@ -1,4 +1,5 @@
 from __future__ import annotations
+from contextlib import asynccontextmanager
 import hashlib
 import json
 import logging
@@ -83,10 +84,21 @@ def create_app(services: ServiceContainer | None = None):
         global _services
         _services = services
 
+    @asynccontextmanager
+    async def lifespan(_: FastAPI):
+        try:
+            yield
+        finally:
+            runtime = _services
+            close = getattr(getattr(runtime, "kg_client", None), "close", None)
+            if callable(close):
+                close()
+
     app = FastAPI(
         title="Velo Claim API",
         version="0.1.0",
         description="HTTP facade for Velo Claim agents and reusable claim operations.",
+        lifespan=lifespan,
     )
     app.add_middleware(
         CORSMiddleware,
@@ -107,11 +119,13 @@ def create_app(services: ServiceContainer | None = None):
                 "error": str(exc),
                 "timestamp": utc_now(),
             }
+        kg = services.kg_client.diagnostics()
         return {
-            "status": "ok",
+            "status": "ok" if kg.get("connectivity") == "healthy" else "degraded",
             "storage": type(services.repository).__name__,
             "object_store": type(services.object_store).__name__,
             "cache": type(services.cache).__name__,
+            "knowledge_graph": kg,
             "timestamp": utc_now(),
         }
 

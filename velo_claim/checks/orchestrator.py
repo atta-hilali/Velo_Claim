@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from velo_claim.builders.prior_auth.builder import PAClaimBuilderModule
+from velo_claim.checks.benefits import check_plan_benefits
 from velo_claim.checks.coding import check_coding_consistency
 from velo_claim.checks.documentation import check_documentation
 from velo_claim.checks.duplicate import check_duplicate
@@ -47,6 +48,7 @@ def run_validation_checks(
     if str(eligibility.status) == EligibilityStatus.WAITING_FOR_PAYER:
         return state, checks
     if str(eligibility.status) in {EligibilityStatus.PASS, EligibilityStatus.CACHED_VALID}:
+        checks.append(check_plan_benefits(state, kg_client))
         state, prior_auth = run_prior_auth_subgraph(
             state=state,
             payer_rules=payer_rules,
@@ -93,5 +95,11 @@ def calculate_validation_report(claim_id: str, checks: list[CheckResult]) -> Val
             score -= issue.penalty
     score = max(0, score)
     blocking_error = any(issue.severity == Severity.ERROR for issue in issues)
-    status = ValidationStatus.READY_TO_SUBMIT if score >= 80 and not blocking_error else ValidationStatus.NEEDS_REVIEW
+    review_statuses = {"REVIEW_REQUIRED", "UNKNOWN", "UNAVAILABLE", "CONFLICT"}
+    review_required = any(str(check.status).upper() in review_statuses for check in checks)
+    status = (
+        ValidationStatus.READY_TO_SUBMIT
+        if score >= 80 and not blocking_error and not review_required
+        else ValidationStatus.NEEDS_REVIEW
+    )
     return ValidationReport(claim_id, score, status, issues, checks)

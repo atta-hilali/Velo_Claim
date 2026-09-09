@@ -22,6 +22,12 @@ Reviewed repository: https://github.com/atta-hilali/Velo_Claim
 
 Reviewed main snapshot: `bcf8565becb00b4dfa6094517d867b379a9d787d`. Local/DGX unpushed changes were not inspected.
 
+> Implementation update (2026-09-08): the DGX graph was inspected read-only
+> and is already populated. The runtime integration described below is now
+> implemented with the official Neo4j driver, explicit backend selection,
+> evidence-bearing results, code-system-aware queries, and health diagnostics.
+> See `docs/kg_runtime_schema.md` for the observed production graph contract.
+
 - `velo_claim/core/container.py` selects `MockNeo4jClient` in both memory and production storage modes.
 - Production storage mode selects PostgreSQL, S3/MinIO, and Redis, but this does not activate a real graph connection.
 - `LivePayerRuleLoader` is constructed with `fetcher=None`. It can read persisted/cached rules and otherwise falls back to mock defaults; it cannot fetch live rules in that configuration.

@@ -1,0 +1,44 @@
+<?xml version="1.0" ?>
+<Claim.Submission>
+  <Header>
+    <SenderID>MF2057</SenderID>
+    <ReceiverID>DAMAN</ReceiverID>
+    <TransactionDate>09/09/2026 17:36</TransactionDate>
+    <RecordCount>1</RecordCount>
+    <DispositionFlag>PTE_VALIDATE_ONLY</DispositionFlag>
+  </Header>
+  <Claim>
+    <ID>CLM-DAMAN-KG-TEST-001</ID>
+    <MemberID>MEM-DAMAN-KG-001</MemberID>
+    <PayerID>DAMAN</PayerID>
+    <ProviderID>MF2057</ProviderID>
+    <EmiratesIDNumber>784-1988-7654321-2</EmiratesIDNumber>
+    <Gross>126.00</Gross>
+    <PatientShare>25.20</PatientShare>
+    <Net>100.80</Net>
+    <Encounter>
+      <FacilityID>MF2057</FacilityID>
+      <Type>1</Type>
+      <PatientID>PAT-DAMAN-KG-001</PatientID>
+      <Start>15/06/2026 09:00</Start>
+      <End>15/06/2026 09:30</End>
+      <StartType>1</StartType>
+      <EndType>1</EndType>
+    </Encounter>
+    <Diagnosis>
+      <Type>Principal</Type>
+      <Code>K05.30</Code>
+    </Diagnosis>
+    <Activity>
+      <ID>ACT-DAMAN-KG-001</ID>
+      <Start>15/06/2026 00:00</Start>
+      <Type>6</Type>
+      <Code>D4342</Code>
+      <Quantity>1</Quantity>
+      <Net>100.80</Net>
+      <OrderingClinician>GD6476</OrderingClinician>
+      <Clinician>GD6476</Clinician>
+      <VAT>0.00</VAT>
+    </Activity>
+  </Claim>
+</Claim.Submission>

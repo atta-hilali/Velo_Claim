@@ -6,7 +6,8 @@ from velo_claim.builders.prior_auth.builder import PAClaimBuilderModule
 from velo_claim.core.enums import PriorAuthStatus, Severity
 from velo_claim.core.models import CheckIssue, CheckResult, PayerRuleSet
 from velo_claim.kg.interface import Neo4jClientInterface
-from velo_claim.rules.engine import pa_required_for_code
+from velo_claim.kg.models import KnowledgeStatus, normalize_code_system
+from velo_claim.rules.engine import prior_auth_requirement_for_code
 from velo_claim.storage.interfaces import RepositoryInterface
 
 
@@ -20,19 +21,52 @@ def run_prior_auth_check(
 ) -> tuple[dict, CheckResult]:
     claim = state.get("canonical_claim", {})
     payer = claim.get("payer", {})
-    required_codes = [
-        line.get("code")
-        for line in claim.get("line_items", [])
-        if pa_required_for_code(
-            payer_id=payer.get("id", ""),
-            plan_id=payer.get("plan_id", ""),
-            cpt_code=line.get("code", ""),
-            payer_rules=payer_rules,
-            kg_client=kg_client,
+    decisions = [
+        (
+            line,
+            prior_auth_requirement_for_code(
+                payer_id=payer.get("id", ""),
+                plan_id=payer.get("plan_id", ""),
+                procedure_code=line.get("code", ""),
+                procedure_system=normalize_code_system(line.get("system")),
+                service_date=line.get("service_date") or claim.get("encounter", {}).get("service_date"),
+                payer_rules=payer_rules,
+                kg_client=kg_client,
+            ),
         )
+        for line in claim.get("line_items", [])
+        if line.get("code")
     ]
+    knowledge_issues = [
+        CheckIssue(
+            code=f"PA_KNOWLEDGE_{decision.status}",
+            severity=Severity.ERROR,
+            check_type="PRIOR_AUTH",
+            field=f"canonical_claim.line_items.{line.get('code')}",
+            message=decision.reason or f"Prior-authorization requirement is {decision.status}.",
+            suggestion="Confirm PA requirements with the payer before submission.",
+            penalty=20,
+            evidence={"kg_result": decision.to_dict()},
+        )
+        for line, decision in decisions
+        if normalize_code_system(line.get("system")) == "CDT"
+        and decision.source in {"NEO4J", "RULE_ENGINE"}
+        and decision.status in {KnowledgeStatus.UNKNOWN, KnowledgeStatus.UNAVAILABLE, KnowledgeStatus.CONFLICT}
+    ]
+    if knowledge_issues:
+        return state, CheckResult(
+            "PRIOR_AUTH",
+            "REVIEW_REQUIRED",
+            knowledge_issues,
+            {"knowledge_results": [decision.to_dict() for _, decision in decisions]},
+        )
+    required_codes = [line.get("code") for line, decision in decisions if decision.status == KnowledgeStatus.REQUIRED]
     if not required_codes:
-        return state, CheckResult("PRIOR_AUTH", PriorAuthStatus.NOT_REQUIRED, data={"required_codes": []})
+        return state, CheckResult(
+            "PRIOR_AUTH",
+            PriorAuthStatus.NOT_REQUIRED,
+            data={"required_codes": [], "knowledge_results": [decision.to_dict() for _, decision in decisions]},
+        )
 
     issues: list[CheckIssue] = []
     valid_refs: list[str] = []

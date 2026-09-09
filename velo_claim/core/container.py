@@ -98,17 +98,20 @@ def _resolve_project_path(value: str, project_root: Path) -> Path:
 
 
 def _build_kg_client(project_root: Path) -> Neo4jClientInterface:
-    backend = os.getenv("VALIDATION_KG_BACKEND", "auto").strip().lower()
-    if backend == "neo4j" or (backend == "auto" and os.getenv("NEO4J_URI")):
+    backend = os.getenv("VALIDATION_KG_BACKEND", "").strip().lower()
+    if backend == "neo4j":
         client = Neo4jKnowledgeGraphClient.from_env()
         if os.getenv("NEO4J_VERIFY_CONNECTIVITY", "true").lower() in {"1", "true", "yes"}:
-            client.verify_connectivity()
+            client.verify_connectivity(raise_on_error=False)
         return client
-    if backend in {"auto", "json"} and os.getenv("USE_VALIDATION_KG", "true").lower() in {"1", "true", "yes"}:
+    if backend == "json":
         path = _resolve_project_path(
             os.getenv("VALIDATION_KG_PATH", "./data/coding_knowledge_graph.json"), project_root
         )
         return JsonKnowledgeGraphClient(path)
     if backend == "mock":
         return MockNeo4jClient()
-    raise ValueError(f"Unsupported or disabled production KG backend: {backend!r}")
+    raise ValueError(
+        "Production requires an explicit VALIDATION_KG_BACKEND value: neo4j, json, or mock. "
+        "Use neo4j on DGX; mock and json are intended only for explicit development/test runtimes."
+    )

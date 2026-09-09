@@ -11,6 +11,7 @@ def check_documentation(state: dict, payer_rules: PayerRuleSet, kg_client: Neo4j
     attachments = claim.get("attachments", [])
     available = {str(doc.get("type") or doc.get("category") or doc.get("name", "")).upper() for doc in attachments if isinstance(doc, dict)}
     issues: list[CheckIssue] = []
+    kg_results: list[dict] = []
     if not claim.get("encounter", {}).get("id"):
         issues.append(_issue("ENCOUNTER_MISSING", "canonical_claim.encounter.id", "Encounter reference is missing."))
     if not attachments:
@@ -26,10 +27,17 @@ def check_documentation(state: dict, payer_rules: PayerRuleSet, kg_client: Neo4j
             )
         )
     for line in claim.get("line_items", []):
-        for required in required_documents_for_code(cpt_code=line.get("code"), payer_rules=payer_rules, kg_client=kg_client):
+        required_documents, kg_result = required_documents_for_code(
+            procedure_code=line.get("code"),
+            procedure_system=line.get("system") or "CPT",
+            payer_rules=payer_rules,
+            kg_client=kg_client,
+        )
+        kg_results.append(kg_result.to_dict())
+        for required in required_documents:
             if required.upper() not in available:
                 issues.append(_issue("REQUIRED_DOCUMENT_MISSING", "canonical_claim.attachments", f"Required document is missing: {required}."))
-    return CheckResult("DOCUMENTATION", "PASS" if not issues else "REVIEW", issues)
+    return CheckResult("DOCUMENTATION", "PASS" if not issues else "REVIEW", issues, {"kg_results": kg_results})
 
 
 def _issue(code: str, field: str, message: str) -> CheckIssue:

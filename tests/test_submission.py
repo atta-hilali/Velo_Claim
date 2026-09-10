@@ -367,6 +367,7 @@ def test_api_manual_actions_use_supported_audit_event_types(setup, monkeypatch):
 
     assert status_response.status_code == 200, status_response.text
     assert action_response.status_code == 200, action_response.text
+    assert services.repository.get_claim_detail(claim_id)['status'] == 'NEEDS_REVIEW'
     manual_events = [
         event
         for event in services.repository.audit_events

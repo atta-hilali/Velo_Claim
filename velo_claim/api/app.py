@@ -20,7 +20,7 @@ from pydantic import BaseModel, Field
 from velo_claim.core.container import ServiceContainer, build_container_from_env
 from velo_claim.builders.prior_auth.builder import PAClaimBuilderModule
 from velo_claim.builders.claim.builder import ClaimBuilderModule
-from velo_claim.core.enums import AuditEventType
+from velo_claim.core.enums import AuditEventType, PayloadStatus
 from velo_claim.core.utils import utc_now
 from velo_claim.fallback.checkpoints import MemoryCheckpointStore
 from velo_claim.ingestion.pdf_encounter import EncounterPdfExtractor, PdfExtractionError
@@ -476,15 +476,15 @@ def create_app(services: ServiceContainer | None = None):
         body = body or ActionRequest()
         action_key = action.strip().lower()
         if action_key in {"send_back", "sendback"}:
-            new_status = "review"
+            new_status = PayloadStatus.NEEDS_REVIEW
         elif action_key in {"escalate", "needs_review"}:
-            new_status = "review"
+            new_status = PayloadStatus.NEEDS_REVIEW
         elif action_key in {"approve_submit", "submit", "submitted"}:
             raise HTTPException(409, "Use payload approval and the controlled /submit endpoint.")
         elif action_key in {"hold", "hold_critical"}:
-            new_status = "hold"
+            new_status = PayloadStatus.HOLD_CRITICAL
         else:
-            new_status = str(detail.get("status") or "review")
+            new_status = str(detail.get("status") or PayloadStatus.NEEDS_REVIEW)
         metadata = {**body.metadata, "actor": actor, "action": action_key, "reason": body.reason, "note": body.note}
         services.repository.update_claim_status(claim_id, new_status, metadata)
         services.repository.insert_audit_event(

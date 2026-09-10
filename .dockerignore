@@ -2,7 +2,8 @@
 .gitignore
 .env
 keys/
-frontend/
+frontend/node_modules/
+frontend/dist/
 sample_inputs/
 sample_outputs/
 __pycache__/

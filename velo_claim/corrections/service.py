@@ -20,6 +20,7 @@ from velo_claim.corrections.patches import (
     UnsafeCorrectionError,
     apply_correction,
     get_canonical_value,
+    validate_correction_path,
     validate_proposed_value,
     values_equal,
 )
@@ -428,15 +429,24 @@ class CorrectionWorkflowService:
 
     def _cycle_response(self, cycle: dict[str, Any]) -> dict[str, Any]:
         cycle_id = str(cycle.get("cycle_id") or cycle.get("id"))
+        current_version = self.repository.get_current_claim_version(str(cycle.get("claim_id"))) or {}
+        canonical_claim = current_version.get("canonical_claim") or {}
         suggestions = []
         for row in self.repository.list_correction_suggestions(cycle_id):
             suggestion_id = str(row.get("suggestion_id") or row.get("id"))
+            field_path = str(row.get("field_path") or "")
+            try:
+                validate_correction_path(field_path)
+                get_canonical_value(canonical_claim, field_path)
+                can_modify = True
+            except UnsafeCorrectionError:
+                can_modify = False
             suggestions.append(
                 {
                     "id": suggestion_id,
                     "issue_ids": row.get("issue_ids") or [],
                     "issue_codes": row.get("issue_codes") or [],
-                    "field_path": row.get("field_path"),
+                    "field_path": field_path,
                     "old_value": row.get("old_value"),
                     "proposed_value": row.get("proposed_value"),
                     "source": str(row.get("source")),
@@ -445,6 +455,7 @@ class CorrectionWorkflowService:
                     "evidence": row.get("evidence") or {},
                     "rule_refs": row.get("rule_refs") or [],
                     "status": str(row.get("status")),
+                    "can_modify": can_modify,
                     "reviews": self.repository.list_correction_reviews(suggestion_id),
                 }
             )

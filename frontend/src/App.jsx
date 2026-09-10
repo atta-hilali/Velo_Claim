@@ -3,11 +3,18 @@ import React, { useState, useMemo } from "react";
 import {
   Bell, Search, ChevronDown, ChevronRight, X, Check, AlertTriangle,
   AlertCircle, Info, Clock, FileText, Shield, Activity, ListChecks,
-  RefreshCw, ArrowLeft, Hash, Filter, Upload, LoaderCircle
+  RefreshCw, ArrowLeft, Hash, Filter, Upload, LoaderCircle, Sparkles,
+  CheckCircle2, Pencil, XCircle, KeyRound, Play, History, GitCompareArrows
 } from "lucide-react";
 import {
+  applyCorrectionCycle,
+  fetchCorrectionCycles,
   fetchDesignClaims,
+  generateCorrections,
+  getReviewerToken,
+  reviewCorrection,
   runDesignClaimAction,
+  setReviewerToken,
   updateDesignClaimStatus,
   uploadEncounterPdf,
 } from "./designApi.js";
@@ -663,6 +670,400 @@ function ValidationTab({ claim }) {
   );
 }
 
+const CORRECTION_CYCLE_STYLE = {
+  GENERATING: { color: "#1864AB", bg: "#E8F2FC" },
+  AWAITING_HUMAN_REVIEW: { color: "#9A5700", bg: "#FDF1DF" },
+  PARTIALLY_REVIEWED: { color: "#1864AB", bg: "#E8F2FC" },
+  READY_TO_APPLY: { color: "#15883E", bg: "#E7F6EC" },
+  APPLIED: { color: "#37636A", bg: "#E8F6F8" },
+  REJECTED: { color: "#C22B2B", bg: "#FCE9E9" },
+  STALE: { color: "#5B6470", bg: "#EEF0F2" },
+  EXHAUSTED: { color: "#C22B2B", bg: "#FCE9E9" },
+};
+
+const CORRECTION_SUGGESTION_STYLE = {
+  PENDING_REVIEW: { color: "#9A5700", bg: "#FDF1DF" },
+  MANUAL_RECONCILIATION_REQUIRED: { color: "#B25E00", bg: "#FDF1DF" },
+  APPROVED: { color: "#15883E", bg: "#E7F6EC" },
+  MODIFIED: { color: "#1864AB", bg: "#E8F2FC" },
+  REJECTED: { color: "#C22B2B", bg: "#FCE9E9" },
+  STALE: { color: "#5B6470", bg: "#EEF0F2" },
+  APPLIED: { color: "#37636A", bg: "#E8F6F8" },
+};
+
+function readableStatus(value) {
+  const labels = { KG: "Knowledge Graph", LLM: "LLM", MIXED: "Mixed sources" };
+  if (labels[value]) return labels[value];
+  return String(value || "Unknown").toLowerCase().split("_").map(word =>
+    word ? word[0].toUpperCase() + word.slice(1) : word,
+  ).join(" ");
+}
+
+function formatCorrectionValue(value) {
+  if (value === undefined) return "Not set";
+  if (value === null) return "null";
+  if (typeof value === "string") return value || '""';
+  return JSON.stringify(value, null, 2);
+}
+
+function editableCorrectionValue(value) {
+  if (value === undefined || value === null) return "";
+  return typeof value === "string" ? value : JSON.stringify(value, null, 2);
+}
+
+function parseCorrectionValue(value, reference) {
+  if (typeof reference === "string") return value;
+  if (reference === undefined || reference === null) {
+    try { return JSON.parse(value); } catch { return value; }
+  }
+  try {
+    return JSON.parse(value);
+  } catch {
+    throw new Error("Enter a valid JSON value with the same type as the current field.");
+  }
+}
+
+function CorrectionStatusBadge({ status, suggestion = false }) {
+  const palette = suggestion ? CORRECTION_SUGGESTION_STYLE : CORRECTION_CYCLE_STYLE;
+  const style = palette[status] || { color: "#5B6470", bg: "#EEF0F2" };
+  return (
+    <span style={{
+      display: "inline-flex", alignItems: "center", padding: "3px 8px", borderRadius: 5,
+      fontSize: 10.5, lineHeight: 1.3, fontWeight: 800, textTransform: "uppercase",
+      color: style.color, background: style.bg,
+    }}>
+      {readableStatus(status)}
+    </span>
+  );
+}
+
+function CorrectionValue({ label, value, tone = "neutral" }) {
+  const colors = tone === "proposed"
+    ? { border: "#A9DCE3", bg: "#F2FAFB", label: "#0E8298" }
+    : { border: "#E4E7EB", bg: "#FAFBFC", label: "#6D747D" };
+  return (
+    <div style={{ minWidth: 0, border: `1px solid ${colors.border}`, background: colors.bg, borderRadius: 7, padding: "10px 12px" }}>
+      <div style={{ fontSize: 10.5, fontWeight: 800, color: colors.label, textTransform: "uppercase", marginBottom: 5 }}>{label}</div>
+      <pre style={{ margin: 0, color: "#1A1D21", fontSize: 12.5, fontFamily: "ui-monospace, SFMono-Regular, Consolas, monospace", lineHeight: 1.5, whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
+        {formatCorrectionValue(value)}
+      </pre>
+    </div>
+  );
+}
+
+function CorrectionsTab({ claim, onClaimUpdated }) {
+  const [token, setToken] = useState(() => getReviewerToken());
+  const [cycles, setCycles] = useState([]);
+  const [activeCycleId, setActiveCycleId] = useState("");
+  const [hasLoaded, setHasLoaded] = useState(false);
+  const [busy, setBusy] = useState("");
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [reviewEditor, setReviewEditor] = useState(null);
+  const [confirmApply, setConfirmApply] = useState(false);
+
+  const activeCycle = cycles.find(item => item.cycle?.id === activeCycleId) || cycles[cycles.length - 1] || null;
+  const suggestions = activeCycle?.suggestions || [];
+  const resolvedCount = suggestions.filter(item => ["APPROVED", "MODIFIED", "APPLIED"].includes(item.status)).length;
+
+  const refreshCycles = async (preferredCycleId) => {
+    const data = await fetchCorrectionCycles(claim.id);
+    const nextCycles = Array.isArray(data.cycles) ? data.cycles : [];
+    const preferred = nextCycles.find(item => item.cycle?.id === preferredCycleId);
+    setCycles(nextCycles);
+    setActiveCycleId(preferred?.cycle?.id || nextCycles[nextCycles.length - 1]?.cycle?.id || "");
+    setHasLoaded(true);
+    return nextCycles;
+  };
+
+  const run = async (key, action) => {
+    if (!token.trim()) {
+      setError("Reviewer access token is required.");
+      return null;
+    }
+    setReviewerToken(token.trim());
+    setBusy(key);
+    setError("");
+    setNotice("");
+    try {
+      return await action();
+    } catch (actionError) {
+      setError(actionError.message || "Correction action failed.");
+      return null;
+    } finally {
+      setBusy("");
+    }
+  };
+
+  const load = () => run("load", () => refreshCycles(activeCycleId));
+
+  const generate = () => run("generate", async () => {
+    const generated = await generateCorrections(claim.id);
+    await refreshCycles(generated.cycle?.id);
+    setNotice(`Correction cycle ${generated.cycle?.number || ""} is ready for review.`);
+  });
+
+  const approveSuggestion = (suggestion) => run(`approve:${suggestion.id}`, async () => {
+    const result = await reviewCorrection(claim.id, suggestion.id, { decision: "APPROVED" });
+    const preferredId = result.next_cycle?.cycle?.id || result.cycle?.cycle?.id || activeCycleId;
+    await refreshCycles(preferredId);
+    setNotice("Suggestion approved.");
+  });
+
+  const openReviewEditor = (suggestion, decision) => {
+    const initialValue = suggestion.proposed_value ?? suggestion.old_value;
+    setReviewEditor({
+      suggestion,
+      decision,
+      value: editableCorrectionValue(initialValue),
+      comment: "",
+    });
+    setError("");
+  };
+
+  const submitReview = () => {
+    const editor = reviewEditor;
+    if (!editor) return;
+    if (editor.decision === "REJECTED" && !editor.comment.trim()) {
+      setError("Add a reason before rejecting this suggestion.");
+      return;
+    }
+
+    let modifiedValue;
+    if (editor.decision === "MODIFIED") {
+      const reference = editor.suggestion.proposed_value ?? editor.suggestion.old_value;
+      try {
+        modifiedValue = parseCorrectionValue(editor.value, reference);
+      } catch (parseError) {
+        setError(parseError.message);
+        return;
+      }
+    }
+
+    run(`review:${editor.suggestion.id}`, async () => {
+      const result = await reviewCorrection(claim.id, editor.suggestion.id, {
+        decision: editor.decision,
+        ...(editor.decision === "MODIFIED" ? { modified_value: modifiedValue } : {}),
+        comment: editor.comment.trim() || null,
+      });
+      const preferredId = result.next_cycle?.cycle?.id || result.cycle?.cycle?.id || activeCycleId;
+      setReviewEditor(null);
+      await refreshCycles(preferredId);
+      setNotice(
+        editor.decision === "REJECTED"
+          ? result.next_cycle
+            ? "Suggestion rejected. The next correction cycle is ready for review."
+            : `Suggestion rejected. Cycle status: ${readableStatus(result.cycle?.cycle?.status)}.`
+          : "Reviewed value saved.",
+      );
+    });
+  };
+
+  const applyCycle = () => run("apply", async () => {
+    const result = await applyCorrectionCycle(claim.id, activeCycle.cycle.id);
+    setConfirmApply(false);
+    await onClaimUpdated(claim.id);
+    await refreshCycles(result.next_cycle?.cycle?.id || activeCycle.cycle.id);
+    const finalStatus = readableStatus(result.validation?.final_status);
+    setNotice(`Corrections applied to claim version ${result.new_claim_version}. Validation: ${finalStatus}.`);
+  });
+
+  return (
+    <div>
+      <div className="correction-toolbar">
+        <label className="correction-token-field">
+          <span>Reviewer access token</span>
+          <div>
+            <KeyRound size={14} color="#8A9099" />
+            <input
+              type="password"
+              autoComplete="off"
+              value={token}
+              onChange={event => {
+                setToken(event.target.value);
+                setReviewerToken(event.target.value);
+                setCycles([]);
+                setActiveCycleId("");
+                setHasLoaded(false);
+              }}
+            />
+          </div>
+        </label>
+        <button style={{ ...btnGhost, display: "inline-flex", alignItems: "center", gap: 7 }} disabled={Boolean(busy) || !token.trim()} onClick={load}>
+          {busy === "load" ? <LoaderCircle size={14} className="spin" /> : <RefreshCw size={14} />}
+          Load
+        </button>
+        <button style={{ ...btnPrimary, display: "inline-flex", alignItems: "center", gap: 7 }} disabled={Boolean(busy) || !token.trim() || claim.status !== "review"} onClick={generate}>
+          {busy === "generate" ? <LoaderCircle size={14} className="spin" /> : <Sparkles size={14} />}
+          Generate suggestions
+        </button>
+      </div>
+
+      {error && <div role="alert" className="correction-message correction-message-error"><AlertCircle size={15} />{error}</div>}
+      {notice && <div role="status" className="correction-message correction-message-success"><CheckCircle2 size={15} />{notice}</div>}
+
+      {hasLoaded && cycles.length === 0 && (
+        <div className="correction-empty">
+          <Sparkles size={24} color="#8A9099" />
+          <strong>No correction cycles</strong>
+          <span>{claim.status === "review" ? "Generate suggestions from the current validation report." : "This claim is not in a review state."}</span>
+        </div>
+      )}
+
+      {activeCycle && (
+        <>
+          <div className="correction-cycle-bar">
+            <div>
+              <span className="correction-kicker"><History size={13} /> Correction cycle</span>
+              <strong>Cycle {activeCycle.cycle.number}</strong>
+              <CorrectionStatusBadge status={activeCycle.cycle.status} />
+            </div>
+            <div className="correction-cycle-controls">
+              <span>{resolvedCount} of {suggestions.length} reviewed</span>
+              {cycles.length > 1 && (
+                <select value={activeCycle.cycle.id} onChange={event => setActiveCycleId(event.target.value)} aria-label="Correction cycle">
+                  {cycles.map(item => <option key={item.cycle.id} value={item.cycle.id}>Cycle {item.cycle.number}: {readableStatus(item.cycle.status)}</option>)}
+                </select>
+              )}
+              <button
+                style={{ ...btnPrimary, display: "inline-flex", alignItems: "center", gap: 7, opacity: activeCycle.cycle.status === "READY_TO_APPLY" ? 1 : 0.5 }}
+                disabled={Boolean(busy) || activeCycle.cycle.status !== "READY_TO_APPLY"}
+                onClick={() => setConfirmApply(true)}
+              >
+                {busy === "apply" ? <LoaderCircle size={14} className="spin" /> : <Play size={14} />}
+                Apply reviewed changes
+              </button>
+            </div>
+          </div>
+
+          <div className="correction-meta">
+            <span>Base claim <b>v{activeCycle.base_claim_version}</b></span>
+            <span>Payload <b>v{activeCycle.base_payload_version}</b></span>
+            <span>Validation report <b>{activeCycle.validation_report_id}</b></span>
+          </div>
+
+          <div className="correction-list">
+            {suggestions.map((suggestion, index) => {
+              const reviewable = ["PENDING_REVIEW", "MANUAL_RECONCILIATION_REQUIRED"].includes(suggestion.status);
+              const requiresValue = suggestion.status === "MANUAL_RECONCILIATION_REQUIRED";
+              const canModify = suggestion.can_modify !== false;
+              const review = suggestion.reviews?.[suggestion.reviews.length - 1];
+              const effectiveValue = review?.decision === "MODIFIED" ? review.modified_value : suggestion.proposed_value;
+              const hasEvidence = Object.keys(suggestion.evidence || {}).length > 0 || (suggestion.rule_refs || []).length > 0;
+              return (
+                <article className="correction-item" key={suggestion.id}>
+                  <header>
+                    <div className="correction-item-title">
+                      <span>{index + 1}</span>
+                      <div>
+                        <code>{suggestion.field_path}</code>
+                        <div>
+                          {(suggestion.issue_codes || []).map(code => <small key={code}>{code}</small>)}
+                        </div>
+                      </div>
+                    </div>
+                    <CorrectionStatusBadge status={suggestion.status} suggestion />
+                  </header>
+
+                  <div className="correction-values">
+                    <CorrectionValue label="Current value" value={suggestion.old_value} />
+                    <div className="correction-value-arrow"><GitCompareArrows size={17} /></div>
+                    <CorrectionValue
+                      label={review?.decision === "MODIFIED" ? "Reviewed value" : requiresValue ? "Reviewer value required" : "Proposed value"}
+                      value={effectiveValue}
+                      tone="proposed"
+                    />
+                  </div>
+
+                  <div className="correction-evidence">
+                    <div><b>{readableStatus(suggestion.source)}</b><span>{Math.round(Number(suggestion.confidence || 0) * 100)}% confidence</span></div>
+                    <p>{suggestion.rationale || "No rationale recorded."}</p>
+                    {review && <p className="correction-review-note"><b>{readableStatus(review.decision)}</b> by {review.reviewer_id}{review.comment ? `: ${review.comment}` : ""}</p>}
+                    {!canModify && reviewable && <p className="correction-review-note"><b>External reconciliation required.</b> This field is outside the canonical claim correction boundary.</p>}
+                    {hasEvidence && (
+                      <details className="correction-evidence-details">
+                        <summary>Evidence and rule references</summary>
+                        <pre>{JSON.stringify({ evidence: suggestion.evidence || {}, rule_refs: suggestion.rule_refs || [] }, null, 2)}</pre>
+                      </details>
+                    )}
+                  </div>
+
+                  {reviewable && (
+                    <footer>
+                      <button
+                        style={{ ...btnGhost, color: "#15883E", borderColor: "#A9D6B7", display: "inline-flex", alignItems: "center", gap: 6, opacity: requiresValue ? 0.45 : 1 }}
+                        disabled={Boolean(busy) || requiresValue}
+                        title={requiresValue ? "Enter a reviewed value with Modify" : "Approve proposed value"}
+                        onClick={() => approveSuggestion(suggestion)}
+                      >
+                        {busy === `approve:${suggestion.id}` ? <LoaderCircle size={14} className="spin" /> : <CheckCircle2 size={14} />}
+                        Approve
+                      </button>
+                      <button
+                        style={{ ...btnGhost, color: "#1864AB", display: "inline-flex", alignItems: "center", gap: 6, opacity: canModify ? 1 : 0.45 }}
+                        disabled={Boolean(busy) || !canModify}
+                        title={canModify ? "Enter a reviewed value" : "This field must be reconciled outside the canonical claim"}
+                        onClick={() => openReviewEditor(suggestion, "MODIFIED")}
+                      >
+                        <Pencil size={14} /> Modify
+                      </button>
+                      <button style={{ ...btnDanger, display: "inline-flex", alignItems: "center", gap: 6 }} disabled={Boolean(busy)} onClick={() => openReviewEditor(suggestion, "REJECTED")}>
+                        <XCircle size={14} /> Reject
+                      </button>
+                    </footer>
+                  )}
+                </article>
+              );
+            })}
+          </div>
+        </>
+      )}
+
+      {reviewEditor && (
+        <Modal title={reviewEditor.decision === "MODIFIED" ? "Modify correction" : "Reject correction"} onClose={() => !busy && setReviewEditor(null)}>
+          <div style={{ fontSize: 12, color: "#8A9099", marginBottom: 12, overflowWrap: "anywhere" }}>{reviewEditor.suggestion.field_path}</div>
+          {error && <div role="alert" className="correction-message correction-message-error"><AlertCircle size={15} />{error}</div>}
+          {reviewEditor.decision === "MODIFIED" && (
+            <label className="correction-editor-field">
+              <span>Reviewed value</span>
+              <textarea value={reviewEditor.value} onChange={event => setReviewEditor(current => ({ ...current, value: event.target.value }))} rows={5} />
+            </label>
+          )}
+          <label className="correction-editor-field">
+            <span>{reviewEditor.decision === "REJECTED" ? "Rejection reason" : "Review comment"}</span>
+            <textarea maxLength={4000} value={reviewEditor.comment} onChange={event => setReviewEditor(current => ({ ...current, comment: event.target.value }))} rows={3} />
+          </label>
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 16 }}>
+            <button style={btnGhost} disabled={Boolean(busy)} onClick={() => setReviewEditor(null)}>Cancel</button>
+            <button style={reviewEditor.decision === "REJECTED" ? btnDanger : btnPrimary} disabled={Boolean(busy)} onClick={submitReview}>
+              {busy.startsWith("review:") ? "Saving" : reviewEditor.decision === "REJECTED" ? "Reject suggestion" : "Save reviewed value"}
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {confirmApply && activeCycle && (
+        <Modal title="Apply correction cycle" onClose={() => !busy && setConfirmApply(false)}>
+          {error && <div role="alert" className="correction-message correction-message-error"><AlertCircle size={15} />{error}</div>}
+          <p style={{ margin: "0 0 8px", color: "#3A4048", fontSize: 13.5, lineHeight: 1.5 }}>
+            Apply {suggestions.length} reviewed {suggestions.length === 1 ? "change" : "changes"} to <b>{claim.id}</b>?
+          </p>
+          <p style={{ margin: 0, color: "#8A9099", fontSize: 12.5, lineHeight: 1.5 }}>
+            This creates claim version {activeCycle.base_claim_version + 1}, rebuilds the payload, and runs validation again.
+          </p>
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 18 }}>
+            <button style={btnGhost} disabled={Boolean(busy)} onClick={() => setConfirmApply(false)}>Cancel</button>
+            <button style={{ ...btnPrimary, display: "inline-flex", alignItems: "center", gap: 7 }} disabled={Boolean(busy)} onClick={applyCycle}>
+              {busy === "apply" ? <LoaderCircle size={14} className="spin" /> : <Play size={14} />}
+              {busy === "apply" ? "Applying" : "Apply and revalidate"}
+            </button>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
 function CollapsibleSection({ title, sub, count, children }) {
   const [open, setOpen] = useState(true);
   return (
@@ -904,6 +1305,7 @@ function ClaimDetail({ claim, onBack, onUpdateStatus }) {
 
   const tabs = [
     { key: "validation", label: "Validation Report", icon: ListChecks },
+    { key: "corrections", label: "Corrections", icon: Sparkles },
     { key: "payload", label: "Claim Payload", icon: FileText },
     { key: "priorauth", label: "Prior Authorization", icon: Shield },
     { key: "eligibility", label: "Eligibility", icon: Activity },
@@ -971,7 +1373,7 @@ function ClaimDetail({ claim, onBack, onUpdateStatus }) {
         </div>
       </div>
 
-      <div style={{ display: "flex", gap: 4, borderBottom: "1px solid #E4E7EB", marginBottom: 20 }}>
+      <div className="claim-tabs" style={{ display: "flex", gap: 4, borderBottom: "1px solid #E4E7EB", marginBottom: 20 }}>
         {tabs.map(t => {
           const Icon = t.icon;
           const active = tab === t.key;
@@ -988,6 +1390,7 @@ function ClaimDetail({ claim, onBack, onUpdateStatus }) {
       </div>
 
       {tab === "validation" && <ValidationTab claim={claim} />}
+      {tab === "corrections" && <CorrectionsTab claim={claim} onClaimUpdated={onUpdateStatus} />}
       {tab === "payload" && <PayloadTab claim={claim} />}
       {tab === "priorauth" && <PriorAuthTab claim={claim} />}
       {tab === "eligibility" && <EligibilityTab claim={claim} />}

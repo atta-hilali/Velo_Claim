@@ -1,5 +1,6 @@
 let reviewerToken = "";
 export function setReviewerToken(value) { reviewerToken = value; }
+export function getReviewerToken() { return reviewerToken; }
 const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL;
 const API_DISABLED = configuredApiBaseUrl === "fallback" || configuredApiBaseUrl === "off";
 const API_BASE_URL = API_DISABLED
@@ -171,7 +172,17 @@ async function requestJson(path, options = {}, raw = false) {
   });
 
   if (!response.ok) {
-    throw new Error(`API ${response.status}: ${await response.text()}`);
+    const responseBody = await response.text();
+    let detail = responseBody;
+    try {
+      const parsed = JSON.parse(responseBody);
+      detail = typeof parsed.detail === "string"
+        ? parsed.detail
+        : parsed.detail?.message || parsed.message || parsed.error || responseBody;
+    } catch {
+      // Keep the plain-text response as the error detail.
+    }
+    throw new Error(detail || `API ${response.status}: ${response.statusText}`);
   }
 
   return raw ? response : response.json();
@@ -234,6 +245,34 @@ export async function uploadEncounterPdf(file) {
     throw new Error(`${detail.message || `API ${response.status}`}${missing}${errorId}`);
   }
   return { ...data, claim: normalizeBackendClaim(data.claim) };
+}
+
+export async function fetchCorrectionCycles(claimId) {
+  return requestJson(`/claims/${encodeURIComponent(claimId)}/corrections`);
+}
+
+export async function generateCorrections(claimId, validationReportId) {
+  return requestJson(`/claims/${encodeURIComponent(claimId)}/corrections/generate`, {
+    method: "POST",
+    body: JSON.stringify(validationReportId ? { validation_report_id: validationReportId } : {}),
+  });
+}
+
+export async function reviewCorrection(claimId, suggestionId, review) {
+  return requestJson(
+    `/claims/${encodeURIComponent(claimId)}/corrections/${encodeURIComponent(suggestionId)}/review`,
+    {
+      method: "POST",
+      body: JSON.stringify(review),
+    },
+  );
+}
+
+export async function applyCorrectionCycle(claimId, cycleId) {
+  return requestJson(
+    `/claims/${encodeURIComponent(claimId)}/corrections/${encodeURIComponent(cycleId)}/apply`,
+    { method: "POST", body: JSON.stringify({}) },
+  );
 }
 
 export const submissionRequest = requestJson;

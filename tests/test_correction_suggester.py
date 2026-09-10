@@ -747,6 +747,26 @@ def test_correction_api_requires_auth_and_returns_frontend_shape(services, monke
     assert body["claim_id"] == claim_id
     assert body["cycle"]["status"] == "AWAITING_HUMAN_REVIEW"
     assert body["suggestions"][0]["field_path"] == "canonical_claim.amount.gross"
+    assert body["suggestions"][0]["can_modify"] is True
+
+
+def test_noncanonical_manual_suggestion_is_not_editable(services) -> None:
+    claim_id, report_id = _seed(
+        services,
+        issues=[
+            {
+                "check_type": "PAYLOAD_CONFORMITY",
+                "severity": "WARNING",
+                "code": "XSD_NOT_CONFIGURED",
+                "field": "schema",
+                "message": "Schema configuration is missing.",
+                "suggestion": "Configure the schema.",
+            }
+        ],
+    )
+    cycle = CorrectionWorkflowService(services).generate(claim_id, validation_report_id=report_id)
+    assert cycle["suggestions"][0]["source"] == "MANUAL_REQUIRED"
+    assert cycle["suggestions"][0]["can_modify"] is False
 
 
 def test_exact_requested_validation_report_is_loaded(services) -> None:

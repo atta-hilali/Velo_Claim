@@ -176,6 +176,16 @@ Example review body:
 }
 ```
 
+### Frontend review
+
+Open a claim and select **Corrections**. After entering a configured reviewer
+token, the console can load prior cycles, generate the current cycle, compare
+old and proposed values, inspect evidence, and approve, modify, or reject each
+suggestion. Manual findings outside the canonical correction boundary are
+marked for external reconciliation and cannot open the value editor. The apply
+control is enabled only for `READY_TO_APPLY` cycles and asks for confirmation
+before creating the next claim version and revalidating.
+
 ## Environment
 
 Production uses the shared graph configuration:

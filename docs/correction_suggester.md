@@ -151,6 +151,14 @@ docker exec -i velo-claim-postgres-containerized \
   < velo_claim/migrations/007_correction_workflow.sql
 ```
 
+Legacy DGX databases also require the additive audit-enum alignment migration:
+
+```bash
+docker exec -i velo-claim-postgres-containerized \
+  psql -U velo_claim -d velo_claim --single-transaction -v ON_ERROR_STOP=1 \
+  < velo_claim/migrations/008_correction_audit_enum_alignment.sql
+```
+
 Use the actual PostgreSQL container name from `docker ps` if it differs.
 
 ## API

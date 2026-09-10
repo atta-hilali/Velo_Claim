@@ -41,7 +41,7 @@ and LangGraph agents only orchestrate those modules.
 - `velo_claim/security/generate_jwks.py` preserves JWKS generation without
   exposing private keys.
 - `velo_claim/migrations/` contains the ordered PostgreSQL migrations. Apply
-  every unapplied migration through `007_correction_workflow.sql`.
+  every unapplied migration through `008_correction_audit_enum_alignment.sql`.
 - `data/schemas/shafafiya/v2.0/` contains the immutable official XSD release
   used for claims, eligibility, prior authorization, and remittance responses.
 

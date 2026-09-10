@@ -31,6 +31,8 @@ services:
       - CORRECTION_LLM_MIN_CONFIDENCE=${CORRECTION_LLM_MIN_CONFIDENCE:-0.80}
     tty: true
     stdin_open: true
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "8002:8002"
       - "5174:5173"

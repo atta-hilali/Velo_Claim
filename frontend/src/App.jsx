@@ -1,10 +1,11 @@
 import SubmissionPanel from "./SubmissionPanel.jsx";
-import React, { useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import {
   Bell, Search, ChevronDown, ChevronRight, X, Check, AlertTriangle,
   AlertCircle, Info, Clock, FileText, Shield, Activity, ListChecks,
   RefreshCw, ArrowLeft, Hash, Filter, Upload, LoaderCircle, Sparkles,
-  CheckCircle2, Pencil, XCircle, KeyRound, Play, History, GitCompareArrows
+  CheckCircle2, Pencil, XCircle, KeyRound, Play, History,
+  ArrowRight, Database, ListTodo, LockKeyhole, Settings
 } from "lucide-react";
 import {
   applyCorrectionCycle,
@@ -378,7 +379,7 @@ const COLOR_MAP = { ready: "#15883E", review: "#C7900A", hold: "#C22B2B", waitin
 
 function TopBar() {
   return (
-    <div style={{
+    <div className="top-bar" style={{
       height: 56, display: "flex", alignItems: "center", justifyContent: "space-between",
       padding: "0 24px", background: "#fff", borderBottom: "1px solid #E4E7EB", flexShrink: 0,
     }}>
@@ -399,7 +400,7 @@ function TopBar() {
         <ChevronRight size={14} color="#C2C7CD" />
         <span style={{ fontWeight: 600, fontSize: 13.5, color: "#0E8298", background: "#E8F6F8", padding: "3px 9px", borderRadius: 6 }}>Claim</span>
       </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+      <div className="top-bar-actions" style={{ display: "flex", alignItems: "center", gap: 16 }}>
         <div style={{ position: "relative" }}>
           <Bell size={18} color="#5B6470" />
           <span style={{
@@ -418,7 +419,7 @@ function TopBar() {
             color: "#fff", fontSize: 12, fontWeight: 700, display: "flex",
             alignItems: "center", justifyContent: "center",
           }}>SA</div>
-          <span style={{ fontSize: 13.5, fontWeight: 600, color: "#1A1D21" }}>Sara Al-Bloushi</span>
+          <span className="top-bar-user-name" style={{ fontSize: 13.5, fontWeight: 600, color: "#1A1D21" }}>Sara Al-Bloushi</span>
         </div>
       </div>
     </div>
@@ -723,6 +724,58 @@ function parseCorrectionValue(value, reference) {
   }
 }
 
+function correctionEditorValue(suggestion) {
+  const mode = suggestion.resolution?.input_mode;
+  const reference = suggestion.proposed_value ?? suggestion.old_value;
+  if (mode === "code" && reference && typeof reference === "object") return String(reference.code || "");
+  return editableCorrectionValue(reference);
+}
+
+function parsedEditorValue(editor) {
+  const reference = editor.suggestion.proposed_value ?? editor.suggestion.old_value;
+  if (editor.inputMode === "code") {
+    const code = editor.value.trim();
+    if (!code) throw new Error("Enter a procedure code.");
+    return { ...reference, code };
+  }
+  if (editor.inputMode === "text") {
+    const value = editor.value.trim();
+    if (!value) throw new Error(`Enter ${editor.inputLabel.toLowerCase()}.`);
+    return value;
+  }
+  return parseCorrectionValue(editor.value, reference);
+}
+
+function correctionValueSummary(value) {
+  if (value === undefined || value === null || value === "") return "Not provided";
+  if (typeof value !== "object") return String(value);
+  if (value.code) return `${value.code}${value.description ? ` - ${value.description}` : ""}`;
+  return formatCorrectionValue(value);
+}
+
+const CORRECTION_TASK_STYLE = {
+  SUGGESTED_CHANGE: { icon: Sparkles, label: "Suggested fix", color: "#126C32", bg: "#E7F6EC" },
+  REVIEWER_INPUT: { icon: Pencil, label: "Information needed", color: "#1864AB", bg: "#E8F2FC" },
+  CODE_REVIEW: { icon: ListTodo, label: "Coding review", color: "#7A5300", bg: "#FFF6DB" },
+  EXTERNAL_ACTION: { icon: Settings, label: "Setup or source task", color: "#7A4B00", bg: "#FDF1DF" },
+};
+
+function correctionResolution(suggestion) {
+  if (suggestion.resolution) return suggestion.resolution;
+  const codes = new Set(suggestion.issue_codes || []);
+  if (suggestion.proposed_value !== null && suggestion.proposed_value !== undefined) {
+    return { kind: "SUGGESTED_CHANGE", title: "Suggested fix", summary: suggestion.rationale, action_label: "Use suggested fix", input_label: "Corrected value", input_mode: "value" };
+  }
+  if (suggestion.can_modify === false) {
+    if (codes.has("FACILITY_LICENSE_MISSING")) return { kind: "EXTERNAL_ACTION", title: "Add the facility license", summary: "Update the verified facility record, then rebuild and validate this claim.", input_mode: "none" };
+    if (codes.has("XSD_NOT_CONFIGURED")) return { kind: "EXTERNAL_ACTION", title: "Configure ECLAIMLINK validation", summary: "Set the claim XSD path on the backend, then rerun validation.", input_mode: "none" };
+    return { kind: "EXTERNAL_ACTION", title: "Resolve in the source system", summary: suggestion.rationale, input_mode: "none" };
+  }
+  if (codes.has("ENCOUNTER_MISSING")) return { kind: "REVIEWER_INPUT", title: "Encounter ID needed", summary: "Enter the encounter ID from the EHR or source encounter record.", action_label: "Enter encounter ID", input_label: "Encounter ID", input_mode: "text" };
+  if (codes.has("DIAGNOSIS_PROCEDURE_KNOWLEDGE_UNKNOWN")) return { kind: "CODE_REVIEW", title: `Verify procedure ${suggestion.old_value?.code || "code"}`, summary: "Confirm or replace this code using the clinical documentation and coding source.", action_label: "Review procedure", input_label: "Procedure code", input_mode: "code" };
+  return { kind: "REVIEWER_INPUT", title: "Reviewer input needed", summary: suggestion.rationale, action_label: "Enter value", input_label: "Corrected value", input_mode: "value" };
+}
+
 function CorrectionStatusBadge({ status, suggestion = false }) {
   const palette = suggestion ? CORRECTION_SUGGESTION_STYLE : CORRECTION_CYCLE_STYLE;
   const style = palette[status] || { color: "#5B6470", bg: "#EEF0F2" };
@@ -734,20 +787,6 @@ function CorrectionStatusBadge({ status, suggestion = false }) {
     }}>
       {readableStatus(status)}
     </span>
-  );
-}
-
-function CorrectionValue({ label, value, tone = "neutral" }) {
-  const colors = tone === "proposed"
-    ? { border: "#A9DCE3", bg: "#F2FAFB", label: "#0E8298" }
-    : { border: "#E4E7EB", bg: "#FAFBFC", label: "#6D747D" };
-  return (
-    <div style={{ minWidth: 0, border: `1px solid ${colors.border}`, background: colors.bg, borderRadius: 7, padding: "10px 12px" }}>
-      <div style={{ fontSize: 10.5, fontWeight: 800, color: colors.label, textTransform: "uppercase", marginBottom: 5 }}>{label}</div>
-      <pre style={{ margin: 0, color: "#1A1D21", fontSize: 12.5, fontFamily: "ui-monospace, SFMono-Regular, Consolas, monospace", lineHeight: 1.5, whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
-        {formatCorrectionValue(value)}
-      </pre>
-    </div>
   );
 }
 
@@ -764,7 +803,12 @@ function CorrectionsTab({ claim, onClaimUpdated }) {
 
   const activeCycle = cycles.find(item => item.cycle?.id === activeCycleId) || cycles[cycles.length - 1] || null;
   const suggestions = activeCycle?.suggestions || [];
-  const resolvedCount = suggestions.filter(item => ["APPROVED", "MODIFIED", "APPLIED"].includes(item.status)).length;
+  const actionableSuggestions = suggestions.filter(item => correctionResolution(item).kind !== "EXTERNAL_ACTION");
+  const reviewLimitReached = Number(activeCycle?.cycle?.number || 0) >= 3;
+  const externalSuggestions = suggestions.filter(item => correctionResolution(item).kind === "EXTERNAL_ACTION");
+  const resolvedCount = actionableSuggestions.filter(item => ["APPROVED", "MODIFIED", "APPLIED"].includes(item.status)).length;
+  const suggestedCount = suggestions.filter(item => correctionResolution(item).kind === "SUGGESTED_CHANGE" && item.status === "PENDING_REVIEW").length;
+  const inputCount = actionableSuggestions.filter(item => item.status === "MANUAL_RECONCILIATION_REQUIRED").length;
 
   const refreshCycles = async (preferredCycleId) => {
     const data = await fetchCorrectionCycles(claim.id);
@@ -775,6 +819,25 @@ function CorrectionsTab({ claim, onClaimUpdated }) {
     setHasLoaded(true);
     return nextCycles;
   };
+
+  useEffect(() => {
+    let current = true;
+    if (!token.trim()) return () => { current = false; };
+    setReviewerToken(token.trim());
+    setBusy("load");
+    setError("");
+    fetchCorrectionCycles(claim.id)
+      .then(data => {
+        if (!current) return;
+        const nextCycles = Array.isArray(data.cycles) ? data.cycles : [];
+        setCycles(nextCycles);
+        setActiveCycleId(nextCycles[nextCycles.length - 1]?.cycle?.id || "");
+        setHasLoaded(true);
+      })
+      .catch(actionError => current && setError(actionError.message || "Could not load correction tasks."))
+      .finally(() => current && setBusy(""));
+    return () => { current = false; };
+  }, [claim.id]);
 
   const run = async (key, action) => {
     if (!token.trim()) {
@@ -798,9 +861,19 @@ function CorrectionsTab({ claim, onClaimUpdated }) {
   const load = () => run("load", () => refreshCycles(activeCycleId));
 
   const generate = () => run("generate", async () => {
-    const generated = await generateCorrections(claim.id);
+    const forceNew = Boolean(activeCycle && activeCycle.cycle?.status !== "GENERATING");
+    const generated = await generateCorrections(claim.id, undefined, forceNew);
     await refreshCycles(generated.cycle?.id);
-    setNotice(`Correction cycle ${generated.cycle?.number || ""} is ready for review.`);
+    setNotice(`Review plan ${generated.cycle?.number || ""} is ready.`);
+  });
+
+  const approveAllSuggested = () => run("approve-all", async () => {
+    const pending = suggestions.filter(item => correctionResolution(item).kind === "SUGGESTED_CHANGE" && item.status === "PENDING_REVIEW");
+    for (const suggestion of pending) {
+      await reviewCorrection(claim.id, suggestion.id, { decision: "APPROVED" });
+    }
+    await refreshCycles(activeCycleId);
+    setNotice(`${pending.length} suggested ${pending.length === 1 ? "fix" : "fixes"} accepted.`);
   });
 
   const approveSuggestion = (suggestion) => run(`approve:${suggestion.id}`, async () => {
@@ -811,12 +884,15 @@ function CorrectionsTab({ claim, onClaimUpdated }) {
   });
 
   const openReviewEditor = (suggestion, decision) => {
-    const initialValue = suggestion.proposed_value ?? suggestion.old_value;
+    const resolution = correctionResolution(suggestion);
     setReviewEditor({
       suggestion,
       decision,
-      value: editableCorrectionValue(initialValue),
+      value: correctionEditorValue(suggestion),
       comment: "",
+      inputMode: resolution.input_mode || "value",
+      inputLabel: resolution.input_label || "Corrected value",
+      inputHint: resolution.input_hint || "",
     });
     setError("");
   };
@@ -831,9 +907,8 @@ function CorrectionsTab({ claim, onClaimUpdated }) {
 
     let modifiedValue;
     if (editor.decision === "MODIFIED") {
-      const reference = editor.suggestion.proposed_value ?? editor.suggestion.old_value;
       try {
-        modifiedValue = parseCorrectionValue(editor.value, reference);
+        modifiedValue = parsedEditorValue(editor);
       } catch (parseError) {
         setError(parseError.message);
         return;
@@ -872,12 +947,13 @@ function CorrectionsTab({ claim, onClaimUpdated }) {
     <div>
       <div className="correction-toolbar">
         <label className="correction-token-field">
-          <span>Reviewer access token</span>
+          <span>Reviewer access</span>
           <div>
             <KeyRound size={14} color="#8A9099" />
             <input
               type="password"
               autoComplete="off"
+              placeholder="Enter reviewer token"
               value={token}
               onChange={event => {
                 setToken(event.target.value);
@@ -891,11 +967,16 @@ function CorrectionsTab({ claim, onClaimUpdated }) {
         </label>
         <button style={{ ...btnGhost, display: "inline-flex", alignItems: "center", gap: 7 }} disabled={Boolean(busy) || !token.trim()} onClick={load}>
           {busy === "load" ? <LoaderCircle size={14} className="spin" /> : <RefreshCw size={14} />}
-          Load
+          Refresh
         </button>
-        <button style={{ ...btnPrimary, display: "inline-flex", alignItems: "center", gap: 7 }} disabled={Boolean(busy) || !token.trim() || claim.status !== "review"} onClick={generate}>
+        <button
+          style={{ ...btnPrimary, display: "inline-flex", alignItems: "center", gap: 7 }}
+          disabled={Boolean(busy) || !token.trim() || claim.status !== "review" || reviewLimitReached}
+          title={reviewLimitReached ? "The maximum of three correction cycles has been reached." : undefined}
+          onClick={generate}
+        >
           {busy === "generate" ? <LoaderCircle size={14} className="spin" /> : <Sparkles size={14} />}
-          Generate suggestions
+          {reviewLimitReached ? "Review limit reached" : activeCycle ? "Re-analyze" : "Analyze issues"}
         </button>
       </div>
 
@@ -905,8 +986,13 @@ function CorrectionsTab({ claim, onClaimUpdated }) {
       {hasLoaded && cycles.length === 0 && (
         <div className="correction-empty">
           <Sparkles size={24} color="#8A9099" />
-          <strong>No correction cycles</strong>
-          <span>{claim.status === "review" ? "Generate suggestions from the current validation report." : "This claim is not in a review state."}</span>
+          <strong>No correction tasks yet</strong>
+          <span>{claim.status === "review" ? "Analyze this claim to prepare reviewer tasks." : "This claim is not in a review state."}</span>
+          {claim.status === "review" && (
+            <button style={{ ...btnPrimary, display: "inline-flex", alignItems: "center", gap: 7, marginTop: 6 }} disabled={Boolean(busy)} onClick={generate}>
+              <Sparkles size={14} /> Analyze issues
+            </button>
+          )}
         </div>
       )}
 
@@ -914,12 +1000,12 @@ function CorrectionsTab({ claim, onClaimUpdated }) {
         <>
           <div className="correction-cycle-bar">
             <div>
-              <span className="correction-kicker"><History size={13} /> Correction cycle</span>
+              <span className="correction-kicker"><History size={13} /> Review plan</span>
               <strong>Cycle {activeCycle.cycle.number}</strong>
               <CorrectionStatusBadge status={activeCycle.cycle.status} />
             </div>
             <div className="correction-cycle-controls">
-              <span>{resolvedCount} of {suggestions.length} reviewed</span>
+              <span>{resolvedCount} of {actionableSuggestions.length} claim tasks completed</span>
               {cycles.length > 1 && (
                 <select value={activeCycle.cycle.id} onChange={event => setActiveCycleId(event.target.value)} aria-label="Correction cycle">
                   {cycles.map(item => <option key={item.cycle.id} value={item.cycle.id}>Cycle {item.cycle.number}: {readableStatus(item.cycle.status)}</option>)}
@@ -929,60 +1015,79 @@ function CorrectionsTab({ claim, onClaimUpdated }) {
                 style={{ ...btnPrimary, display: "inline-flex", alignItems: "center", gap: 7, opacity: activeCycle.cycle.status === "READY_TO_APPLY" ? 1 : 0.5 }}
                 disabled={Boolean(busy) || activeCycle.cycle.status !== "READY_TO_APPLY"}
                 onClick={() => setConfirmApply(true)}
+                title={activeCycle.cycle.status === "READY_TO_APPLY" ? "Create a corrected claim version" : "Complete all claim tasks before applying"}
               >
                 {busy === "apply" ? <LoaderCircle size={14} className="spin" /> : <Play size={14} />}
-                Apply reviewed changes
+                Apply fixes
               </button>
             </div>
           </div>
 
-          <div className="correction-meta">
-            <span>Base claim <b>v{activeCycle.base_claim_version}</b></span>
-            <span>Payload <b>v{activeCycle.base_payload_version}</b></span>
-            <span>Validation report <b>{activeCycle.validation_report_id}</b></span>
+          <div className="correction-summary">
+            <div><Sparkles size={16} /><span><b>{suggestedCount}</b> suggested fixes</span></div>
+            <div><Pencil size={16} /><span><b>{inputCount}</b> need your input</span></div>
+            <div><Settings size={16} /><span><b>{externalSuggestions.length}</b> source or setup tasks</span></div>
+            {suggestedCount > 1 && (
+              <button style={btnGhost} disabled={Boolean(busy)} onClick={approveAllSuggested}>
+                {busy === "approve-all" ? "Accepting..." : "Accept all suggested"}
+              </button>
+            )}
           </div>
 
+          {externalSuggestions.length > 0 && (
+            <div className="correction-blocker-note">
+              <LockKeyhole size={16} />
+              <span><b>{externalSuggestions.length} {externalSuggestions.length === 1 ? "task is" : "tasks are"} outside this claim.</b> Complete them in the source system or backend configuration, then rebuild and validate the claim.</span>
+            </div>
+          )}
+
+          {actionableSuggestions.length > 0 && <div className="correction-section-title">Claim fixes</div>}
           <div className="correction-list">
-            {suggestions.map((suggestion, index) => {
+            {actionableSuggestions.map((suggestion, index) => {
               const reviewable = ["PENDING_REVIEW", "MANUAL_RECONCILIATION_REQUIRED"].includes(suggestion.status);
               const requiresValue = suggestion.status === "MANUAL_RECONCILIATION_REQUIRED";
               const canModify = suggestion.can_modify !== false;
               const review = suggestion.reviews?.[suggestion.reviews.length - 1];
               const effectiveValue = review?.decision === "MODIFIED" ? review.modified_value : suggestion.proposed_value;
               const hasEvidence = Object.keys(suggestion.evidence || {}).length > 0 || (suggestion.rule_refs || []).length > 0;
+              const resolution = correctionResolution(suggestion);
+              const taskStyle = CORRECTION_TASK_STYLE[resolution.kind] || CORRECTION_TASK_STYLE.REVIEWER_INPUT;
+              const TaskIcon = taskStyle.icon;
               return (
-                <article className="correction-item" key={suggestion.id}>
+                <article className={`correction-item correction-item-${String(resolution.kind || "input").toLowerCase()}`} key={suggestion.id}>
                   <header>
                     <div className="correction-item-title">
-                      <span>{index + 1}</span>
+                      <span style={{ color: taskStyle.color, background: taskStyle.bg }}><TaskIcon size={13} /></span>
                       <div>
-                        <code>{suggestion.field_path}</code>
-                        <div>
-                          {(suggestion.issue_codes || []).map(code => <small key={code}>{code}</small>)}
-                        </div>
+                        <strong>{resolution.title || `Claim task ${index + 1}`}</strong>
+                        <p>{resolution.summary || suggestion.rationale}</p>
                       </div>
                     </div>
-                    <CorrectionStatusBadge status={suggestion.status} suggestion />
+                    <span className="correction-task-kind" style={{ color: taskStyle.color, background: taskStyle.bg }}>{taskStyle.label}</span>
                   </header>
 
-                  <div className="correction-values">
-                    <CorrectionValue label="Current value" value={suggestion.old_value} />
-                    <div className="correction-value-arrow"><GitCompareArrows size={17} /></div>
-                    <CorrectionValue
-                      label={review?.decision === "MODIFIED" ? "Reviewed value" : requiresValue ? "Reviewer value required" : "Proposed value"}
-                      value={effectiveValue}
-                      tone="proposed"
-                    />
+                  <div className="correction-task-body">
+                    <div className="correction-current-value">
+                      <span>{resolution.kind === "CODE_REVIEW" ? "Current procedure" : "Current value"}</span>
+                      <b>{correctionValueSummary(suggestion.old_value)}</b>
+                    </div>
+                    {effectiveValue !== null && effectiveValue !== undefined && (
+                      <>
+                        <ArrowRight size={16} className="correction-task-arrow" />
+                        <div className="correction-proposed-value">
+                          <span>{review?.decision === "MODIFIED" ? "Reviewed value" : "Recommended value"}</span>
+                          <b>{correctionValueSummary(effectiveValue)}</b>
+                        </div>
+                      </>
+                    )}
                   </div>
 
                   <div className="correction-evidence">
-                    <div><b>{readableStatus(suggestion.source)}</b><span>{Math.round(Number(suggestion.confidence || 0) * 100)}% confidence</span></div>
-                    <p>{suggestion.rationale || "No rationale recorded."}</p>
                     {review && <p className="correction-review-note"><b>{readableStatus(review.decision)}</b> by {review.reviewer_id}{review.comment ? `: ${review.comment}` : ""}</p>}
-                    {!canModify && reviewable && <p className="correction-review-note"><b>External reconciliation required.</b> This field is outside the canonical claim correction boundary.</p>}
                     {hasEvidence && (
                       <details className="correction-evidence-details">
-                        <summary>Evidence and rule references</summary>
+                        <summary><Database size={13} /> Evidence and technical details</summary>
+                        <div className="correction-technical-path">Field: {suggestion.field_path}</div>
                         <pre>{JSON.stringify({ evidence: suggestion.evidence || {}, rule_refs: suggestion.rule_refs || [] }, null, 2)}</pre>
                       </details>
                     )}
@@ -990,25 +1095,27 @@ function CorrectionsTab({ claim, onClaimUpdated }) {
 
                   {reviewable && (
                     <footer>
+                      {!requiresValue && (
+                        <button
+                          style={{ ...btnGhost, color: "#15883E", borderColor: "#A9D6B7", display: "inline-flex", alignItems: "center", gap: 6 }}
+                          disabled={Boolean(busy)}
+                          title="Accept the recommended value"
+                          onClick={() => approveSuggestion(suggestion)}
+                        >
+                          {busy === `approve:${suggestion.id}` ? <LoaderCircle size={14} className="spin" /> : <CheckCircle2 size={14} />}
+                          {resolution.action_label || "Use suggested fix"}
+                        </button>
+                      )}
                       <button
-                        style={{ ...btnGhost, color: "#15883E", borderColor: "#A9D6B7", display: "inline-flex", alignItems: "center", gap: 6, opacity: requiresValue ? 0.45 : 1 }}
-                        disabled={Boolean(busy) || requiresValue}
-                        title={requiresValue ? "Enter a reviewed value with Modify" : "Approve proposed value"}
-                        onClick={() => approveSuggestion(suggestion)}
-                      >
-                        {busy === `approve:${suggestion.id}` ? <LoaderCircle size={14} className="spin" /> : <CheckCircle2 size={14} />}
-                        Approve
-                      </button>
-                      <button
-                        style={{ ...btnGhost, color: "#1864AB", display: "inline-flex", alignItems: "center", gap: 6, opacity: canModify ? 1 : 0.45 }}
+                        style={{ ...(requiresValue ? btnPrimary : btnGhost), color: requiresValue ? undefined : "#1864AB", display: "inline-flex", alignItems: "center", gap: 6, opacity: canModify ? 1 : 0.45 }}
                         disabled={Boolean(busy) || !canModify}
-                        title={canModify ? "Enter a reviewed value" : "This field must be reconciled outside the canonical claim"}
+                        title="Enter a verified value"
                         onClick={() => openReviewEditor(suggestion, "MODIFIED")}
                       >
-                        <Pencil size={14} /> Modify
+                        <Pencil size={14} /> {requiresValue ? resolution.action_label || "Enter value" : "Edit instead"}
                       </button>
                       <button style={{ ...btnDanger, display: "inline-flex", alignItems: "center", gap: 6 }} disabled={Boolean(busy)} onClick={() => openReviewEditor(suggestion, "REJECTED")}>
-                        <XCircle size={14} /> Reject
+                        <XCircle size={14} /> Cannot resolve
                       </button>
                     </footer>
                   )}
@@ -1016,27 +1123,66 @@ function CorrectionsTab({ claim, onClaimUpdated }) {
               );
             })}
           </div>
+
+          {externalSuggestions.length > 0 && <div className="correction-section-title correction-section-title-external">Source and setup tasks</div>}
+          <div className="correction-list">
+            {externalSuggestions.map(suggestion => {
+              const resolution = correctionResolution(suggestion);
+              const taskStyle = CORRECTION_TASK_STYLE.EXTERNAL_ACTION;
+              const TaskIcon = suggestion.issue_codes?.includes("XSD_NOT_CONFIGURED") ? Settings : LockKeyhole;
+              const hasEvidence = Object.keys(suggestion.evidence || {}).length > 0;
+              return (
+                <article className="correction-item correction-item-external" key={suggestion.id}>
+                  <header>
+                    <div className="correction-item-title">
+                      <span style={{ color: taskStyle.color, background: taskStyle.bg }}><TaskIcon size={13} /></span>
+                      <div><strong>{resolution.title}</strong><p>{resolution.summary}</p></div>
+                    </div>
+                    <span className="correction-task-kind" style={{ color: taskStyle.color, background: taskStyle.bg }}>{taskStyle.label}</span>
+                  </header>
+                  {hasEvidence && (
+                    <div className="correction-evidence">
+                      <details className="correction-evidence-details">
+                        <summary><Database size={13} /> Evidence and technical details</summary>
+                        <div className="correction-technical-path">Field: {suggestion.field_path}</div>
+                        <pre>{JSON.stringify(suggestion.evidence, null, 2)}</pre>
+                      </details>
+                    </div>
+                  )}
+                </article>
+              );
+            })}
+          </div>
+
+          <details className="correction-cycle-details">
+            <summary>Cycle details</summary>
+            <div className="correction-meta">
+              <span>Base claim <b>v{activeCycle.base_claim_version}</b></span>
+              <span>Payload <b>v{activeCycle.base_payload_version}</b></span>
+              <span>Validation report <b>{activeCycle.validation_report_id}</b></span>
+            </div>
+          </details>
         </>
       )}
 
       {reviewEditor && (
-        <Modal title={reviewEditor.decision === "MODIFIED" ? "Modify correction" : "Reject correction"} onClose={() => !busy && setReviewEditor(null)}>
-          <div style={{ fontSize: 12, color: "#8A9099", marginBottom: 12, overflowWrap: "anywhere" }}>{reviewEditor.suggestion.field_path}</div>
+        <Modal title={reviewEditor.decision === "MODIFIED" ? correctionResolution(reviewEditor.suggestion).title : "Cannot resolve this task"} onClose={() => !busy && setReviewEditor(null)}>
           {error && <div role="alert" className="correction-message correction-message-error"><AlertCircle size={15} />{error}</div>}
           {reviewEditor.decision === "MODIFIED" && (
             <label className="correction-editor-field">
-              <span>Reviewed value</span>
-              <textarea value={reviewEditor.value} onChange={event => setReviewEditor(current => ({ ...current, value: event.target.value }))} rows={5} />
+              <span>{reviewEditor.inputLabel}</span>
+              <input autoFocus value={reviewEditor.value} onChange={event => setReviewEditor(current => ({ ...current, value: event.target.value }))} />
+              {reviewEditor.inputHint && <small>{reviewEditor.inputHint}</small>}
             </label>
           )}
           <label className="correction-editor-field">
-            <span>{reviewEditor.decision === "REJECTED" ? "Rejection reason" : "Review comment"}</span>
+            <span>{reviewEditor.decision === "REJECTED" ? "What is blocking this task?" : "Review note (optional)"}</span>
             <textarea maxLength={4000} value={reviewEditor.comment} onChange={event => setReviewEditor(current => ({ ...current, comment: event.target.value }))} rows={3} />
           </label>
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 16 }}>
             <button style={btnGhost} disabled={Boolean(busy)} onClick={() => setReviewEditor(null)}>Cancel</button>
             <button style={reviewEditor.decision === "REJECTED" ? btnDanger : btnPrimary} disabled={Boolean(busy)} onClick={submitReview}>
-              {busy.startsWith("review:") ? "Saving" : reviewEditor.decision === "REJECTED" ? "Reject suggestion" : "Save reviewed value"}
+              {busy.startsWith("review:") ? "Saving" : reviewEditor.decision === "REJECTED" ? "Save blocker" : "Save value"}
             </button>
           </div>
         </Modal>

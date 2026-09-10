@@ -18,6 +18,7 @@ from velo_claim.submission.api import reviewer
 
 class GenerateCorrectionsIn(BaseModel):
     validation_report_id: str | None = None
+    force_new: bool = False
 
 
 class ReviewCorrectionIn(BaseModel):
@@ -57,6 +58,7 @@ def build_correction_router(get_services) -> APIRouter:
             lambda: service().generate(
                 claim_id,
                 validation_report_id=body.validation_report_id,
+                force_new=body.force_new,
             )
         )
 

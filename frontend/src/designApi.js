@@ -1,5 +1,11 @@
-let reviewerToken = "";
-export function setReviewerToken(value) { reviewerToken = value; }
+const REVIEWER_TOKEN_KEY = "velo-claim-reviewer-token";
+let reviewerToken = typeof sessionStorage === "undefined" ? "" : sessionStorage.getItem(REVIEWER_TOKEN_KEY) || "";
+export function setReviewerToken(value) {
+  reviewerToken = value;
+  if (typeof sessionStorage === "undefined") return;
+  if (value) sessionStorage.setItem(REVIEWER_TOKEN_KEY, value);
+  else sessionStorage.removeItem(REVIEWER_TOKEN_KEY);
+}
 export function getReviewerToken() { return reviewerToken; }
 const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL;
 const API_DISABLED = configuredApiBaseUrl === "fallback" || configuredApiBaseUrl === "off";
@@ -251,10 +257,13 @@ export async function fetchCorrectionCycles(claimId) {
   return requestJson(`/claims/${encodeURIComponent(claimId)}/corrections`);
 }
 
-export async function generateCorrections(claimId, validationReportId) {
+export async function generateCorrections(claimId, validationReportId, forceNew = false) {
   return requestJson(`/claims/${encodeURIComponent(claimId)}/corrections/generate`, {
     method: "POST",
-    body: JSON.stringify(validationReportId ? { validation_report_id: validationReportId } : {}),
+    body: JSON.stringify({
+      ...(validationReportId ? { validation_report_id: validationReportId } : {}),
+      ...(forceNew ? { force_new: true } : {}),
+    }),
   });
 }
 

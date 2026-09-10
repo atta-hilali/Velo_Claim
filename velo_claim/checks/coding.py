@@ -16,6 +16,7 @@ def check_coding_consistency(state: dict, kg_client: Neo4jClientInterface) -> Ch
     procedures = claim.get("procedures", []) or claim.get("line_items", [])
     issues: list[CheckIssue] = []
     evidence: list[dict] = []
+    reviewed_codes = {str(code) for code in state.get("correction_reviewed_coding_codes", [])}
     if not diagnoses:
         issues.append(_issue("DIAGNOSIS_MISSING", Severity.ERROR, "canonical_claim.diagnoses",
                              "No diagnosis code is present.", 20))
@@ -52,6 +53,8 @@ def check_coding_consistency(state: dict, kg_client: Neo4jClientInterface) -> Ch
             )
             continue
         explicitly_unsupported = any(result.status == KnowledgeStatus.NOT_SUPPORTED for result in results)
+        if not explicitly_unsupported and str(procedure.get("code")) in reviewed_codes:
+            continue
         llm_evidence = _llm_coding_review(state, procedure) if _llm_enabled() else None
         issues.append(
             _issue(
@@ -74,6 +77,7 @@ def check_coding_consistency(state: dict, kg_client: Neo4jClientInterface) -> Ch
             str(KnowledgeStatus.UNAVAILABLE),
             str(KnowledgeStatus.CONFLICT),
         }
+        and str(result.get("procedure_code")) not in reviewed_codes
         for result in evidence
     )
     status = "PASS" if not issues else "REVIEW_REQUIRED" if requires_review else "REVIEW"

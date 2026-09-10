@@ -11,6 +11,7 @@ from velo_claim.api.app import create_app
 from velo_claim.agents.claim_validation import run_claim_validation
 from velo_claim.agents.correction_suggester import CorrectionContextError, run_correction_suggester
 from velo_claim.builders.claim.builder import ClaimBuilderModule
+from velo_claim.checks.coding import check_coding_consistency
 from velo_claim.core.container import build_default_container
 from velo_claim.core.enums import Severity
 from velo_claim.core.models import CheckIssue, CheckResult
@@ -942,6 +943,129 @@ def test_invalid_medgemma_json_is_rejected(monkeypatch) -> None:
     monkeypatch.setattr("urllib.request.urlopen", lambda request, timeout: Response())
     with pytest.raises(json.JSONDecodeError):
         client.resolve({"issue": "test"})
+
+
+def test_medgemma_dgx_chat_response_is_supported(monkeypatch) -> None:
+    client = CorrectionLLMClient(
+        enabled=True,
+        base_url="http://model-server.test/v1",
+        api_key="",
+        model="medgemma-4b-it",
+        api_style="openai_chat",
+        generate_path="/generate",
+        timeout_seconds=1,
+        minimum_confidence=0.8,
+    )
+    captured = {}
+
+    class Response:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def read(self):
+            content = json.dumps(
+                {
+                    "can_suggest": True,
+                    "field_path": "canonical_claim.encounter.type",
+                    "current_value": "AMB",
+                    "proposed_value": "EMER",
+                    "rationale": "Supported by the source encounter.",
+                    "confidence": 0.95,
+                    "evidence_refs": ["source:source_context.encounter.type"],
+                    "rule_refs": [],
+                    "requires_manual_reconciliation": False,
+                }
+            )
+            return json.dumps({"role": "assistant", "content": f"```json\n{content}\n```"}).encode()
+
+    def open_request(request, timeout):
+        captured.update(json.loads(request.data.decode()))
+        return Response()
+
+    monkeypatch.setattr("urllib.request.urlopen", open_request)
+    result = client.resolve({"issue": "test"})
+    assert result.proposed_value == "EMER"
+    assert captured["stream"] is False
+    assert captured["temperature"] == 0.01
+
+
+def test_cycle_response_explains_reviewer_input(services) -> None:
+    canonical = _canonical()
+    canonical["encounter"]["id"] = None
+    claim_id, report_id = _seed(
+        services,
+        canonical=canonical,
+        issues=[
+            {
+                "check_type": "DOCUMENTATION",
+                "severity": "ERROR",
+                "code": "ENCOUNTER_MISSING",
+                "field": "canonical_claim.encounter.id",
+                "message": "Encounter reference is missing.",
+                "suggestion": "Enter the source encounter ID.",
+            }
+        ],
+    )
+    cycle = CorrectionWorkflowService(services).generate(claim_id, validation_report_id=report_id)
+    suggestion = cycle["suggestions"][0]
+    assert suggestion["can_modify"] is True
+    assert suggestion["resolution"]["kind"] == "REVIEWER_INPUT"
+    assert suggestion["resolution"]["action_label"] == "Enter encounter ID"
+
+
+def test_cycle_response_explains_external_setup_action(services) -> None:
+    claim_id, report_id = _seed(
+        services,
+        issues=[
+            {
+                "check_type": "PAYLOAD_CONFORMITY",
+                "severity": "WARNING",
+                "code": "XSD_NOT_CONFIGURED",
+                "field": "schema",
+                "message": "Schema is not configured.",
+                "suggestion": "Configure the XSD path.",
+            }
+        ],
+    )
+    cycle = CorrectionWorkflowService(services).generate(claim_id, validation_report_id=report_id)
+    suggestion = cycle["suggestions"][0]
+    assert suggestion["can_modify"] is False
+    assert suggestion["resolution"]["kind"] == "EXTERNAL_ACTION"
+    assert suggestion["resolution"]["title"] == "Configure ECLAIMLINK validation"
+
+
+def test_force_new_api_reanalyzes_into_next_cycle(services, monkeypatch) -> None:
+    claim_id, report_id = _seed(services)
+    token = "correction-reviewer-token-at-least-32-characters"
+    monkeypatch.setenv("VELO_SUBMISSION_REVIEWERS", json.dumps({token: "reviewer-1"}))
+    client = TestClient(create_app(services))
+    headers = {"Authorization": f"Bearer {token}"}
+    first = client.post(
+        f"/claims/{claim_id}/corrections/generate",
+        json={"validation_report_id": report_id},
+        headers=headers,
+    )
+    second = client.post(
+        f"/claims/{claim_id}/corrections/generate",
+        json={"validation_report_id": report_id, "force_new": True},
+        headers=headers,
+    )
+    assert first.status_code == 200
+    assert second.status_code == 200
+    assert second.json()["cycle"]["number"] == 2
+
+
+def test_reviewed_unknown_coding_pair_does_not_loop(services) -> None:
+    state = {
+        "canonical_claim": _canonical(),
+        "correction_reviewed_coding_codes": ["99213"],
+    }
+    result = check_coding_consistency(state, services.kg_client)
+    assert result.status == "PASS"
+    assert result.issues == []
 
 
 def test_rejected_cycle_never_mutates_claim_or_payload(services) -> None:

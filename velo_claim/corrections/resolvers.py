@@ -102,7 +102,9 @@ class CorrectionLLMClient:
             body = {
                 "model": self.model,
                 "messages": [{"role": "system", "content": system}, {"role": "user", "content": prompt}],
-                "temperature": 0,
+                "temperature": 0.01,
+                "stream": False,
+                "max_new_tokens": 1024,
                 "response_format": {"type": "json_object"},
             }
             endpoint = self.base_url if self.base_url.endswith("/chat/completions") else self.base_url + "/chat/completions"
@@ -116,7 +118,12 @@ class CorrectionLLMClient:
         with urllib.request.urlopen(request, timeout=self.timeout_seconds) as response:
             payload = json.loads(response.read().decode("utf-8"))
         if self.api_style == "openai_chat":
-            content = payload.get("choices", [{}])[0].get("message", {}).get("content")
+            choices = payload.get("choices") or []
+            content = (
+                choices[0].get("message", {}).get("content")
+                if choices
+                else payload.get("content")
+            )
         else:
             content = payload.get("generated_text") or payload.get("text") or payload.get("response")
         if isinstance(content, dict):

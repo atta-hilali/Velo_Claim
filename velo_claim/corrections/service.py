@@ -215,6 +215,7 @@ class CorrectionWorkflowService:
         if int(current_version.get("version") or 0) != base_version:
             self._mark_cycle_stale(claim_id, cycle_id, suggestions, "Base claim version changed.")
         canonical = deepcopy(current_version.get("canonical_claim") or {})
+        reviewed_coding_codes: list[str] = []
         for suggestion in suggestions:
             if str(suggestion.get("status")) not in {"APPROVED", "MODIFIED"}:
                 raise InvalidCorrectionStateError("Correction cycle contains an unresolved suggestion.")
@@ -228,6 +229,10 @@ class CorrectionWorkflowService:
                 if str(review.get("decision")) == str(CorrectionReviewDecision.MODIFIED)
                 else suggestion.get("proposed_value")
             )
+            if "DIAGNOSIS_PROCEDURE_KNOWLEDGE_UNKNOWN" in set(suggestion.get("issue_codes") or []):
+                reviewed_code = proposed.get("code") if isinstance(proposed, dict) else proposed
+                if reviewed_code:
+                    reviewed_coding_codes.append(str(reviewed_code))
             canonical = apply_correction(
                 canonical,
                 field_path=suggestion["field_path"],
@@ -306,6 +311,7 @@ class CorrectionWorkflowService:
             "eligibility_result": detail.get("eligibility_result") or {},
             "prior_auth": detail.get("prior_auth") or {},
             "correction_cycle_count": int(cycle.get("cycle_number") or 1),
+            "correction_reviewed_coding_codes": reviewed_coding_codes,
         }
         try:
             validated = run_claim_validation(validation_state, container=self.services)
@@ -441,6 +447,7 @@ class CorrectionWorkflowService:
                 can_modify = True
             except UnsafeCorrectionError:
                 can_modify = False
+            resolution = _suggestion_resolution(row, can_modify=can_modify)
             suggestions.append(
                 {
                     "id": suggestion_id,
@@ -456,6 +463,7 @@ class CorrectionWorkflowService:
                     "rule_refs": row.get("rule_refs") or [],
                     "status": str(row.get("status")),
                     "can_modify": can_modify,
+                    "resolution": resolution,
                     "reviews": self.repository.list_correction_reviews(suggestion_id),
                 }
             )
@@ -491,3 +499,88 @@ def _value_hash(value: Any) -> str:
     import json
 
     return sha256_text(json.dumps(value, sort_keys=True, default=str))
+
+
+def _suggestion_resolution(row: dict[str, Any], *, can_modify: bool) -> dict[str, Any]:
+    codes = {str(code) for code in row.get("issue_codes") or []}
+    proposed = row.get("proposed_value")
+    current = row.get("old_value")
+    field_path = str(row.get("field_path") or "")
+    issue = _first_issue(row.get("evidence") or {})
+    message = str(issue.get("message") or row.get("rationale") or "Review this finding.")
+
+    if proposed is not None:
+        return {
+            "kind": "SUGGESTED_CHANGE",
+            "title": "Suggested fix",
+            "summary": message,
+            "action_label": "Use suggested fix",
+            "input_label": "Corrected value",
+            "input_mode": "value",
+            "blocking": True,
+        }
+
+    if can_modify:
+        if "ENCOUNTER_MISSING" in codes:
+            return {
+                "kind": "REVIEWER_INPUT",
+                "title": "Encounter ID needed",
+                "summary": "Enter the encounter ID from the EHR or source encounter record.",
+                "action_label": "Enter encounter ID",
+                "input_label": "Encounter ID",
+                "input_mode": "text",
+                "input_hint": "Use the authoritative encounter identifier, not a new generated value.",
+                "blocking": True,
+            }
+        if "DIAGNOSIS_PROCEDURE_KNOWLEDGE_UNKNOWN" in codes:
+            code = current.get("code") if isinstance(current, dict) else None
+            return {
+                "kind": "CODE_REVIEW",
+                "title": f"Verify procedure {code}" if code else "Verify procedure code",
+                "summary": "The knowledge graph has no evidence for this diagnosis/procedure combination. Confirm or replace the code using the coding source.",
+                "action_label": "Review procedure",
+                "input_label": "Procedure code",
+                "input_mode": "code",
+                "input_hint": "Keep the current code only when the clinical documentation supports it.",
+                "blocking": True,
+            }
+        return {
+            "kind": "REVIEWER_INPUT",
+            "title": "Reviewer input needed",
+            "summary": message,
+            "action_label": "Enter corrected value",
+            "input_label": "Corrected value",
+            "input_mode": "value",
+            "blocking": True,
+        }
+
+    if "FACILITY_LICENSE_MISSING" in codes:
+        title = "Add the facility license"
+        summary = "Update the verified facility record with its license, then rebuild and validate this claim. Facility identity cannot be changed from claim review."
+    elif "XSD_NOT_CONFIGURED" in codes:
+        title = "Configure ECLAIMLINK validation"
+        summary = "Set ECLAIMLINK_CLAIM_XSD_PATH on the backend, then rerun validation. This is a system setup task, not a claim-value change."
+    else:
+        title = "Resolve in the source system"
+        summary = message
+    return {
+        "kind": "EXTERNAL_ACTION",
+        "title": title,
+        "summary": summary,
+        "action_label": "View required action",
+        "input_mode": "none",
+        "blocking": True,
+    }
+
+
+def _first_issue(evidence: Any) -> dict[str, Any]:
+    if not isinstance(evidence, dict):
+        return {}
+    issues = evidence.get("issues")
+    if isinstance(issues, list) and issues and isinstance(issues[0], dict):
+        return issues[0]
+    for source in evidence.get("sources") or []:
+        issue = _first_issue(source)
+        if issue:
+            return issue
+    return {}

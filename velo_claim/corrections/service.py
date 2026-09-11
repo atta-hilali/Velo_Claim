@@ -169,6 +169,8 @@ class CorrectionWorkflowService:
         )
 
         cycle_id = str(suggestion["cycle_id"])
+        if normalized_decision != CorrectionReviewDecision.REJECTED:
+            self._refresh_reviewable_cycle_status(claim_id, cycle_id)
         cycle = self.repository.get_correction_cycle(cycle_id)
         if normalized_decision == CorrectionReviewDecision.REJECTED and cycle:
             cycle_number = int(cycle.get("cycle_number") or 1)
@@ -215,10 +217,15 @@ class CorrectionWorkflowService:
         if int(current_version.get("version") or 0) != base_version:
             self._mark_cycle_stale(claim_id, cycle_id, suggestions, "Base claim version changed.")
         canonical = deepcopy(current_version.get("canonical_claim") or {})
+        reviewable_suggestions = [
+            suggestion for suggestion in suggestions if _suggestion_can_modify(suggestion, canonical)
+        ]
+        if not reviewable_suggestions:
+            raise InvalidCorrectionStateError("Correction cycle has no claim fixes that can be applied.")
         reviewed_coding_codes: list[str] = []
-        for suggestion in suggestions:
+        for suggestion in reviewable_suggestions:
             if str(suggestion.get("status")) not in {"APPROVED", "MODIFIED"}:
-                raise InvalidCorrectionStateError("Correction cycle contains an unresolved suggestion.")
+                raise InvalidCorrectionStateError("Correction cycle contains an unresolved claim fix.")
             self._assert_suggestion_fresh(suggestion, current_version=current_version)
             reviews = self.repository.list_correction_reviews(str(suggestion.get("suggestion_id") or suggestion.get("id")))
             review = reviews[-1] if reviews else None
@@ -441,12 +448,7 @@ class CorrectionWorkflowService:
         for row in self.repository.list_correction_suggestions(cycle_id):
             suggestion_id = str(row.get("suggestion_id") or row.get("id"))
             field_path = str(row.get("field_path") or "")
-            try:
-                validate_correction_path(field_path)
-                get_canonical_value(canonical_claim, field_path)
-                can_modify = True
-            except UnsafeCorrectionError:
-                can_modify = False
+            can_modify = _suggestion_can_modify(row, canonical_claim)
             resolution = _suggestion_resolution(row, can_modify=can_modify)
             suggestions.append(
                 {
@@ -482,6 +484,25 @@ class CorrectionWorkflowService:
             },
             "suggestions": suggestions,
         }
+
+    def _refresh_reviewable_cycle_status(self, claim_id: str, cycle_id: str) -> None:
+        current_version = self.repository.get_current_claim_version(claim_id) or {}
+        canonical_claim = current_version.get("canonical_claim") or {}
+        reviewable = [
+            row
+            for row in self.repository.list_correction_suggestions(cycle_id)
+            if _suggestion_can_modify(row, canonical_claim)
+        ]
+        if not reviewable:
+            return
+        statuses = [str(row.get("status")) for row in reviewable]
+        if all(status in {"APPROVED", "MODIFIED"} for status in statuses):
+            status = CorrectionStatus.READY_TO_APPLY
+        elif any(status in {"APPROVED", "MODIFIED"} for status in statuses):
+            status = CorrectionStatus.PARTIALLY_REVIEWED
+        else:
+            status = CorrectionStatus.AWAITING_HUMAN_REVIEW
+        self.repository.update_correction_cycle_status(cycle_id, str(status))
 
     def _audit(self, claim_id: str, node: str, event_type: AuditEventType, payload: dict[str, Any]) -> None:
         record_audit_event(
@@ -571,6 +592,16 @@ def _suggestion_resolution(row: dict[str, Any], *, can_modify: bool) -> dict[str
         "input_mode": "none",
         "blocking": True,
     }
+
+
+def _suggestion_can_modify(row: dict[str, Any], canonical_claim: dict[str, Any]) -> bool:
+    field_path = str(row.get("field_path") or "")
+    try:
+        validate_correction_path(field_path)
+        get_canonical_value(canonical_claim, field_path)
+    except UnsafeCorrectionError:
+        return False
+    return True
 
 
 def _first_issue(evidence: Any) -> dict[str, Any]:

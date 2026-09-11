@@ -1037,6 +1037,55 @@ def test_cycle_response_explains_external_setup_action(services) -> None:
     assert suggestion["resolution"]["title"] == "Configure ECLAIMLINK validation"
 
 
+def test_external_setup_task_does_not_block_applicable_claim_fix(services, monkeypatch) -> None:
+    claim_id, report_id = _seed(
+        services,
+        issues=[
+            {
+                "check_type": "PAYLOAD_CONFORMITY",
+                "severity": "WARNING",
+                "code": "XSD_NOT_CONFIGURED",
+                "field": "schema",
+                "message": "Schema is not configured.",
+                "suggestion": "Configure the XSD path.",
+            },
+            {
+                "check_type": "FINANCIAL",
+                "severity": "ERROR",
+                "code": "FINANCIAL_GROSS_MISMATCH",
+                "field": "canonical_claim.amount.gross",
+                "message": "Gross total mismatch.",
+                "suggestion": "Recalculate from lines.",
+            },
+        ],
+    )
+    service = CorrectionWorkflowService(services)
+    cycle = service.generate(claim_id, validation_report_id=report_id)
+    financial = next(item for item in cycle["suggestions"] if item["can_modify"])
+    reviewed = service.review(
+        claim_id=claim_id,
+        suggestion_id=financial["id"],
+        decision="APPROVED",
+        reviewer_id="reviewer-1",
+    )
+    assert reviewed["cycle"]["cycle"]["status"] == "READY_TO_APPLY"
+
+    monkeypatch.setattr(
+        "velo_claim.corrections.service.run_claim_validation",
+        lambda state, container: {
+            **state,
+            "validation_report_id": "v2",
+            "score": 100,
+            "final_status": "READY_TO_SUBMIT",
+            "payload_status": "READY_TO_SUBMIT",
+            "next_agent": "SubmissionAgent",
+        },
+    )
+    service.apply(claim_id=claim_id, cycle_id=cycle["cycle"]["id"], reviewer_id="reviewer-1")
+    current = services.repository.get_current_claim_version(claim_id)
+    assert current["canonical_claim"]["amount"]["gross"] == 100.0
+
+
 def test_force_new_api_reanalyzes_into_next_cycle(services, monkeypatch) -> None:
     claim_id, report_id = _seed(services)
     token = "correction-reviewer-token-at-least-32-characters"
